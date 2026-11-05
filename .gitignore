@@ -1,0 +1,25 @@
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+captures/
+.externalNativeBuild/
+.cxx/
+# IDE
+.idea/
+*.iml
+.vscode/
+# OS
+.DS_Store
+Thumbs.db
+# Python
+__pycache__/
+.venv/
+# Large generated map artifacts (publish via releases, not git)
+map-data/**/*.pmtiles
+map-data/**/*.mbtiles
+dist/

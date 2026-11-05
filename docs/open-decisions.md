@@ -1,0 +1,23 @@
+# Open decisions
+
+From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answer to any of these.** Keep each one configurable or leave it out until it is decided.
+
+| Topic | Decided when |
+| --- | --- |
+| Map zoom limit; story-mode details | During implementation (owner's call) |
+| Package size; full download before use vs start while downloading | After a sample of content and map is measured |
+| Exact detailed-coverage bounds; list of landmark and border changes | During content and map preparation |
+| Date documentation; pre-Hijra reference; Gregorian conversion | Content review with the owner |
+| Long-running events, approximate or unknown dates, disputed locations | When those cases come up in content |
+| The actual display-date values (the one-date rule is decided) | Content review |
+| Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
+| App framework, map engine, download and update mechanism | Technical spike (see [ADR 0002](adr/0002-proposed-stack.md)) |
+| Test devices, minimum Android version, performance targets, accessibility, failure states | Implementation spec |
+| Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
+| Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
+| Event categories | Not decided |
+| How daily life, legislation and Shama'il topics are split into situations | Not decided |
+| Backup or restore after reinstall | Not decided |
+| How to depict anonymous soldiers (none may be assumed) | Not decided |
+| English name, subtitle, logo; name availability check | Not decided |
+| Pre-birth intro: reference date and detailed stations | Not decided |

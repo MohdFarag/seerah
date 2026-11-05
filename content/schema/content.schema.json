@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MohdFarag/seerah/content/schema/content.schema.json",
+  "title": "Seerah content",
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "review": {
+      "description": "Owner review state. Only 'approved' may ship.",
+      "enum": ["title-approved", "draft", "in-review", "approved"]
+    },
+    "displayDate": {
+      "description": "The single date shown in v1, reviewed by the owner. Choosing it does not settle a scholarly dispute.",
+      "type": "object",
+      "required": ["precision"],
+      "properties": {
+        "calendar": { "enum": ["hijri", "pre-hijra", "gregorian"], "description": "Pre-Hijra reference and Gregorian conversion are still open decisions." },
+        "year": { "type": "integer" },
+        "month": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "day": { "type": "integer", "minimum": 1, "maximum": 31 },
+        "precision": { "enum": ["year", "month", "day", "unknown"] },
+        "approximate": { "type": "boolean", "default": false },
+        "note": { "type": "string" }
+      },
+      "allOf": [
+        { "if": { "properties": { "precision": { "const": "year" } } }, "then": { "required": ["year"], "not": { "anyOf": [{ "required": ["month"] }, { "required": ["day"] }] } } },
+        { "if": { "properties": { "precision": { "const": "month" } } }, "then": { "required": ["year", "month"], "not": { "required": ["day"] } } },
+        { "if": { "properties": { "precision": { "const": "day" } } }, "then": { "required": ["year", "month", "day"] } },
+        { "if": { "properties": { "precision": { "const": "unknown" } } }, "then": { "not": { "anyOf": [{ "required": ["year"] }, { "required": ["month"] }, { "required": ["day"] }] } } }
+      ]
+    },
+    "placeRef": {
+      "type": "object",
+      "required": ["accuracy"],
+      "properties": {
+        "accuracy": { "enum": ["exact", "general", "unknown"], "description": "general = known city/region, exact spot unknown. unknown = no marker." },
+        "place_id": { "$ref": "#/$defs/id" }
+      },
+      "if": { "properties": { "accuracy": { "const": "unknown" } } },
+      "then": { "not": { "required": ["place_id"] } },
+      "else": { "required": ["place_id"] }
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "work", "locator"],
+      "properties": {
+        "kind": { "enum": ["quran", "hadith", "seerah-book", "atlas", "shamail", "commentary"] },
+        "work": { "type": "string", "description": "e.g. صحيح البخاري, سيرة ابن هشام" },
+        "edition": { "type": "string" },
+        "locator": { "type": "string", "description": "surah:ayah, hadith number, volume/page" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "text": {
+      "type": "object",
+      "required": ["id", "kind", "body", "source"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["quran", "hadith", "athar", "seerah-narration", "editorial"], "description": "editorial = reviewed linking or summary text, always shown as distinct from narration wording." },
+        "body": { "type": "string" },
+        "source": { "$ref": "#/$defs/source" },
+        "excerpt_of": { "$ref": "#/$defs/id", "description": "Set when this is an excerpt of a longer narration; points to the full text." },
+        "explanation": { "type": "string", "description": "Simple: word meanings or a hadith commentary. Shown on request." },
+        "explanation_source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "situation": {
+      "type": "object",
+      "required": ["id", "title", "text_ids"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string" },
+        "place": { "$ref": "#/$defs/placeRef" },
+        "text_ids": { "type": "array", "items": { "$ref": "#/$defs/id" }, "description": "One chosen narration in v1; a text may be shared across situations." }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": ["stations", "documented"],
+      "properties": {
+        "stations": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "documented": { "type": "boolean", "description": "false = show stations and order only, no line." },
+        "geometry_ref": { "type": "string" },
+        "accuracy_note": { "type": "string" },
+        "distance_km": { "type": "number" },
+        "distance_basis": { "enum": ["source", "estimate"] },
+        "days": { "type": "integer", "description": "Only when well founded. A step number is not a day." }
+      },
+      "dependentRequired": { "geometry_ref": ["accuracy_note"], "distance_km": ["distance_basis"] }
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "phase_id", "order", "title", "review"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "phase_id": { "$ref": "#/$defs/id" },
+        "order": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string" },
+        "review": { "$ref": "#/$defs/review" },
+        "preliminary_date_note": { "type": "string", "description": "Owner's preliminary compilation, kept as given. NOT a display date." },
+        "date": { "$ref": "#/$defs/displayDate" },
+        "place": { "$ref": "#/$defs/placeRef" },
+        "lead_in": { "type": "string" },
+        "outcome": { "type": "string" },
+        "related_event_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "event_text_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "situations": { "type": "array", "items": { "$ref": "#/$defs/situation" } },
+        "texts": { "type": "array", "items": { "$ref": "#/$defs/text" } },
+        "route": { "$ref": "#/$defs/route" }
+      },
+      "if": { "properties": { "review": { "const": "approved" } } },
+      "then": { "required": ["date", "lead_in", "outcome", "situations", "texts"] }
+    },
+    "phase": {
+      "type": "object",
+      "required": ["id", "order", "title", "events"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "order": { "type": "integer" },
+        "title": { "type": "string" },
+        "skippable": { "type": "boolean", "default": false },
+        "note": { "type": "string" },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" } }
+      }
+    }
+  },
+  "type": "object",
+  "required": ["content_version", "phases"],
+  "properties": {
+    "content_version": { "type": "string" },
+    "phases": { "type": "array", "items": { "$ref": "#/$defs/phase" } }
+  }
+}
