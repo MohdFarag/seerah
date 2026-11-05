@@ -33,12 +33,14 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 **Phase → Event → Situations (only when needed).** A simple event can be a single situation, and there is no fixed count. Linked but separate events stay separate stations (e.g. al-Ahzab, then Banu Qurayza).
 
 **Minimum content per event:**
+
 1. A short, sourced lead-in linking it to what came before.
 2. Place and time as far as they are known, with approximation or disagreement stated.
 3. Key situations with their original texts.
 4. A short outcome linking it to what follows.
 
 **Text rules:**
+
 - The original text comes first. The explanation shows on request.
 - A narration from a Seerah book is shown as that book gives it, with the source cited. The book carries the report; it does not create the event.
 - An excerpt from a long narration must keep its full meaning. Label it as an excerpt and give access to the full narration and its source.

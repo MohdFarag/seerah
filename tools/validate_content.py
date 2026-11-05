@@ -5,6 +5,7 @@ Uses the JSON Schema if the `jsonschema` package is installed, and always runs
 the cross-reference and integrity checks the schema can't express.
 Exit code 1 on any error.
 """
+
 import json
 import pathlib
 import sys

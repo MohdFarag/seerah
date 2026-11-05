@@ -1,0 +1,6 @@
+default: true
+MD013: false   # line length: prose and Arabic tables
+MD033: false   # inline HTML (README header)
+MD041: false
+MD024:
+  siblings_only: true

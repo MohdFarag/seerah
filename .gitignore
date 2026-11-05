@@ -23,3 +23,15 @@ __pycache__/
 map-data/**/*.pmtiles
 map-data/**/*.mbtiles
 dist/
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+google-services.json
+keystore.properties
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+node_modules/

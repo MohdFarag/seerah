@@ -1,0 +1,22 @@
+name: Content correction
+description: Report a wrong or unsourced text, date, place, route or explanation
+title: "content: "
+labels: [content]
+body:
+  - type: input
+    id: event
+    attributes: { label: Event or situation, placeholder: "e.g. غزوة بدر — دعاء النبي ﷺ" }
+    validations: { required: true }
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong?
+      options: [Text / wording, Source citation, Date, Place / marker, Route / distance, Explanation, Other]
+    validations: { required: true }
+  - type: textarea
+    id: issue
+    attributes: { label: Details, description: What is shown and what it should be }
+    validations: { required: true }
+  - type: textarea
+    id: source
+    attributes: { label: Supporting source, description: "Book, edition, volume/page or hadith number, link" }
