@@ -1,4 +1,4 @@
 # Dev tooling, pinned. Update via Dependabot.
 jsonschema==4.26.0
-pre-commit==4.0.1
+pre-commit==4.7.0
 ruff==0.17.3
