@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Technical spike (`spike/`): offline test package builder (PMTiles base map, Arabic SDF glyphs, time-state GeoJSON, test content, manifest with checksums), local update server with Range and simulated cuts, Kotlin `core` module (time states, package install, update and rollback, resumable download, progress rules) with 21 tests, and an unbuilt Compose + MapLibre + Room spike app.
+- CI job that builds the spike package and runs the core tests.
+
 ## [0.1.0] - 2026-11-05
 
 ### Added

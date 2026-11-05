@@ -6,7 +6,9 @@ No dates, budget or estimates have been approved. This is only the order of work
 
 Structure, PRD snapshot, requirements digest, content schema, approved event index.
 
-## 1. Technical spike (proves the stack before it's adopted)
+## 1. Technical spike (proves the stack before it's adopted) 🔶
+
+Built in [`spike/`](../spike/README.md). Logic and package are verified; the on-device checklist is pending.
 
 From the PRD section "ما يلزم إثباته قبل الاعتماد" (what must be proven before adoption):
 

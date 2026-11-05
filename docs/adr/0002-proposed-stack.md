@@ -22,3 +22,14 @@ v1 is Android only (phone and tablet), Arabic RTL and 2D. It needs a historical 
 ## Consequences
 
 The spike (see [roadmap](../roadmap.md)) must prove Arabic label rendering in MapLibre **Android** specifically. RTL results in Compose don't carry over to the map engine, and GL JS documentation doesn't apply to Native.
+
+## Spike results (2026-11-05)
+
+See [`spike/README.md`](../../spike/README.md). Summary:
+
+- **Verified without a device:** time-state logic, package verify/activate/rollback, resumable updates, progress kept across updates (21 tests), and package assets (PMTiles, glyphs, style) rendered in MapLibre GL JS. MapLibre Native 13.7.1 ships `PMTilesFileSource`, `file://`/`asset://` and ICU Arabic shaping.
+- **Risk found:** Arabic diacritics on map labels are drawn without mark positioning (no HarfBuzz/GPOS). Letters join correctly. Event texts in Compose are unaffected.
+- **Still unverified:** everything on a real Android device (rendering, airplane-mode restart, performance, memory). The cloud environment blocks `dl.google.com`, so no SDK or APK was available.
+- **Adjustments:** content as JSON in the package for now (SQLite later), Room for user state only, GeoJSON for historical layers until they grow, and `maplibre/font-maker` for production glyphs.
+
+Status stays **Proposed** until the device checklist in the spike README is run.

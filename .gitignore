@@ -35,3 +35,7 @@ keystore.properties
 .ruff_cache/
 .pytest_cache/
 node_modules/
+# Spike: fetched sources and generated packages
+spike/pack/.cache/
+spike/pack/dist/
+spike/android/local.properties

@@ -1,0 +1,294 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     39.6,
+     24.5
+    ]
+   },
+   "properties": {
+    "entity": "test-town",
+    "kind": "place",
+    "state": "a",
+    "from": 1,
+    "to": 3,
+    "name": "قَرْيَةُ الاخْتِبَارِ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     39.6,
+     24.5
+    ]
+   },
+   "properties": {
+    "entity": "test-town",
+    "kind": "place",
+    "state": "b",
+    "from": 3,
+    "name": "مَدِينَةُ الاخْتِبَارِ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       38.0,
+       23.0
+      ],
+      [
+       41.0,
+       23.0
+      ],
+      [
+       41.0,
+       26.0
+      ],
+      [
+       38.0,
+       26.0
+      ],
+      [
+       38.0,
+       23.0
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "entity": "test-region",
+    "kind": "region",
+    "state": "a",
+    "from": 1,
+    "to": 3,
+    "name": "مِنْطَقَةُ حُكْمٍ تَجْرِيبِيَّةٌ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       43.2,
+       24.5
+      ],
+      [
+       41.6,
+       27.2713
+      ],
+      [
+       38.4,
+       27.2713
+      ],
+      [
+       36.8,
+       24.5
+      ],
+      [
+       38.4,
+       21.7287
+      ],
+      [
+       41.6,
+       21.7287
+      ],
+      [
+       43.2,
+       24.5
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "entity": "test-region",
+    "kind": "region",
+    "state": "b",
+    "from": 3,
+    "name": "مِنْطَقَةُ حُكْمٍ تَجْرِيبِيَّةٌ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       46,
+       28
+      ],
+      [
+       58,
+       28
+      ],
+      [
+       58,
+       38
+      ],
+      [
+       46,
+       38
+      ],
+      [
+       46,
+       28
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "entity": "test-kingdom",
+    "kind": "region",
+    "state": "a",
+    "from": 1,
+    "to": 5,
+    "name": "مَمْلَكَةٌ تَجْرِيبِيَّةٌ (أ)",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       48,
+       30
+      ],
+      [
+       58,
+       30
+      ],
+      [
+       58,
+       38
+      ],
+      [
+       48,
+       38
+      ],
+      [
+       48,
+       30
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "entity": "test-kingdom",
+    "kind": "region",
+    "state": "b",
+    "from": 5,
+    "name": "مَمْلَكَةٌ تَجْرِيبِيَّةٌ (ب)",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     39.75,
+     24.35
+    ]
+   },
+   "properties": {
+    "entity": "test-landmark",
+    "kind": "landmark",
+    "state": "a",
+    "from": 3,
+    "name": "مَعْلَمٌ تَجْرِيبِيٌّ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     38.6,
+     21.4
+    ]
+   },
+   "properties": {
+    "entity": "stress-long",
+    "kind": "place",
+    "state": "a",
+    "from": 1,
+    "name": "اسْمٌ طَوِيلٌ لِاخْتِبَارِ تَزَاحُمِ الأَسْمَاءِ عَلَى الخَرِيطَةِ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     40.8,
+     22.2
+    ]
+   },
+   "properties": {
+    "entity": "stress-digits",
+    "kind": "place",
+    "state": "a",
+    "from": 1,
+    "name": "مَحَطَّةُ ١٢ — 34 كم (Test-Lab)",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     37.4,
+     25.6
+    ]
+   },
+   "properties": {
+    "entity": "stress-ligature",
+    "kind": "place",
+    "state": "a",
+    "from": 1,
+    "name": "النَّبِيُّ ﷺ — بِئْرُ «الشِّفَاءِ»",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     42.3,
+     26.4
+    ]
+   },
+   "properties": {
+    "entity": "stress-plain",
+    "kind": "place",
+    "state": "a",
+    "from": 1,
+    "name": "بئر بلا تشكيل لمقارنة الاتصال",
+    "test": true
+   }
+  }
+ ]
+}

@@ -27,3 +27,28 @@ jobs:
         run: SKIP=no-commit-to-branch pre-commit run --all-files --show-diff-on-failure
       - name: Validate content
         run: python3 tools/validate_content.py
+
+  spike-core:
+    # Builds the spike test package and runs the Android-independent logic tests.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Build spike pack
+        working-directory: spike/pack
+        run: |
+          pip install -r requirements.txt
+          ./prepare_sources.sh
+          python3 build.py
+      - name: Core tests
+        working-directory: spike/android
+        run: ./gradlew :core:test --console=plain
