@@ -42,9 +42,14 @@ class UpdateTest {
             assertNotNull("new event from update", ui.pack?.event("e4"))
             Device.main { vm.closeEvent(); vm.setYear(3) }
             Device.waitFor("year 3") { MapProbe.appliedView == ViewTime.YearEnd(3) }
-            Device.camera(24.35, 39.75, 7.5)
-            assertTrue("corrected landmark name rendered",
-                "مَعْلَمٌ تَجْرِيبِيٌّ (مُصَحَّحٌ ٢)" in Device.rendered("name", "place-label"))
+            // Zoom in on the landmark so collision with the nearby town label cannot hide it.
+            Device.camera(24.35, 39.75, 9.5)
+            val corrected = "مَعْلَمٌ تَجْرِيبِيٌّ (مُصَحَّحٌ ٢)"
+            val until = android.os.SystemClock.uptimeMillis() + 15_000
+            while (corrected !in Device.rendered("name", "place-label") && android.os.SystemClock.uptimeMillis() < until) {
+                android.os.SystemClock.sleep(300)
+            }
+            assertTrue("corrected landmark name rendered", corrected in Device.rendered("name", "place-label"))
             Device.main { vm.openEvent("e2") } // restore for the next restart phase
             Device.screenshot("after-update")
         }
