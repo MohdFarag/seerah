@@ -18,7 +18,11 @@ class Metrics {
         val now = System.nanoTime()
         frameTimes.addLast(now)
         while (frameTimes.isNotEmpty() && now - frameTimes.first() > 1_000_000_000L) frameTimes.removeFirst()
-        renderMs.addLast(renderingTimeMs)
+        // renderingTime reads 0 on software GL; keep the interval between rendered frames instead.
+        if (frameTimes.size >= 2) {
+            val prev = frameTimes.elementAt(frameTimes.size - 2)
+            renderMs.addLast((now - prev) / 1_000_000.0)
+        }
         while (renderMs.size > 300) renderMs.removeFirst()
     }
 
@@ -42,7 +46,7 @@ class Metrics {
         val mapFps: Int, val renderP50: Double, val renderP95: Double, val frames: Int,
         val pssMb: Double, val nativeHeapMb: Double, val apkMb: Double, val packMb: Double,
     ) {
-        fun line() = "fps=%d render p50=%.1fms p95=%.1fms (n=%d) pss=%.0fMB native=%.0fMB apk=%.1fMB pack=%.2fMB"
+        fun line() = "fps=%d frame-interval p50=%.1fms p95=%.1fms (n=%d) pss=%.0fMB native=%.0fMB apk=%.1fMB pack=%.2fMB"
             .format(mapFps, renderP50, renderP95, frames, pssMb, nativeHeapMb, apkMb, packMb)
     }
 }

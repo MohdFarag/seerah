@@ -28,6 +28,16 @@ android {
         }
     }
 
+    // Per-ABI APKs (MapLibre's native library is ~13 MB per ABI) plus a universal one.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
     // The v1 package is bundled as the first-run package (built by spike/pack/build.py).
     sourceSets["main"].assets.srcDir(rootDir.resolve("../pack/dist/assets"))
     androidResources { noCompress += "zip" }

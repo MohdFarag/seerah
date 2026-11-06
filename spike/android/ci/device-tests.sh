@@ -27,7 +27,12 @@ serve() { # args for serve.py
   sleep 2; adb reverse tcp:8765 tcp:8765
 }
 
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+# Emulators on CI are slow; hide system "isn't responding" dialogs so they don't cover screenshots.
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell settings put secure anr_show_background 0 || true
+sleep 20
+APK=$(ls app/build/outputs/apk/debug/*x86_64*.apk 2>/dev/null | head -1); APK=${APK:-app/build/outputs/apk/debug/app-debug.apk}
+adb install -r "$APK"
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb logcat -c; adb logcat -v time > "$OUT/logcat.txt" 2>&1 & LOGCAT=$!
 

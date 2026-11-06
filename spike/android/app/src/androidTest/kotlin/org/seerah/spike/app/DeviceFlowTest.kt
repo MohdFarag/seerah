@@ -41,6 +41,8 @@ class DeviceFlowTest {
                 Device.screenshot("arabic-labels-zoom-$f")
                 Device.camera(24.0, 39.4, 6.3)
             }
+            Device.main { vm.setLabelFonts(LabelFonts.PBF) }
+            Device.waitStyle("1.0.0-test/PBF")
             Device.camera(20.0, 40.0, 1.3)
             Device.screenshot("world-overview")
         }

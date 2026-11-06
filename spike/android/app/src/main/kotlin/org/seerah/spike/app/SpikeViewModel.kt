@@ -41,7 +41,7 @@ data class UiState(
     val offer: UpdateOffer? = null,
     val updateStatus: String? = null,
     val downloading: Boolean = false,
-    val labelFonts: LabelFonts = LabelFonts.FONT_FACES,
+    val labelFonts: LabelFonts = LabelFonts.PBF, // font-faces renders Arabic reversed/unjoined in 13.7.1 (see spike README)
     val historical: JsonObject? = null,
 ) {
     val year: Int get() = user?.year ?: 1
