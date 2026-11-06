@@ -15,6 +15,12 @@ import org.seerah.spike.core.ContentPack
 import org.seerah.spike.core.DownloadResult
 import org.seerah.spike.core.Event
 import org.seerah.spike.core.InstallResult
+import org.seerah.spike.core.LabelFonts
+import org.seerah.spike.core.TimeStates
+import org.seerah.spike.core.ViewTime
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.seerah.spike.core.PackStore
 import org.seerah.spike.core.ProgressRules
 import org.seerah.spike.core.UpdateOffer
@@ -35,9 +41,20 @@ data class UiState(
     val offer: UpdateOffer? = null,
     val updateStatus: String? = null,
     val downloading: Boolean = false,
+    val labelFonts: LabelFonts = LabelFonts.FONT_FACES,
+    val historical: JsonObject? = null,
 ) {
     val year: Int get() = user?.year ?: 1
     val openEvent: Event? get() = user?.openEventId?.let { pack?.event(it) }
+
+    /** Opened event: its own documented time. Otherwise: end of the selected year. */
+    val viewTime: ViewTime get() = openEvent?.let { ViewTime.forEvent(it.date) } ?: ViewTime.YearEnd(year)
+
+    /** Names whose change has an unknown order relative to the open event (shown as a notice). */
+    val undetermined: List<String> get() {
+        val v = viewTime
+        return if (v is ViewTime.EventSpan && historical != null) TimeStates.undetermined(historical, v) else emptyList()
+    }
 }
 
 class SpikeViewModel(app: Application) : AndroidViewModel(app) {
@@ -72,22 +89,27 @@ class SpikeViewModel(app: Application) : AndroidViewModel(app) {
             val dir = store.activeDir() ?: return@withContext null
             val pack = ContentPack.parse(File(dir, "content.json").readText())
             val saved = db.state().get()?.toCore()
-            Triple(dir, pack, ProgressRules.reconcile(saved, pack))
+            val hist = Json.parseToJsonElement(File(dir, "historical.geojson").readText()).jsonObject
+            Loaded(dir, pack, ProgressRules.reconcile(saved, pack), hist)
         }
         if (loaded == null) {
             _ui.update { it.copy(loading = false, error = "لا توجد حزمة محتوى صالحة") }
             return
         }
-        val (dir, pack, rec) = loaded
+        val (dir, pack, rec, hist) = loaded
         _ui.update {
             it.copy(
-                loading = false, pack = pack, packDir = dir, user = rec.state,
+                loading = false, pack = pack, packDir = dir, user = rec.state, historical = hist,
                 notice = rec.notice ?: it.notice,
                 cameraRequest = if (restoreCamera) next(CameraSpec(rec.state.year, rec.state.lon, rec.state.lat, rec.state.zoom)) else it.cameraRequest,
             )
         }
         persist()
     }
+
+    private data class Loaded(val dir: File, val pack: ContentPack, val rec: org.seerah.spike.core.Reconciled, val hist: JsonObject)
+
+    fun setLabelFonts(f: LabelFonts) = _ui.update { it.copy(labelFonts = f) }
 
     private fun next(c: CameraSpec) = (++cameraSeq) to c
 

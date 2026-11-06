@@ -8,6 +8,8 @@ import java.io.File
 
 /** Map render-frame timings from MapLibre plus process memory. Spike instrumentation only. */
 class Metrics {
+    companion object { val shared = Metrics() }
+
     private val renderMs = ArrayDeque<Double>()
     private val frameTimes = ArrayDeque<Long>()
 

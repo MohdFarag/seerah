@@ -304,6 +304,12 @@ def main() -> int:
         d = DIST / f"pack-{ver}"
         shutil.copytree(shared, d)
         shutil.copy(HERE / "src" / spec["historical"], d / "historical.geojson")
+        # Real font file for MapLibre Native `font-faces` (FreeType + HarfBuzz path).
+        (d / "fonts").mkdir()
+        shutil.copy(
+            CACHE / "NotoNaskhArabic_400Regular.ttf", d / "fonts" / "NotoNaskhArabic-Regular.ttf"
+        )
+        shutil.copy(CACHE / "OFL.txt", d / "fonts" / "OFL.txt")  # SIL OFL 1.1 requires the license
         content = json.loads((HERE / "src" / spec["content"]).read_text())
         content["content_version"] = ver
         (d / "content.json").write_text(json.dumps(content, ensure_ascii=False, indent=1))
@@ -336,7 +342,7 @@ def main() -> int:
 
     lines = ["component                      bytes"]
     d0 = report[0][1]
-    for name in ("basemap.pmtiles", "glyphs", "historical.geojson", "content.json"):
+    for name in ("basemap.pmtiles", "glyphs", "fonts", "historical.geojson", "content.json"):
         p = d0 / name
         lines.append(f"{name:<28} {dir_size(p) if p.is_dir() else p.stat().st_size:>10,}")
     for ver, d, z in report:

@@ -29,13 +29,23 @@ import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.seerah.spike.core.CameraSpec
 import org.seerah.spike.core.ContentPack
+import org.seerah.spike.core.LabelFonts
 import org.seerah.spike.core.StyleBuilder
 import org.seerah.spike.core.TimeStates
+import org.seerah.spike.core.ViewTime
 import java.io.File
 
-private const val EVENTS_SOURCE = "events"
-private const val EVENTS_LAYER = "event-markers"
+const val EVENTS_SOURCE = "events"
+const val EVENTS_LAYER = "event-markers"
+
+/** Lets instrumented tests inspect what MapLibre actually rendered. Spike-only. */
+object MapProbe {
+    @Volatile var map: MapLibreMap? = null
+    @Volatile var styleReady: String? = null // "<packVersion>/<fonts>"
+    @Volatile var appliedView: ViewTime? = null
+}
 
 /**
  * MapLibre map driven by app state: the app picks the time state, the engine draws it.
@@ -45,8 +55,10 @@ private const val EVENTS_LAYER = "event-markers"
 fun MapPane(
     packDir: File,
     pack: ContentPack,
-    year: Int,
-    cameraRequest: Pair<Int, org.seerah.spike.core.CameraSpec>?,
+    view: ViewTime,
+    markerYear: Int,
+    fonts: LabelFonts,
+    cameraRequest: Pair<Int, CameraSpec>?,
     metrics: Metrics,
     onCameraIdle: (lon: Double, lat: Double, zoom: Double) -> Unit,
     onEventClick: (String) -> Unit,
@@ -57,7 +69,7 @@ fun MapPane(
     val mapView = remember { MapView(context).apply { onCreate(null) } }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
-    var loadedDir by remember { mutableStateOf<File?>(null) }
+    var loadedKey by remember { mutableStateOf<String?>(null) }
     val timeLayers = remember(packDir) {
         TimeStates.timeLayers(Json.parseToJsonElement(File(packDir, "style.template.json").readText()) as JsonObject)
     }
@@ -78,6 +90,7 @@ fun MapPane(
         )
         mapView.getMapAsync { m ->
             map = m
+            MapProbe.map = m
             m.addOnCameraIdleListener {
                 val c = m.cameraPosition
                 c.target?.let { onCameraIdle(it.longitude, it.latitude, c.zoom) }
@@ -91,16 +104,20 @@ fun MapPane(
         }
         onDispose {
             lifecycle.removeObserver(obs)
+            MapProbe.map = null
+            MapProbe.styleReady = null
             mapView.onDestroy()
         }
     }
 
-    // (Re)load the style when the active package changes (first run or after an update).
-    LaunchedEffect(map, packDir) {
+    // (Re)load the style when the active package or the label font path changes.
+    val key = "${packDir.name}/$fonts"
+    LaunchedEffect(map, key) {
         val m = map ?: return@LaunchedEffect
-        if (loadedDir == packDir) return@LaunchedEffect
+        if (loadedKey == key) return@LaunchedEffect
         val t0 = System.nanoTime()
-        m.setStyle(Style.Builder().fromJson(StyleBuilder.build(packDir))) { s ->
+        MapProbe.styleReady = null
+        m.setStyle(Style.Builder().fromJson(StyleBuilder.build(packDir, fonts))) { s ->
             s.addSource(GeoJsonSource(EVENTS_SOURCE, TimeStates.eventMarkers(pack).toString()))
             s.addLayer(
                 CircleLayer(EVENTS_LAYER, EVENTS_SOURCE).withProperties(
@@ -110,9 +127,9 @@ fun MapPane(
                     PropertyFactory.circleStrokeWidth(2f),
                 ),
             )
-            Log.i(SpikeViewModel.TAG, "style loaded in ${(System.nanoTime() - t0) / 1_000_000} ms from ${packDir.name}")
+            Log.i(SpikeViewModel.TAG, "style loaded in ${(System.nanoTime() - t0) / 1_000_000} ms ($key)")
             style = s
-            loadedDir = packDir
+            loadedKey = key
         }
     }
 
@@ -122,18 +139,20 @@ fun MapPane(
     }
 
     // Time: swap the visible state of names, borders and landmarks; markers of this year only.
-    LaunchedEffect(style, year) {
+    LaunchedEffect(style, view, markerYear) {
         val s = style ?: return@LaunchedEffect
         val t0 = System.nanoTime()
-        timeLayers.forEach { (id, base) -> s.getLayer(id)?.setFilterCompat(TimeStates.filter(base, year).toString()) }
-        s.getLayer(EVENTS_LAYER)?.setFilterCompat(TimeStates.markerFilter(year).toString())
-        Log.i(SpikeViewModel.TAG, "year $year filters applied in ${(System.nanoTime() - t0) / 1000} µs")
+        timeLayers.forEach { (id, base) -> s.getLayer(id)?.setFilterCompat(TimeStates.filter(base, view).toString()) }
+        s.getLayer(EVENTS_LAYER)?.setFilterCompat(TimeStates.markerFilter(markerYear).toString())
+        MapProbe.appliedView = view
+        MapProbe.styleReady = key
+        Log.i(SpikeViewModel.TAG, "view $view filters applied in ${(System.nanoTime() - t0) / 1000} µs")
     }
 
     LaunchedEffect(map, cameraRequest?.first) {
         val m = map ?: return@LaunchedEffect
         val c = cameraRequest?.second ?: return@LaunchedEffect
-        m.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(c.lat, c.lon), c.zoom), 600)
+        m.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(c.lat, c.lon), c.zoom))
     }
 
     AndroidView(factory = { mapView }, modifier = modifier)

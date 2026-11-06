@@ -37,13 +37,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import org.seerah.spike.core.Event
+import org.seerah.spike.core.LabelFonts
 import org.seerah.spike.core.toArabicDigits
 
 /** Minimal spike UI. Not a product design: layout and controls exist only to exercise the tech. */
 @Composable
 fun SpikeScreen(vm: SpikeViewModel = viewModel()) {
     val ui by vm.ui.collectAsStateWithLifecycle()
-    val metrics = remember { Metrics() }
+    val metrics = remember { Metrics.shared }
     val context = LocalContext.current
     var metricsLine by remember { mutableStateOf("") }
 
@@ -68,7 +69,8 @@ fun SpikeScreen(vm: SpikeViewModel = viewModel()) {
                     Modifier.fillMaxWidth().background(Color(0xFFFFE08A)).padding(6.dp), fontSize = 12.sp,
                 )
                 MapPane(
-                    packDir = dir, pack = pack, year = ui.year, cameraRequest = ui.cameraRequest, metrics = metrics,
+                    packDir = dir, pack = pack, view = ui.viewTime, markerYear = ui.year, fonts = ui.labelFonts,
+                    cameraRequest = ui.cameraRequest, metrics = metrics,
                     onCameraIdle = vm::onCameraIdle, onEventClick = vm::openEvent,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
@@ -77,7 +79,7 @@ fun SpikeScreen(vm: SpikeViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     ui.notice?.let { n -> Row { Text(n, Modifier.weight(1f)); TextButton(vm::dismissNotice) { Text("حسنًا") } } }
-                    YearControls(ui.year, pack.years.min, pack.years.max, pack.years.label, vm::setYear)
+                    YearControls(ui.year, pack.years.min, pack.years.max, pack.years.label, ui.openEvent != null, vm::setYear)
                     val events = pack.eventsInYear(ui.year)
                     if (events.isEmpty()) {
                         Text("لا توجد أحداث مضافة لهذه السنة حاليًا")
@@ -91,9 +93,18 @@ fun SpikeScreen(vm: SpikeViewModel = viewModel()) {
                     pack.events.forEach { e ->
                         TextButton({ vm.openEvent(e.id) }) { Text("${e.title} — ${e.date.label(pack.years.label)}", fontSize = 13.sp) }
                     }
-                    ui.openEvent?.let { EventCard(it, pack.years.label, ui.user?.followEventId == it.id, vm) }
+                    ui.openEvent?.let { EventCard(it, pack.years.label, ui.user?.followEventId == it.id, ui.undetermined, vm) }
                     ui.user?.followEventId?.takeIf { it != ui.user?.openEventId }?.let {
                         OutlinedButton(vm::resumeFollow) { Text("استئناف المتابعة") }
+                    }
+                    HorizontalDivider()
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("خطوط الخريطة:", fontSize = 12.sp)
+                        LabelFonts.entries.forEach { f ->
+                            val label = if (f == LabelFonts.FONT_FACES) "font-faces (HarfBuzz)" else "glyph PBF"
+                            if (f == ui.labelFonts) Button({}) { Text(label, fontSize = 12.sp) }
+                            else OutlinedButton({ vm.setLabelFonts(f) }) { Text(label, fontSize = 12.sp) }
+                        }
                     }
                     HorizontalDivider()
                     UpdatePanel(ui, vm)
@@ -109,9 +120,10 @@ fun SpikeScreen(vm: SpikeViewModel = viewModel()) {
 }
 
 @Composable
-private fun YearControls(year: Int, min: Int, max: Int, label: String, onYear: (Int) -> Unit) {
+private fun YearControls(year: Int, min: Int, max: Int, label: String, eventOpen: Boolean, onYear: (Int) -> Unit) {
     var jump by remember { mutableStateOf("") }
-    Text("$label ${year.toArabicDigits()} — الخريطة تمثل حالة نهاية السنة", fontWeight = FontWeight.Bold)
+    val meaning = if (eventOpen) "الخريطة على زمن الحدث المفتوح" else "الخريطة تمثل حالة نهاية السنة"
+    Text("$label ${year.toArabicDigits()} — $meaning", fontWeight = FontWeight.Bold)
     Slider(
         value = year.toFloat(), onValueChange = { onYear(Math.round(it)) },
         valueRange = min.toFloat()..max.toFloat(), steps = (max - min - 1).coerceAtLeast(0),
@@ -123,13 +135,20 @@ private fun YearControls(year: Int, min: Int, max: Int, label: String, onYear: (
 }
 
 @Composable
-private fun EventCard(e: Event, yearLabel: String, isFollowPoint: Boolean, vm: SpikeViewModel) {
+private fun EventCard(e: Event, yearLabel: String, isFollowPoint: Boolean, undetermined: List<String>, vm: SpikeViewModel) {
     var showExplanation by remember(e.id) { mutableStateOf(false) }
     Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(e.title, fontWeight = FontWeight.Bold)
             Text(e.date.label(yearLabel), fontSize = 13.sp)
             e.place.note()?.let { Text(it, fontSize = 13.sp, color = Color(0xFF8A4B00)) }
+            Text("الخريطة تعرض حالة زمن الحدث بدقة تاريخه، لا نهاية السنة", fontSize = 12.sp)
+            if (undetermined.isNotEmpty()) {
+                Text(
+                    "ترتيب هذا التغيّر بالنسبة للحدث غير معروف، فتُعرض الحالة السابقة: ${undetermined.joinToString("، ")}",
+                    fontSize = 12.sp, color = Color(0xFF8A4B00),
+                )
+            }
             e.texts.forEach { t ->
                 Text(t.body, fontSize = 20.sp, lineHeight = 34.sp) // original text first
                 Text("المصدر: ${t.source.work}، ${t.source.locator}", fontSize = 12.sp)

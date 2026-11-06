@@ -17,4 +17,5 @@ for r in 50m 10m; do
 done
 cp node_modules/@expo-google-fonts/noto-naskh-arabic/400Regular/NotoNaskhArabic_400Regular.ttf .
 cp node_modules/@expo-google-fonts/noto-sans/400Regular/NotoSans_400Regular.ttf .
+cp node_modules/@expo-google-fonts/noto-naskh-arabic/LICENSE_FONT OFL.txt
 echo "sources ready in $(pwd)"
