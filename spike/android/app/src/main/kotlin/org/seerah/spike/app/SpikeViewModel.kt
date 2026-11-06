@@ -41,7 +41,7 @@ data class UiState(
     val offer: UpdateOffer? = null,
     val updateStatus: String? = null,
     val downloading: Boolean = false,
-    val labelFonts: LabelVariant = LabelVariant.NASKH, // experiment: compare variants in the UI (see spike README)
+    val labelFonts: LabelVariant = LabelVariant.PRESHAPED, // experiment default; every variant is one tap away (see spike README)
     val historical: JsonObject? = null,
     /** Spike: hide the panel so the map fills the screen (used for font screenshots). */
     val mapOnly: Boolean = false,
