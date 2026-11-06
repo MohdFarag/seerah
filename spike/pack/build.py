@@ -292,7 +292,9 @@ def build_preshaped_stack(out_dir: Path, pre: labels.Preshaper) -> int:
     asc = asc_face.size.ascender / 64 / SCALE
     for start in (0, 8192):
         glyphs = b"".join(
-            m for cp in range(start, start + 256) if (m := render_glyph(latin, cp, asc))
+            _field(3, 2, m)
+            for cp in range(start, start + 256)
+            if (m := render_glyph(latin, cp, asc))
         )
         write_range(stack_dir, stack, start, glyphs)
     by_range: dict[int, bytes] = {}
@@ -305,6 +307,50 @@ def build_preshaped_stack(out_dir: Path, pre: labels.Preshaper) -> int:
     for start, glyphs in by_range.items():
         write_range(stack_dir, stack, start, glyphs)
     return len(pre.words)
+
+
+def _read_varint(b: bytes, i: int) -> tuple[int, int]:
+    r = s = 0
+    while True:
+        c = b[i]
+        i += 1
+        r |= (c & 0x7F) << s
+        s += 7
+        if not c & 0x80:
+            return r, i
+
+
+def _fields(b: bytes):
+    i = 0
+    while i < len(b):
+        k, i = _read_varint(b, i)
+        num, wt = k >> 3, k & 7
+        if wt == 0:
+            v, i = _read_varint(b, i)
+        elif wt == 2:
+            n, i = _read_varint(b, i)
+            v, i = b[i : i + n], i + n
+        else:
+            raise ValueError(f"unexpected wire type {wt}")
+        yield num, wt, v
+
+
+def validate_glyphs(glyph_dir: Path) -> int:
+    """Every glyph must be a length-delimited message whose bitmap matches (w+6)*(h+6)."""
+    checked = 0
+    for pbf in glyph_dir.rglob("*.pbf"):
+        for num, wt, stack in _fields(pbf.read_bytes()):
+            assert num == 1 and wt == 2, f"{pbf}: bad top-level field"
+            for f2, wt2, g in _fields(stack):
+                if f2 != 3:
+                    continue
+                assert wt2 == 2, f"{pbf}: glyph not length-delimited"
+                d = {f: v for f, _, v in _fields(g)}
+                w, h, bmp = d.get(3, 0), d.get(4, 0), d.get(2, b"")
+                ok = (not bmp and w * h == 0) or len(bmp) == (w + 6) * (h + 6)
+                assert ok, f"{pbf}: glyph {d.get(1)} size"
+                checked += 1
+    return checked
 
 
 # --------------------------------------------------------------------- packaging
@@ -362,6 +408,7 @@ def main() -> int:
         content["content_version"] = ver
         (d / "content.json").write_text(json.dumps(content, ensure_ascii=False, indent=1))
         shutil.copy(HERE / "style.template.json", d / "style.template.json")
+        print(f"  {ver}: {validate_glyphs(d / 'glyphs')} glyphs validated")
         files = sorted(p for p in d.rglob("*") if p.is_file())
         manifest = {
             "format": 1,
