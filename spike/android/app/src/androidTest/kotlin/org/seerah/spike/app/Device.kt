@@ -77,7 +77,14 @@ object Device {
 
     /** Screenshot cropped to the map view only (for side-by-side font comparison). */
     fun screenshotMap(name: String) {
-        settle(1_000)
+        // Make sure the map drew a complete frame AFTER this point (not a stale frame from the
+        // previous variant), then let the surface settle before capturing.
+        val before = MapProbe.fullFrames.get()
+        main { MapProbe.map!!.triggerRepaint() }
+        val end = SystemClock.uptimeMillis() + 15_000
+        while (MapProbe.fullFrames.get() <= before && SystemClock.uptimeMillis() < end) SystemClock.sleep(100)
+        check(MapProbe.fullFrames.get() > before) { "no fully rendered frame for $name" }
+        settle(800)
         val bmp: Bitmap = instr.uiAutomation.takeScreenshot()
         val r = main {
             val v = MapProbe.view!!

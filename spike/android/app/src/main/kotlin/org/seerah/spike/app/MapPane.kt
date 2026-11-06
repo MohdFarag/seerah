@@ -44,6 +44,8 @@ const val EVENTS_LAYER = "event-markers"
 object MapProbe {
     @Volatile var map: MapLibreMap? = null
     @Volatile var view: MapView? = null
+    /** Count of fully rendered frames, to make sure a screenshot shows a NEW frame. */
+    val fullFrames = java.util.concurrent.atomic.AtomicLong()
     @Volatile var styleReady: String? = null // "<packVersion>/<fonts>"
     @Volatile var appliedView: ViewTime? = null
 }
@@ -87,7 +89,10 @@ fun MapPane(
         }
         lifecycle.addObserver(obs)
         mapView.addOnDidFinishRenderingFrameListener(
-            MapView.OnDidFinishRenderingFrameWithStatsListener { _, stats -> metrics.onMapFrame(stats.renderingTime) },
+            MapView.OnDidFinishRenderingFrameWithStatsListener { fully, stats ->
+                metrics.onMapFrame(stats.renderingTime)
+                if (fully) MapProbe.fullFrames.incrementAndGet()
+            },
         )
         mapView.getMapAsync { m ->
             map = m

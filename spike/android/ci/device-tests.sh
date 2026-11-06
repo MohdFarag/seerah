@@ -62,6 +62,8 @@ adb pull /sdcard/Android/data/$PKG/files/screens "$OUT/" || true
 adb shell dumpsys meminfo $PKG > "$OUT/meminfo.txt" || true
 kill $LOGCAT || true
 grep -E "SeerahSpike|SeerahDeviceTest|MapLibre|mbgl" "$OUT/logcat.txt" > "$OUT/logcat-app.txt" || true
+# Font experiment evidence in the job log (artifacts may not be reachable for every reviewer).
+grep -E "FONTS |no fully rendered|E/mbgl|W/mbgl" "$OUT/logcat.txt" | sed -E "s/^[0-9-]+ [0-9:.]+ //" | sort | uniq -c | sort -rn | head -80 || true
 ls -l app/build/outputs/apk/*/*.apk > "$OUT/apk-sizes.txt"
 cat "$OUT/summary.txt"
 exit $FAILED
