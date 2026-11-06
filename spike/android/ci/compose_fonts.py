@@ -23,7 +23,8 @@ VARIANTS = [
     "FONT_FACES",
     "FONT_FACES_REVERSED",
 ]
-SCENES = ["closeup-top", "closeup-bottom", "close", "mid", "far"]
+SCENES = ["row1", "row2", "row3", "row4", "all", "crowded", "far"]
+ROWS = ["row1", "row2", "row3", "row4"]
 
 
 def sheet(src: Path, scene: str, width: int) -> Image.Image | None:
@@ -48,6 +49,34 @@ def sheet(src: Path, scene: str, width: int) -> Image.Image | None:
     return out
 
 
+def band(src: Path, scene: str, width: int) -> Image.Image | None:
+    """Native-resolution horizontal band through the map centre, one variant per strip."""
+    strips = []
+    for v in VARIANTS:
+        p = src / f"{v}-{scene}.png"
+        if not p.exists():
+            continue
+        im = Image.open(p).convert("RGB")
+        h = round(im.height * 0.16)
+        cy = im.height // 2
+        strip = im.crop((0, cy - h, im.width, cy + h))
+        if strip.width > width:
+            strip = strip.resize((width, round(strip.height * width / strip.width)))
+        strips.append((v, strip))
+    if not strips:
+        return None
+    out = Image.new(
+        "RGB", (max(s.width for _, s in strips), sum(s.height + 22 for _, s in strips)), "white"
+    )
+    d = ImageDraw.Draw(out)
+    y = 0
+    for v, s in strips:
+        d.text((4, y + 5), f"{v}  [{scene}]", fill="black")
+        out.paste(s, (0, y + 20))
+        y += s.height + 22
+    return out
+
+
 def main() -> None:
     src, dst = Path(sys.argv[1]), Path(sys.argv[2])
     dst.mkdir(parents=True, exist_ok=True)
@@ -56,10 +85,13 @@ def main() -> None:
         if full is None:
             continue
         full.save(dst / f"sheet-{sc}.jpg", quality=90)
-        if "--log" in sys.argv and sc in ("closeup-top", "closeup-bottom", "close", "mid"):
-            small = sheet(src, sc, 440)
+        if sc in ROWS:
+            b = band(src, sc, 1080)
+            b.save(dst / f"closeup-{sc}.jpg", quality=92)
+        if "--log" in sys.argv:
+            small = band(src, sc, 900) if sc in ROWS else sheet(src, sc, 440)
             buf = io.BytesIO()
-            small.save(buf, "JPEG", quality=72)
+            small.save(buf, "JPEG", quality=70)
             print(f"===BEGIN-SHEET {sc} ===")
             b = base64.b64encode(buf.getvalue()).decode()
             for i in range(0, len(b), 4000):

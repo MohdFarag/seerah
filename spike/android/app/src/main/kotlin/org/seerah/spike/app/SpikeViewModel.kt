@@ -43,6 +43,8 @@ data class UiState(
     val downloading: Boolean = false,
     val labelFonts: LabelVariant = LabelVariant.NASKH, // experiment: compare variants in the UI (see spike README)
     val historical: JsonObject? = null,
+    /** Spike: hide the panel so the map fills the screen (used for font screenshots). */
+    val mapOnly: Boolean = false,
 ) {
     val year: Int get() = user?.year ?: 1
     val openEvent: Event? get() = user?.openEventId?.let { pack?.event(it) }
@@ -108,6 +110,8 @@ class SpikeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private data class Loaded(val dir: File, val pack: ContentPack, val rec: org.seerah.spike.core.Reconciled, val hist: JsonObject)
+
+    fun setMapOnly(on: Boolean) = _ui.update { it.copy(mapOnly = on) }
 
     fun setLabelFonts(f: LabelVariant) = _ui.update { it.copy(labelFonts = f) }
 

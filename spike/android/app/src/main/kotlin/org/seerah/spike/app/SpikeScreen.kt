@@ -75,7 +75,7 @@ fun SpikeScreen(vm: SpikeViewModel = viewModel()) {
                     onCameraIdle = vm::onCameraIdle, onEventClick = vm::openEvent,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
-                Column(
+                if (!ui.mapOnly) Column(
                     Modifier.fillMaxWidth().heightIn(max = 380.dp).verticalScroll(rememberScrollState()).padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
