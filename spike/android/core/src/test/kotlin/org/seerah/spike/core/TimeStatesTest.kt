@@ -88,6 +88,14 @@ class TimeStatesTest {
         assertEquals("""["==",["get","year"],2]""", TimeStates.markerFilter(2).toString())
     }
 
+    @Test fun `pre-shaped glyphs get a new fontstack name whenever the word table changes`() {
+        val v1 = StyleBuilder.fontstack(File(Fixtures.dist, "pack-1.0.0-test"), LabelVariant.PRESHAPED)
+        val v2 = StyleBuilder.fontstack(File(Fixtures.dist, "pack-1.1.0-test"), LabelVariant.PRESHAPED)
+        assertTrue(v1.startsWith("Preshaped ") && v2.startsWith("Preshaped "))
+        assertTrue(v1 != v2, "an update must not reuse cached glyphs of the previous word table")
+        assertTrue(File(Fixtures.dist, "pack-1.1.0-test/glyphs/$v2/57344-57599.pbf").isFile)
+    }
+
     @Test fun `style is local only and switches label font path`() {
         val dir = File(Fixtures.dist, "pack-1.0.0-test")
         val pbf = StyleBuilder.build(dir, LabelVariant.NASKH)

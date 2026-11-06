@@ -282,7 +282,7 @@ def build_glyph_stack(out_dir: Path, stack: str) -> int:
 
 def build_preshaped_stack(out_dir: Path, pre: labels.Preshaper) -> int:
     """Latin ranges for spaces/punctuation + one PUA glyph per HarfBuzz-shaped word."""
-    stack = labels.PRESHAPED_STACK
+    stack = pre.stack
     stack_dir = out_dir / stack
     stack_dir.mkdir(parents=True, exist_ok=True)
     latin = freetype.Face(str(labels.LATIN))
@@ -394,7 +394,12 @@ def main() -> int:
         pre = labels.Preshaper()
         hist = labels.annotate(hist, pre)
         (d / "historical.geojson").write_text(json.dumps(hist, ensure_ascii=False))
-        print(f"  {ver}: {build_preshaped_stack(d / 'glyphs', pre)} pre-shaped words")
+        print(
+            f"  {ver}: {build_preshaped_stack(d / 'glyphs', pre)} pre-shaped words -> {pre.stack}"
+        )
+        (d / "labels.json").write_text(
+            json.dumps({"preshaped_stack": pre.stack}, ensure_ascii=False)
+        )
         # Real font files for MapLibre Native `font-faces` (FreeType + HarfBuzz path).
         (d / "fonts").mkdir()
         shutil.copy(

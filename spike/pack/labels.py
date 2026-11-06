@@ -78,6 +78,18 @@ class Preshaper:
     def __init__(self) -> None:
         self.words: dict[str, int] = {}
 
+    @property
+    def stack(self) -> str:
+        """Fontstack name unique to this word->codepoint table.
+
+        MapLibre caches glyphs per fontstack name and range. Codepoints are reassigned when the
+        content changes, so each table needs its own name or an update would draw stale words.
+        """
+        import hashlib
+
+        table = "\n".join(f"{cp:x}={w}" for w, cp in sorted(self.words.items(), key=lambda x: x[1]))
+        return f"{PRESHAPED_STACK} {hashlib.sha256(table.encode()).hexdigest()[:10]}"
+
     def label(self, name: str) -> str:
         # PUA characters are strong LTR for the bidi algorithm, so the engine will not reorder
         # them: give it the words in visual (right-to-left) order, line by line.

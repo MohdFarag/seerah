@@ -54,10 +54,11 @@ object StyleBuilder {
         val historical = TimeStates.annotate(Json.parseToJsonElement(File(packDir, "historical.geojson").readText()).jsonObject)
         val sources = template["sources"]!!.jsonObject.toMutableMap()
         sources["historical"] = buildJsonObject { put("type", "geojson"); put("data", historical) }
+        val fontstack = fontstack(packDir, variant)
         val layers = buildJsonArray {
             template["layers"]!!.jsonArray.forEach { l ->
                 val lo = l.jsonObject
-                add(if (lo["id"]!!.jsonPrimitive.content in LABEL_LAYERS) labelLayer(lo, variant) else lo)
+                add(if (lo["id"]!!.jsonPrimitive.content in LABEL_LAYERS) labelLayer(lo, variant, fontstack) else lo)
             }
         }
         val style = buildJsonObject {
@@ -79,11 +80,19 @@ object StyleBuilder {
         return style
     }
 
-    private fun labelLayer(layer: JsonObject, v: LabelVariant): JsonObject {
+    /** Pre-shaped glyphs live in a per-content stack (see pack/labels.py); others use the variant's name. */
+    fun fontstack(packDir: File, v: LabelVariant): String {
+        if (v != LabelVariant.PRESHAPED) return v.fontstack
+        val meta = File(packDir, "labels.json")
+        require(meta.isFile) { "package has no labels.json for pre-shaped labels" }
+        return Json.parseToJsonElement(meta.readText()).jsonObject["preshaped_stack"]!!.jsonPrimitive.content
+    }
+
+    private fun labelLayer(layer: JsonObject, v: LabelVariant, fontstack: String): JsonObject {
         val id = layer["id"]!!.jsonPrimitive.content
         val layout = layer["layout"]!!.jsonObject.toMutableMap()
         val paint = layer["paint"]!!.jsonObject.toMutableMap()
-        layout["text-font"] = JsonArray(listOf(JsonPrimitive(v.fontstack)))
+        layout["text-font"] = JsonArray(listOf(JsonPrimitive(fontstack)))
         layout["text-field"] = JsonArray(listOf(JsonPrimitive("get"), JsonPrimitive(v.field)))
         if (v.field == "name_ps") layout["text-max-width"] = JsonPrimitive(100) // lines are pre-broken
         if (v.tuned) {
