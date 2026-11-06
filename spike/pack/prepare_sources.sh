@@ -7,7 +7,9 @@ cd "$(dirname "$0")"
 mkdir -p .cache && cd .cache
 [ -f package.json ] || echo '{"name":"spike-pack-sources","private":true}' > package.json
 npm i --no-audit --no-fund world-atlas@2.0.2 topojson-client@3.1.0 \
-  @expo-google-fonts/noto-naskh-arabic@0.4.5 @expo-google-fonts/noto-sans@0.4.2
+  @expo-google-fonts/noto-naskh-arabic@0.4.5 @expo-google-fonts/noto-sans@0.4.2 \
+  @expo-google-fonts/noto-sans-arabic@0.4.3 @expo-google-fonts/noto-kufi-arabic@0.4.3 \
+  @expo-google-fonts/amiri@0.4.1
 for r in 50m 10m; do
   node -e "
     const t=require('./node_modules/world-atlas/land-$r.json');
