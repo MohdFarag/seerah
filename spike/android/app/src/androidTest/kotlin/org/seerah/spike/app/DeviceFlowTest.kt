@@ -9,7 +9,7 @@ import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
-import org.seerah.spike.core.LabelFonts
+import org.seerah.spike.core.LabelVariant
 import org.seerah.spike.core.TimePoint
 import org.seerah.spike.core.ViewTime
 import kotlin.math.abs
@@ -29,7 +29,7 @@ class DeviceFlowTest {
             Device.main { vm.setYear(3) }
             Device.camera(24.0, 39.4, 6.3)
             assertTrue("land from the local PMTiles must render", Device.renderedCount("land") > 0)
-            for (f in LabelFonts.entries) {
+            for (f in listOf(LabelVariant.NASKH, LabelVariant.FONT_FACES)) {
                 Device.main { vm.setLabelFonts(f) }
                 Device.waitStyle("1.0.0-test/$f")
                 Device.settle()
@@ -41,8 +41,8 @@ class DeviceFlowTest {
                 Device.screenshot("arabic-labels-zoom-$f")
                 Device.camera(24.0, 39.4, 6.3)
             }
-            Device.main { vm.setLabelFonts(LabelFonts.PBF) }
-            Device.waitStyle("1.0.0-test/PBF")
+            Device.main { vm.setLabelFonts(LabelVariant.NASKH) }
+            Device.waitStyle("1.0.0-test/NASKH")
             Device.camera(20.0, 40.0, 1.3)
             Device.screenshot("world-overview")
         }

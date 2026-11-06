@@ -65,7 +65,7 @@ class TimeStatesTest {
         val annotated = TimeStates.annotate(hist)
         val style = Json.parseToJsonElement(File(Fixtures.dist, "pack-1.0.0-test/style.template.json").readText()) as JsonObject
         val layers = TimeStates.timeLayers(style)
-        assertEquals(setOf("region-fill", "region-line", "region-label", "landmark-dot", "place-label"), layers.keys)
+        assertEquals(setOf("region-fill", "region-line", "region-label", "landmark-dot", "place-label", "sample-label"), layers.keys)
         val f = TimeStates.filter(layers["region-fill"], eventView("e2")).toString()
         assertEquals("""["all",["==",["get","kind"],"region"],["<=",["get","from_e"],30701],[">",["coalesce",["get","to_e"],2147483647],30701]]""", f)
         // Evaluate the same comparison on the annotated keys for every view.
@@ -90,11 +90,11 @@ class TimeStatesTest {
 
     @Test fun `style is local only and switches label font path`() {
         val dir = File(Fixtures.dist, "pack-1.0.0-test")
-        val pbf = StyleBuilder.build(dir, LabelFonts.PBF)
-        val ff = StyleBuilder.build(dir, LabelFonts.FONT_FACES)
+        val pbf = StyleBuilder.build(dir, LabelVariant.NASKH)
+        val ff = StyleBuilder.build(dir, LabelVariant.FONT_FACES)
         assertFalse("font-faces" in pbf)
-        assertTrue(""""font-faces":{"Noto Naskh Arabic Regular":[{"url":"file://${dir.absolutePath}/fonts/NotoNaskhArabic-Regular.ttf"""" in ff)
-        assertTrue(File(dir, "fonts/NotoNaskhArabic-Regular.ttf").isFile)
+        assertTrue(""""font-faces":{"Noto Sans Arabic Medium":[{"url":"file://${dir.absolutePath}/fonts/NotoSansArabic-Medium.ttf"""" in ff)
+        assertTrue(File(dir, "fonts/NotoSansArabic-Medium.ttf").isFile)
         assertTrue("\"from_e\"" in ff, "historical data is inlined with time keys")
     }
 }

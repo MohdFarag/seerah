@@ -75,6 +75,21 @@ object Device {
         m.queryRenderedFeatures(RectF(0f, 0f, m.width.toFloat(), m.height.toFloat()), *layers).size
     }
 
+    /** Screenshot cropped to the map view only (for side-by-side font comparison). */
+    fun screenshotMap(name: String) {
+        settle(1_000)
+        val bmp: Bitmap = instr.uiAutomation.takeScreenshot()
+        val r = main {
+            val v = MapProbe.view!!
+            val loc = IntArray(2).also { v.getLocationOnScreen(it) }
+            intArrayOf(loc[0], loc[1], v.width, v.height)
+        }
+        val crop = Bitmap.createBitmap(bmp, r[0], r[1], minOf(r[2], bmp.width - r[0]), minOf(r[3], bmp.height - r[1]))
+        val dir = File(instr.targetContext.getExternalFilesDir(null), "fonts").apply { mkdirs() }
+        File(dir, "$name.png").outputStream().use { crop.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        Log.i(TAG, "map screenshot $name")
+    }
+
     fun screenshot(name: String) {
         settle(1_000)
         val bmp: Bitmap = instr.uiAutomation.takeScreenshot()

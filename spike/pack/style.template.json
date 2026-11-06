@@ -13,64 +13,185 @@
     }
   },
   "layers": [
-    { "id": "sea", "type": "background", "paint": { "background-color": "#c9d6d3" } },
+    {
+      "id": "sea",
+      "type": "background",
+      "paint": {
+        "background-color": "#c9d6d3"
+      }
+    },
     {
       "id": "land",
       "type": "fill",
       "source": "base",
       "source-layer": "land",
-      "paint": { "fill-color": "#e8dcc2", "fill-antialias": true }
+      "paint": {
+        "fill-color": "#e8dcc2",
+        "fill-antialias": true
+      }
     },
     {
       "id": "region-fill",
       "type": "fill",
       "source": "historical",
-      "filter": ["==", ["get", "kind"], "region"],
-      "paint": { "fill-color": "#9a5b2f", "fill-opacity": 0.12 }
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "region"
+      ],
+      "paint": {
+        "fill-color": "#9a5b2f",
+        "fill-opacity": 0.12
+      }
     },
     {
       "id": "region-line",
       "type": "line",
       "source": "historical",
-      "filter": ["==", ["get", "kind"], "region"],
-      "paint": { "line-color": "#7a3f1a", "line-width": 1.6, "line-dasharray": [3, 2] }
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "region"
+      ],
+      "paint": {
+        "line-color": "#7a3f1a",
+        "line-width": 1.6,
+        "line-dasharray": [
+          3,
+          2
+        ]
+      }
     },
     {
       "id": "region-label",
       "type": "symbol",
       "source": "historical",
-      "filter": ["==", ["get", "kind"], "region"],
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "region"
+      ],
       "layout": {
-        "text-field": ["get", "name"],
-        "text-font": ["Noto Naskh Arabic Regular"],
+        "text-field": [
+          "get",
+          "name"
+        ],
+        "text-font": [
+          "Noto Naskh Arabic Regular"
+        ],
         "text-size": 15,
         "symbol-placement": "point"
       },
-      "paint": { "text-color": "#6b3415", "text-halo-color": "#f4ecdc", "text-halo-width": 1.5 }
+      "paint": {
+        "text-color": "#6b3415",
+        "text-halo-color": "#f4ecdc",
+        "text-halo-width": 1.5
+      }
     },
     {
       "id": "landmark-dot",
       "type": "circle",
       "source": "historical",
-      "filter": ["==", ["get", "kind"], "landmark"],
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "landmark"
+      ],
       "minzoom": 5,
-      "paint": { "circle-radius": 5, "circle-color": "#2f5d50", "circle-stroke-color": "#fff", "circle-stroke-width": 1.5 }
+      "paint": {
+        "circle-radius": 5,
+        "circle-color": "#2f5d50",
+        "circle-stroke-color": "#fff",
+        "circle-stroke-width": 1.5
+      }
     },
     {
       "id": "place-label",
       "type": "symbol",
       "source": "historical",
-      "filter": ["any", ["==", ["get", "kind"], "place"], ["==", ["get", "kind"], "landmark"]],
+      "filter": [
+        "any",
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "place"
+        ],
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "landmark"
+        ]
+      ],
       "minzoom": 4,
       "layout": {
-        "text-field": ["get", "name"],
-        "text-font": ["Noto Naskh Arabic Regular"],
+        "text-field": [
+          "get",
+          "name"
+        ],
+        "text-font": [
+          "Noto Naskh Arabic Regular"
+        ],
         "text-size": 17,
         "text-max-width": 9,
-        "text-offset": [0, 1.0],
+        "text-offset": [
+          0,
+          1.0
+        ],
         "text-anchor": "top"
       },
-      "paint": { "text-color": "#2b2116", "text-halo-color": "#fbf6ea", "text-halo-width": 1.6 }
+      "paint": {
+        "text-color": "#2b2116",
+        "text-halo-color": "#fbf6ea",
+        "text-halo-width": 1.6
+      }
+    },
+    {
+      "id": "sample-label",
+      "type": "symbol",
+      "source": "historical",
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "sample"
+      ],
+      "minzoom": 4,
+      "layout": {
+        "text-field": [
+          "get",
+          "name"
+        ],
+        "text-font": [
+          "Noto Naskh Arabic Regular"
+        ],
+        "text-size": 17,
+        "text-max-width": 9
+      },
+      "paint": {
+        "text-color": "#2b2116",
+        "text-halo-color": "#fbf6ea",
+        "text-halo-width": 1.6
+      }
     }
   ]
 }

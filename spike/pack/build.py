@@ -22,6 +22,7 @@ import zipfile
 from pathlib import Path
 
 import freetype
+import labels
 import mapbox_vector_tile
 import numpy as np
 from pmtiles.tile import Compression, TileType, zxy_to_tileid
@@ -49,7 +50,6 @@ PACKS = [
     {"version": "1.0.0-test", "content": "content.v1.json", "historical": "historical.v1.geojson"},
     {"version": "1.1.0-test", "content": "content.v2.json", "historical": "historical.v2.geojson"},
 ]
-FONTSTACK = "Noto Naskh Arabic Regular"
 # Unicode ranges (256 each) needed for Arabic map labels after shaping, plus Latin/punct.
 GLYPH_RANGES = [0, 256, 1536, 1792, 8192, 64256, 64512, 64768, 65024]
 
@@ -207,26 +207,23 @@ def _zigzag(n: int) -> int:
     return (n << 1) ^ (n >> 31)
 
 
-def render_glyph(face: freetype.Face, cp: int, ascender: float) -> bytes | None:
-    idx = face.get_char_index(cp)
-    if idx == 0:
-        return None
-    face.load_glyph(idx, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_NO_HINTING)
-    g = face.glyph
-    bmp = g.bitmap
-    advance = round(g.advance.x / 64 / SCALE)
-    w = math.ceil(bmp.width / SCALE)
-    h = math.ceil(bmp.rows / SCALE)
-    left = math.floor(g.bitmap_left / SCALE)
-    top = math.ceil(g.bitmap_top / SCALE)
+def sdf_glyph(
+    cp: int, arr: np.ndarray, left_hi: float, top_hi: float, adv_hi: float, asc: float
+) -> bytes:
+    """Encode one glyph from a supersampled (SCALE x) coverage bitmap into the PBF glyph message."""
+    advance = round(adv_hi / SCALE)
+    rows, cols = arr.shape if arr.size else (0, 0)
+    w = math.ceil(cols / SCALE)
+    h = math.ceil(rows / SCALE)
+    left = math.floor(left_hi / SCALE)
+    top = math.ceil(top_hi / SCALE)
     msg = _field(1, 0, cp)
     if w == 0 or h == 0:
         msg += _field(3, 0, 0) + _field(4, 0, 0)  # no bitmap field for empty glyphs
     else:
         pad = BUFFER * SCALE + SCALE
         hi = np.zeros((h * SCALE + 2 * pad, w * SCALE + 2 * pad), dtype=bool)
-        arr = np.array(bmp.buffer, dtype=np.uint8).reshape(bmp.rows, bmp.pitch)[:, : bmp.width]
-        hi[pad : pad + bmp.rows, pad : pad + bmp.width] = arr >= 128
+        hi[pad : pad + rows, pad : pad + cols] = arr >= 128
         d_out = distance_transform_edt(~hi)
         d_in = distance_transform_edt(hi)
         dist = (d_out - d_in) / SCALE  # in 24px units, positive outside
@@ -237,34 +234,77 @@ def render_glyph(face: freetype.Face, cp: int, ascender: float) -> bytes | None:
         d = dist[np.ix_(ys, xs)]
         val = np.clip(255 - 255 * (d / RADIUS + CUTOFF), 0, 255).astype(np.uint8)
         msg += _field(2, 2, val.tobytes()) + _field(3, 0, w) + _field(4, 0, h)
-    msg += _field(5, 0, _zigzag(left)) + _field(6, 0, _zigzag(top - round(ascender)))
+    msg += _field(5, 0, _zigzag(left)) + _field(6, 0, _zigzag(top - round(asc)))
     msg += _field(7, 0, advance)
     return msg
 
 
-def build_glyphs(out_dir: Path) -> int:
-    faces = []
-    for name in ("NotoNaskhArabic_400Regular.ttf", "NotoSans_400Regular.ttf"):
-        face = freetype.Face(str(CACHE / name))
-        face.set_pixel_sizes(0, SIZE * SCALE)
-        faces.append(face)
+def render_glyph(face: freetype.Face, cp: int, asc: float) -> bytes | None:
+    idx = face.get_char_index(cp)
+    if idx == 0:
+        return None
+    face.load_glyph(idx, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_NO_HINTING)
+    g = face.glyph
+    b = g.bitmap
+    arr = (
+        np.array(b.buffer, dtype=np.uint8).reshape(b.rows, b.pitch)[:, : b.width]
+        if b.rows
+        else np.zeros((0, 0), np.uint8)
+    )
+    return sdf_glyph(cp, arr, g.bitmap_left, g.bitmap_top, g.advance.x / 64, asc)
+
+
+def write_range(stack_dir: Path, stack: str, start: int, glyphs: bytes) -> None:
+    end = start + 255
+    msg = _field(1, 2, stack.encode()) + _field(2, 2, f"{start}-{end}".encode()) + glyphs
+    (stack_dir / f"{start}-{end}.pbf").write_bytes(_field(1, 2, msg))
+
+
+def build_glyph_stack(out_dir: Path, stack: str) -> int:
+    """Arabic font first, Noto Sans as fallback for Latin and punctuation."""
+    faces = labels.stack_faces(stack, SIZE * SCALE)
     asc = faces[0].size.ascender / 64 / SCALE
-    stack_dir = out_dir / FONTSTACK
+    stack_dir = out_dir / stack
     stack_dir.mkdir(parents=True, exist_ok=True)
     total = 0
     for start in GLYPH_RANGES:
-        end = start + 255
         glyphs = b""
-        for cp in range(start, end + 1):
-            for face in faces:  # Naskh first, then Noto Sans fallback
+        for cp in range(start, start + 256):
+            for face in faces:
                 m = render_glyph(face, cp, asc)
                 if m is not None:
                     glyphs += _field(3, 2, m)
                     total += 1
                     break
-        stack = _field(1, 2, FONTSTACK.encode()) + _field(2, 2, f"{start}-{end}".encode()) + glyphs
-        (stack_dir / f"{start}-{end}.pbf").write_bytes(_field(1, 2, stack))
+        write_range(stack_dir, stack, start, glyphs)
     return total
+
+
+def build_preshaped_stack(out_dir: Path, pre: labels.Preshaper) -> int:
+    """Latin ranges for spaces/punctuation + one PUA glyph per HarfBuzz-shaped word."""
+    stack = labels.PRESHAPED_STACK
+    stack_dir = out_dir / stack
+    stack_dir.mkdir(parents=True, exist_ok=True)
+    latin = freetype.Face(str(labels.LATIN))
+    latin.set_pixel_sizes(0, SIZE * SCALE)
+    asc_face = freetype.Face(str(labels.PRESHAPED_FONT))
+    asc_face.set_pixel_sizes(0, SIZE * SCALE)
+    asc = asc_face.size.ascender / 64 / SCALE
+    for start in (0, 8192):
+        glyphs = b"".join(
+            m for cp in range(start, start + 256) if (m := render_glyph(latin, cp, asc))
+        )
+        write_range(stack_dir, stack, start, glyphs)
+    by_range: dict[int, bytes] = {}
+    for word, cp in pre.words.items():
+        arr, left, top, adv = labels.shape_word_bitmap(word, SIZE * SCALE)
+        start = cp - cp % 256
+        by_range[start] = by_range.get(start, b"") + _field(
+            3, 2, sdf_glyph(cp, arr, left, top, adv, asc)
+        )
+    for start, glyphs in by_range.items():
+        write_range(stack_dir, stack, start, glyphs)
+    return len(pre.words)
 
 
 # --------------------------------------------------------------------- packaging
@@ -294,22 +334,30 @@ def main() -> int:
     print("building base map tiles…")
     counts = build_basemap(shared / "basemap.pmtiles")
     print("  tiles per zoom:", counts)
-    print("building glyphs…")
-    n_glyphs = build_glyphs(shared / "glyphs")
-    print(f"  {n_glyphs} glyphs")
+    print("building glyph stacks…")
+    for stack in labels.STACKS:
+        print(f"  {stack}: {build_glyph_stack(shared / 'glyphs', stack)} glyphs")
 
     report = []
     for spec in PACKS:
         ver = spec["version"]
         d = DIST / f"pack-{ver}"
         shutil.copytree(shared, d)
-        shutil.copy(HERE / "src" / spec["historical"], d / "historical.geojson")
-        # Real font file for MapLibre Native `font-faces` (FreeType + HarfBuzz path).
+        # Label experiment: sample grid + pre-shaped names (see labels.py).
+        hist = labels.merge_samples(json.loads((HERE / "src" / spec["historical"]).read_text()))
+        pre = labels.Preshaper()
+        hist = labels.annotate(hist, pre)
+        (d / "historical.geojson").write_text(json.dumps(hist, ensure_ascii=False))
+        print(f"  {ver}: {build_preshaped_stack(d / 'glyphs', pre)} pre-shaped words")
+        # Real font files for MapLibre Native `font-faces` (FreeType + HarfBuzz path).
         (d / "fonts").mkdir()
         shutil.copy(
             CACHE / "NotoNaskhArabic_400Regular.ttf", d / "fonts" / "NotoNaskhArabic-Regular.ttf"
         )
-        shutil.copy(CACHE / "OFL.txt", d / "fonts" / "OFL.txt")  # SIL OFL 1.1 requires the license
+        shutil.copy(labels.FONT_FACES_TTF, d / "fonts" / "NotoSansArabic-Medium.ttf")
+        # SIL OFL 1.1 requires the license to travel with the fonts.
+        shutil.copy(labels.LICENSES["Noto"], d / "fonts" / "OFL-Noto.txt")
+        shutil.copy(labels.LICENSES["Amiri"], d / "fonts" / "OFL-Amiri.txt")
         content = json.loads((HERE / "src" / spec["content"]).read_text())
         content["content_version"] = ver
         (d / "content.json").write_text(json.dumps(content, ensure_ascii=False, indent=1))

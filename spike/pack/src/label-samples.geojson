@@ -1,0 +1,246 @@
+{
+ "type": "FeatureCollection",
+ "note": "Font comparison samples: real names on a synthetic grid. Positions are not real locations.",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.6,
+     28.4
+    ]
+   },
+   "properties": {
+    "entity": "sample-01",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "مَكَّةُ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     36.65,
+     28.4
+    ]
+   },
+   "properties": {
+    "entity": "sample-02",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "المَدِينَةُ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     37.7,
+     28.4
+    ]
+   },
+   "properties": {
+    "entity": "sample-03",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "بِئْرٌ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.6,
+     27.85
+    ]
+   },
+   "properties": {
+    "entity": "sample-04",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "وَادِي القُرَى",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     36.65,
+     27.85
+    ]
+   },
+   "properties": {
+    "entity": "sample-05",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "الأَبْوَاءُ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     37.7,
+     27.85
+    ]
+   },
+   "properties": {
+    "entity": "sample-06",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "بِئْرُ أَرِيسٍ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.6,
+     27.3
+    ]
+   },
+   "properties": {
+    "entity": "sample-07",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "جَبَلُ أُحُدٍ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     36.65,
+     27.3
+    ]
+   },
+   "properties": {
+    "entity": "sample-08",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "مَاءُ بَدْرٍ ١٢",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     37.7,
+     27.3
+    ]
+   },
+   "properties": {
+    "entity": "sample-09",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "المَحَطَّةُ ٣٤ — 56 كم",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.6,
+     26.75
+    ]
+   },
+   "properties": {
+    "entity": "sample-10",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "النَّبِيُّ ﷺ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     36.65,
+     26.75
+    ]
+   },
+   "properties": {
+    "entity": "sample-11",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "سَ سِ لَ كَّ ءٌ",
+    "test": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     37.7,
+     26.75
+    ]
+   },
+   "properties": {
+    "entity": "sample-12",
+    "kind": "sample",
+    "state": "a",
+    "from": {
+     "year": 1
+    },
+    "name": "مكة المدينة بلا تشكيل",
+    "test": true
+   }
+  }
+ ]
+}

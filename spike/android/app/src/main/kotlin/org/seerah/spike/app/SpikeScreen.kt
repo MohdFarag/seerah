@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -37,7 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import org.seerah.spike.core.Event
-import org.seerah.spike.core.LabelFonts
+import org.seerah.spike.core.LabelVariant
 import org.seerah.spike.core.toArabicDigits
 
 /** Minimal spike UI. Not a product design: layout and controls exist only to exercise the tech. */
@@ -98,12 +99,11 @@ fun SpikeScreen(vm: SpikeViewModel = viewModel()) {
                         OutlinedButton(vm::resumeFollow) { Text("استئناف المتابعة") }
                     }
                     HorizontalDivider()
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("خطوط الخريطة:", fontSize = 12.sp)
-                        LabelFonts.entries.forEach { f ->
-                            val label = if (f == LabelFonts.FONT_FACES) "font-faces (HarfBuzz)" else "glyph PBF"
-                            if (f == ui.labelFonts) Button({}) { Text(label, fontSize = 12.sp) }
-                            else OutlinedButton({ vm.setLabelFonts(f) }) { Text(label, fontSize = 12.sp) }
+                    Text("خط أسماء الخريطة (تجربة):", fontSize = 12.sp)
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LabelVariant.entries.forEach { f ->
+                            if (f == ui.labelFonts) Button({}) { Text(f.title, fontSize = 12.sp) }
+                            else OutlinedButton({ vm.setLabelFonts(f) }) { Text(f.title, fontSize = 12.sp) }
                         }
                     }
                     HorizontalDivider()

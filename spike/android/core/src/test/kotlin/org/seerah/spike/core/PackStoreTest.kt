@@ -20,7 +20,7 @@ class PackStoreTest {
         assertEquals(InstallResult.Installed("1.1.0-test", "1.0.0-test"), r)
         val content = ContentPack.parse(File(store.activeDir(), "content.json").readText())
         assertNotNull(content.event("e4"), "update added an event")
-        assertTrue(StyleBuilder.build(store.activeDir()!!, LabelFonts.PBF).contains("file://${store.activeDir()!!.absolutePath}/basemap.pmtiles"))
+        assertTrue(StyleBuilder.build(store.activeDir()!!, LabelVariant.NASKH).contains("file://${store.activeDir()!!.absolutePath}/basemap.pmtiles"))
     }
 
     @Test fun `corrupted package is rejected and the working one stays active`() {

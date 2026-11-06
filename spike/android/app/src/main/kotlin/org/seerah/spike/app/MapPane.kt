@@ -31,7 +31,7 @@ import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.seerah.spike.core.CameraSpec
 import org.seerah.spike.core.ContentPack
-import org.seerah.spike.core.LabelFonts
+import org.seerah.spike.core.LabelVariant
 import org.seerah.spike.core.StyleBuilder
 import org.seerah.spike.core.TimeStates
 import org.seerah.spike.core.ViewTime
@@ -43,6 +43,7 @@ const val EVENTS_LAYER = "event-markers"
 /** Lets instrumented tests inspect what MapLibre actually rendered. Spike-only. */
 object MapProbe {
     @Volatile var map: MapLibreMap? = null
+    @Volatile var view: MapView? = null
     @Volatile var styleReady: String? = null // "<packVersion>/<fonts>"
     @Volatile var appliedView: ViewTime? = null
 }
@@ -57,7 +58,7 @@ fun MapPane(
     pack: ContentPack,
     view: ViewTime,
     markerYear: Int,
-    fonts: LabelFonts,
+    fonts: LabelVariant,
     cameraRequest: Pair<Int, CameraSpec>?,
     metrics: Metrics,
     onCameraIdle: (lon: Double, lat: Double, zoom: Double) -> Unit,
@@ -91,6 +92,7 @@ fun MapPane(
         mapView.getMapAsync { m ->
             map = m
             MapProbe.map = m
+            MapProbe.view = mapView
             m.addOnCameraIdleListener {
                 val c = m.cameraPosition
                 c.target?.let { onCameraIdle(it.longitude, it.latitude, c.zoom) }

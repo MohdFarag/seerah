@@ -98,6 +98,11 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           working-directory: spike/android
           script: OUT=../../device-results-${{ matrix.device }} ./ci/device-tests.sh
+      - name: Font comparison sheets
+        if: always()
+        run: |
+          pip install pillow==11.3.0
+          python3 spike/android/ci/compose_fonts.py device-results-${{ matrix.device }}/fonts device-results-${{ matrix.device }}/sheets --log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

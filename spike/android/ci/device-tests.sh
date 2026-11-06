@@ -36,6 +36,9 @@ adb install -r "$APK"
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb logcat -c; adb logcat -v time > "$OUT/logcat.txt" 2>&1 & LOGCAT=$!
 
+run 0-fonts -e class $PKG.app.FontComparisonTest
+adb pull /sdcard/Android/data/$PKG/files/fonts "$OUT/" || true
+adb shell pm clear $PKG  # fonts phase must not leave state behind for the flow phases
 run 1-flow -e class $PKG.app.DeviceFlowTest
 
 adb shell am force-stop $PKG; net off

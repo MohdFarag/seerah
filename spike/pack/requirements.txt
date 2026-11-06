@@ -4,3 +4,4 @@ numpy==2.5.3
 pmtiles==3.8.1
 scipy==1.18.1
 shapely==2.2.0
+uharfbuzz==0.57.0

@@ -15,7 +15,7 @@ import org.seerah.spike.core.ContentPack
 import org.seerah.spike.core.DownloadResult
 import org.seerah.spike.core.Event
 import org.seerah.spike.core.InstallResult
-import org.seerah.spike.core.LabelFonts
+import org.seerah.spike.core.LabelVariant
 import org.seerah.spike.core.TimeStates
 import org.seerah.spike.core.ViewTime
 import kotlinx.serialization.json.Json
@@ -41,7 +41,7 @@ data class UiState(
     val offer: UpdateOffer? = null,
     val updateStatus: String? = null,
     val downloading: Boolean = false,
-    val labelFonts: LabelFonts = LabelFonts.PBF, // font-faces renders Arabic reversed/unjoined in 13.7.1 (see spike README)
+    val labelFonts: LabelVariant = LabelVariant.NASKH, // experiment: compare variants in the UI (see spike README)
     val historical: JsonObject? = null,
 ) {
     val year: Int get() = user?.year ?: 1
@@ -109,7 +109,7 @@ class SpikeViewModel(app: Application) : AndroidViewModel(app) {
 
     private data class Loaded(val dir: File, val pack: ContentPack, val rec: org.seerah.spike.core.Reconciled, val hist: JsonObject)
 
-    fun setLabelFonts(f: LabelFonts) = _ui.update { it.copy(labelFonts = f) }
+    fun setLabelFonts(f: LabelVariant) = _ui.update { it.copy(labelFonts = f) }
 
     private fun next(c: CameraSpec) = (++cameraSeq) to c
 
