@@ -74,9 +74,14 @@ jobs:
         with: { name: build-for-device-tests, path: dl }
       - name: Place build outputs
         run: |
-          mkdir -p spike/android/app/build/outputs spike/pack
-          cp -r dl/spike/android/app/build/outputs/apk spike/android/app/build/outputs/
-          cp -r dl/spike/pack/dist spike/pack/
+          # upload-artifact drops the common path prefix, so locate the folders instead of assuming it.
+          apk=$(find dl -type d -path '*app/build/outputs/apk' | head -1)
+          dist=$(find dl -type d -path '*pack/dist' | head -1)
+          test -n "$apk" && test -n "$dist"
+          mkdir -p spike/android/app/build/outputs
+          cp -r "$apk" spike/android/app/build/outputs/
+          cp -r "$dist" spike/pack/
+          find spike/android/app/build/outputs -name '*.apk'
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
