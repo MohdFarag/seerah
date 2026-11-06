@@ -8,7 +8,7 @@
 
 ## تجربة خطوط أسماء الخريطة (Android)
 
-التشغيلة: [CI run 9](https://github.com/MohdFarag/seerah/actions/runs/42266127494). الصور من محاكي Android 14 (pixel_6)، ومجمعة في [`docs/fonts/`](docs/fonts/).
+آخر تشغيلة ناجحة بكل المراحل والـAPK: [CI run 12](https://github.com/MohdFarag/seerah/actions/runs/42275483277). صور المقارنة من [run 9](https://github.com/MohdFarag/seerah/actions/runs/42266127494) على محاكي Android 14 (pixel_6)، ومجمعة في [`docs/fonts/`](docs/fonts/).
 
 ### التشخيص: من أين يأتي سوء التشكيل في glyph PBF؟
 
