@@ -1,0 +1,31 @@
+name: Spike APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["app/**", "map-data/**", ".github/workflows/spike-apk.yml"]
+  pull_request:
+    paths: ["app/**", "map-data/**", ".github/workflows/spike-apk.yml"]
+permissions:
+  contents: read
+concurrency:
+  group: spike-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - name: Build debug APKs
+        working-directory: app
+        run: ./gradlew :spike:assembleDebug --console=plain
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spike-apks
+          path: app/spike/build/outputs/apk/*/debug/*.apk
+          if-no-files-found: error

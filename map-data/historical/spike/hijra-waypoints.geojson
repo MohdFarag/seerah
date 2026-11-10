@@ -1,0 +1,455 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "pre-01",
+      "properties": {
+        "id": "pre-01",
+        "section": "pre-departure",
+        "seq": 1,
+        "stage": null,
+        "name": "منزل النبي ﷺ بمكة",
+        "position": "source",
+        "when_source": "يوم الخميس، ليلة الجمعة؛ 26 صفر 1هـ (26/2/1هـ)؛ 8 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.8280833,
+          21.4246389
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "pre-02",
+      "properties": {
+        "id": "pre-02",
+        "section": "pre-departure",
+        "seq": 2,
+        "stage": null,
+        "name": "الحزورة",
+        "position": "source",
+        "when_source": "يوم الخميس، ليلة الجمعة؛ 26 صفر 1هـ؛ 8 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.8260083,
+          21.4217417
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "pre-03",
+      "properties": {
+        "id": "pre-03",
+        "section": "pre-departure",
+        "seq": 3,
+        "stage": null,
+        "name": "منزل أبي بكر الصديق رضي الله عنه",
+        "position": "source",
+        "when_source": "يوم الخميس، ليلة الجمعة؛ 26 صفر 1هـ؛ 8 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.8238472,
+          21.4193778
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-01",
+      "properties": {
+        "id": "hijra-01",
+        "section": "route",
+        "seq": 1,
+        "stage": 1,
+        "name": "غار ثور",
+        "position": "source",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.8531778,
+          21.3751472
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-02",
+      "properties": {
+        "id": "hijra-02",
+        "section": "route",
+        "seq": 2,
+        "stage": 1,
+        "name": "أسفل مكة",
+        "position": "source",
+        "when_source": "يوم الأحد ليلة الاثنين، 29 صفر 1هـ، الموافق 11 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.8404083,
+          21.3683444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-03",
+      "properties": {
+        "id": "hijra-03",
+        "section": "route",
+        "seq": 3,
+        "stage": 1,
+        "name": "الساحل",
+        "position": "source",
+        "when_source": "يوم الأحد ليلة الاثنين، 29 صفر 1هـ، الموافق 11 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.7109472,
+          21.3434083
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-04",
+      "properties": {
+        "id": "hijra-04",
+        "section": "route",
+        "seq": 4,
+        "stage": 1,
+        "name": "بطن مر",
+        "position": "source",
+        "when_source": "يوم الاثنين، 1 ربيع الأول 1هـ، الموافق 12 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.6303528,
+          21.5085833
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-05",
+      "properties": {
+        "id": "hijra-05",
+        "section": "route",
+        "seq": 5,
+        "stage": 1,
+        "name": "كراع الغميم",
+        "position": "source",
+        "when_source": "يوم الاثنين، 1 ربيع الأول 1هـ، الموافق 12 سبتمبر 622م؛ يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.4549056,
+          21.827375
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-06",
+      "properties": {
+        "id": "hijra-06",
+        "section": "route",
+        "seq": 6,
+        "stage": 2,
+        "name": "أسفل عسفان",
+        "position": "source",
+        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3123972,
+          21.9326389
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-07",
+      "properties": {
+        "id": "hijra-07",
+        "section": "route",
+        "seq": 7,
+        "stage": 2,
+        "name": "أسفل أمج",
+        "position": "source",
+        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2007,
+          22.1359917
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-08",
+      "properties": {
+        "id": "hijra-08",
+        "section": "route",
+        "seq": 8,
+        "stage": 2,
+        "name": "خيمتا أم معبد",
+        "position": "source",
+        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2492306,
+          22.3357611
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-09",
+      "properties": {
+        "id": "hijra-09",
+        "section": "route",
+        "seq": 9,
+        "stage": 2,
+        "name": "قديد",
+        "position": "source",
+        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2858472,
+          22.3262778
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-10",
+      "properties": {
+        "id": "hijra-10",
+        "section": "route",
+        "seq": 10,
+        "stage": 2,
+        "name": "معارضة الطريق بعد قديد",
+        "position": "source",
+        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2550917,
+          22.3741833
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-11-a",
+      "properties": {
+        "id": "hijra-11-a",
+        "section": "route",
+        "seq": 11,
+        "stage": 2,
+        "name": "حادثة سراقة (وادي كلية)",
+        "position": "candidate",
+        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3789667,
+          22.5658417
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-11-b",
+      "properties": {
+        "id": "hijra-11-b",
+        "section": "route",
+        "seq": 11,
+        "stage": 2,
+        "name": "حادثة سراقة (وادي كلية)",
+        "position": "candidate",
+        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.1603556,
+          22.4738611
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-12",
+      "properties": {
+        "id": "hijra-12",
+        "section": "route",
+        "seq": 12,
+        "stage": 2,
+        "name": "الجحفة",
+        "position": "source",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.13445,
+          22.7396611
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-13-a",
+      "properties": {
+        "id": "hijra-13-a",
+        "section": "route",
+        "seq": 13,
+        "stage": 2,
+        "name": "الخرّار",
+        "position": "candidate",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.1470167,
+          22.7052083
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-13-b",
+      "properties": {
+        "id": "hijra-13-b",
+        "section": "route",
+        "seq": 13,
+        "stage": 2,
+        "name": "الخرّار",
+        "position": "candidate",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3334833,
+          22.8084333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-14",
+      "properties": {
+        "id": "hijra-14",
+        "section": "route",
+        "seq": 14,
+        "stage": 3,
+        "name": "غدير خم",
+        "position": "source",
+        "when_source": "يوم الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2074028,
+          22.7432639
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-15",
+      "properties": {
+        "id": "hijra-15",
+        "section": "route",
+        "seq": 15,
+        "stage": 3,
+        "name": "ماء أحياء",
+        "position": "source",
+        "when_source": "صباح يوم الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.282475,
+          22.7899611
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-16",
+      "properties": {
+        "id": "hijra-16",
+        "section": "route",
+        "seq": 16,
+        "stage": 3,
+        "name": "ثنية المَرّة",
+        "position": "pending",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-17",
+      "properties": {
+        "id": "hijra-17",
+        "section": "route",
+        "seq": 17,
+        "stage": 3,
+        "name": "وادي لَقْف",
+        "position": "pending",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": null
+    }
+  ]
+}
