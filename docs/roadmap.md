@@ -20,7 +20,7 @@ From the PRD section "ما يلزم إثباته قبل الاعتماد" (what 
 
 Added by the owner (2026-11-10), detailed in the [stack study](research/android-stack-study.ar.md) §9–10:
 
-- Map data sourcing trial: georeference one atlas page, compare an AI-drafted route with a hand-traced one, build a base from open elevation data, and try one battle as both a map layer and a standalone illustration. Atlas pages are a reference only; no coordinates are taken from a model's guess.
+- Map data sourcing trial: build the Hijra route from its station names and their sourced coordinates (atlas pages are read for names and order only, not georeferenced), compare an AI-drafted route with a hand-made one, build a base from open elevation data, and try one battle as both a map layer and a standalone illustration. Atlas pages are a reference only; no coordinates are taken from a model's guess.
 
 Spike inputs set by the owner (2026-11-10):
 
