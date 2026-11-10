@@ -18,6 +18,10 @@ From the PRD section "ما يلزم إثباته قبل الاعتماد" (what 
 - A content update without a new app version, including an **interrupted download**.
 - Measure package size, map smoothness and memory on a target Android phone **and** tablet. Only then set numeric targets.
 
+Added by the owner (2026-11-10), detailed in the [stack study](research/android-stack-study.ar.md) §9–10:
+
+- Map data sourcing trial: georeference one atlas page, compare an AI-drafted route with a hand-traced one, build a base from open elevation data, and try one battle as both a map layer and a standalone illustration. Atlas pages are a reference only; no coordinates are taken from a model's guess.
+
 Exit: the owner approves the stack (update ADR 0002 to Accepted).
 
 ## 2. Content sample
