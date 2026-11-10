@@ -32,5 +32,7 @@ Both install side by side. The `Spike APK` workflow also builds them and attache
 ## Regenerating glyphs
 
 ```sh
-python3 tools/spike/make_glyphs.py map-data/style/fonts/Amiri-Regular.ttf "Amiri-Regular" map-data/style/glyphs
+F=map-data/style/fonts
+python3 tools/spike/make_glyphs.py $F/IBMPlexSansArabic-Regular.ttf "PlexArabic-Regular" map-data/style/glyphs
+python3 tools/spike/make_glyphs.py $F/Amiri-Regular.ttf "Amiri-Regular" map-data/style/glyphs $F/IBMPlexSansArabic-Regular.ttf
 ```

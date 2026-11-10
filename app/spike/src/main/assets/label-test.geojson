@@ -1,13 +1,13 @@
 {
   "type": "FeatureCollection",
   "features": [
-    {"type": "Feature", "properties": {"name": "الحَزْوَرة"}, "geometry": {"type": "Point", "coordinates": [38.55, 22.75]}},
-    {"type": "Feature", "properties": {"name": "ثنية المَرّة"}, "geometry": {"type": "Point", "coordinates": [38.55, 22.55]}},
-    {"type": "Feature", "properties": {"name": "وادي لَقْف"}, "geometry": {"type": "Point", "coordinates": [38.55, 22.35]}},
-    {"type": "Feature", "properties": {"name": "غدير خُمّ"}, "geometry": {"type": "Point", "coordinates": [38.55, 22.15]}},
-    {"type": "Feature", "properties": {"name": "منزل النبي ﷺ بمكة"}, "geometry": {"type": "Point", "coordinates": [38.55, 21.95]}},
-    {"type": "Feature", "properties": {"name": "١ ربيع الأول ١ هـ · 622م"}, "geometry": {"type": "Point", "coordinates": [38.55, 21.75]}},
-    {"type": "Feature", "properties": {"name": "يثرب ← المدينة"}, "geometry": {"type": "Point", "coordinates": [38.55, 21.55]}},
-    {"type": "Feature", "properties": {"name": "الْمَدِينَةُ الْمُنَوَّرَةُ"}, "geometry": {"type": "Point", "coordinates": [38.55, 21.35]}}
+    {"type": "Feature", "properties": {"name": "الحَزْوَرة"}, "geometry": {"type": "Point", "coordinates": [38.2, 22.75]}},
+    {"type": "Feature", "properties": {"name": "ثنية المَرّة"}, "geometry": {"type": "Point", "coordinates": [38.2, 22.55]}},
+    {"type": "Feature", "properties": {"name": "وادي لَقْف"}, "geometry": {"type": "Point", "coordinates": [38.2, 22.35]}},
+    {"type": "Feature", "properties": {"name": "غدير خُمّ"}, "geometry": {"type": "Point", "coordinates": [38.2, 22.15]}},
+    {"type": "Feature", "properties": {"name": "منزل النبي ﷺ بمكة"}, "geometry": {"type": "Point", "coordinates": [38.2, 21.95]}},
+    {"type": "Feature", "properties": {"name": "١ ربيع الأول ١ هـ · 622م"}, "geometry": {"type": "Point", "coordinates": [38.2, 21.75]}},
+    {"type": "Feature", "properties": {"name": "يثرب ← المدينة"}, "geometry": {"type": "Point", "coordinates": [38.2, 21.55]}},
+    {"type": "Feature", "properties": {"name": "الْمَدِينَةُ الْمُنَوَّرَةُ"}, "geometry": {"type": "Point", "coordinates": [38.2, 21.35]}}
   ]
 }

@@ -3,7 +3,10 @@
 
 Spike tool. Needs Pillow (with FreeType) and numpy.
 
-    python3 tools/spike/make_glyphs.py FONT.ttf "Font Stack Name" OUT_DIR
+    python3 tools/spike/make_glyphs.py FONT.ttf "Font Stack Name" OUT_DIR [FALLBACK.ttf]
+
+The engine cannot fall back between bundled stacks, so a code point the main
+font lacks (an arrow, say) is taken from the fallback font when one is given.
 
 Writes OUT_DIR/<Font Stack Name>/<start>-<end>.pbf for all 256 ranges of the
 Basic Multilingual Plane. Ranges the font does not cover get an empty stack so
@@ -44,33 +47,64 @@ def bytes_field(num: int, data: bytes) -> bytes:
     return field(num, 2, varint(len(data)) + data)
 
 
+INF = 1e20
+
+
+def _edt1d(f: np.ndarray) -> np.ndarray:
+    """1D squared distance transform (Felzenszwalb and Huttenlocher)."""
+    n = len(f)
+    d = np.empty(n)
+    v = [0] * n
+    z = [0.0] * (n + 1)
+    k = 0
+    z[0], z[1] = -INF, INF
+    for q in range(1, n):
+        while True:
+            p = v[k]
+            s = ((f[q] + q * q) - (f[p] + p * p)) / (2 * q - 2 * p)
+            if s > z[k]:
+                break
+            k -= 1
+        k += 1
+        v[k] = q
+        z[k], z[k + 1] = s, INF
+    k = 0
+    for q in range(n):
+        while z[k + 1] < q:
+            k += 1
+        p = v[k]
+        d[q] = (q - p) ** 2 + f[p]
+    return d
+
+
+def _edt2d(grid: np.ndarray) -> np.ndarray:
+    out = np.apply_along_axis(_edt1d, 0, grid)
+    return np.apply_along_axis(_edt1d, 1, out)
+
+
 def sdf(alpha: np.ndarray) -> bytes:
-    """Distance field of a coverage bitmap, padded by BUFFER on each side."""
+    """Distance field of an anti-aliased coverage bitmap, padded by BUFFER.
+
+    Same approach as TinySDF: partial coverage seeds the transform, so edges
+    land between pixels instead of on them.
+    """
     h, w = alpha.shape
-    grid = np.zeros((h + 2 * BUFFER, w + 2 * BUFFER), dtype=bool)
-    grid[BUFFER : BUFFER + h, BUFFER : BUFFER + w] = alpha > 127
-    ys, xs = np.indices(grid.shape)
-    pts = np.stack([ys.ravel(), xs.ravel()], axis=1).astype(np.float32)
-    inside = grid.ravel()
-
-    def nearest(targets: np.ndarray) -> np.ndarray:
-        if not len(targets):
-            return np.full(len(pts), RADIUS * 4, dtype=np.float32)
-        d = pts[:, None, :] - targets[None, :, :]
-        return np.sqrt((d * d).sum(axis=2)).min(axis=1)
-
-    to_in = nearest(pts[inside])
-    to_out = nearest(pts[~inside])
-    signed = np.where(inside, -(to_out - 0.5), to_in - 0.5)
-    val = 255.0 - 255.0 * (signed / RADIUS + CUTOFF)
-    return np.clip(val, 0, 255).astype(np.uint8).tobytes()
+    a = np.zeros((h + 2 * BUFFER, w + 2 * BUFFER))
+    a[BUFFER : BUFFER + h, BUFFER : BUFFER + w] = alpha / 255.0
+    outer = np.where(a == 1, 0.0, np.where(a == 0, INF, np.maximum(0, 0.5 - a) ** 2))
+    inner = np.where(a == 1, INF, np.where(a == 0, 0.0, np.maximum(0, a - 0.5) ** 2))
+    dist = np.sqrt(_edt2d(outer)) - np.sqrt(_edt2d(inner))
+    val = 255.0 - 255.0 * (dist / RADIUS + CUTOFF)
+    return np.clip(np.round(val), 0, 255).astype(np.uint8).tobytes()
 
 
 def main() -> int:
     font_path, stack, out_dir = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
-    font = ImageFont.truetype(font_path, SIZE, layout_engine=ImageFont.Layout.BASIC)
-    notdef = font.getmask2("￿", mode="L")[0]
-    notdef_bytes = (notdef.size, bytes(notdef))
+    fonts = []
+    for path in [font_path, *sys.argv[4:5]]:
+        f = ImageFont.truetype(path, SIZE, layout_engine=ImageFont.Layout.BASIC)
+        nd = f.getmask2(chr(0xFFFF), mode="L")[0]
+        fonts.append((f, (nd.size, bytes(nd))))
     target = out_dir / stack
     target.mkdir(parents=True, exist_ok=True)
     covered = 0
@@ -80,16 +114,20 @@ def main() -> int:
             if cp < 32 or 0xD800 <= cp <= 0xDFFF:
                 continue
             ch = chr(cp)
-            try:
-                mask, (left, top) = font.getmask2(ch, mode="L")
-            except OSError:
-                continue  # glyph too large to rasterise (e.g. U+FDFD)
-            w, h = mask.size
-            if w > 200 or h > 200:
+            found = None
+            for font, notdef_bytes in fonts:
+                try:
+                    mask, (left, top) = font.getmask2(ch, mode="L")
+                except OSError:
+                    continue  # glyph too large to rasterise (e.g. U+FDFD)
+                w, h = mask.size
+                if w > 200 or h > 200 or ((w, h), bytes(mask)) == notdef_bytes:
+                    continue
+                found = font
+                break
+            if found is None:
                 continue
-            if cp != 0xFFFF and ((w, h), bytes(mask)) == notdef_bytes:
-                continue
-            advance = round(font.getlength(ch))
+            advance = round(found.getlength(ch))
             g = field(1, 0, varint(cp))
             if w and h:
                 alpha = np.frombuffer(bytes(mask), dtype=np.uint8).reshape(h, w)
