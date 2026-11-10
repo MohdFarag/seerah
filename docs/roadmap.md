@@ -22,6 +22,14 @@ Added by the owner (2026-11-10), detailed in the [stack study](research/android-
 
 - Map data sourcing trial: georeference one atlas page, compare an AI-drafted route with a hand-traced one, build a base from open elevation data, and try one battle as both a map layer and a standalone illustration. Atlas pages are a reference only; no coordinates are taken from a model's guess.
 
+Spike inputs set by the owner (2026-11-10):
+
+- **Devices:** Huawei MatePad 11.5 (tablet), Galaxy A54 5G on Android 16 / One UI 8.5, Oppo A55 on Android 13 (the low-end target).
+- **Sample area:** Makkah, Madinah and the Hijra route in detail, over a simplified world base.
+- **Time states:** Yathrib → Madinah (name change) and the Prophet's Mosque (landmark appearing). The border change uses a placeholder shape marked as sample data, not a historical claim, until a reviewed example is chosen.
+- **Arabic test labels:** taken from the map data and reference maps the owner supplies.
+- **Atlas pages:** the owner supplies Hijra-route pages as a working reference for the data trial.
+
 Exit: the owner approves the stack (update ADR 0002 to Accepted).
 
 ## 2. Content sample
