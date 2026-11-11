@@ -290,7 +290,7 @@
           39.3789667,
           22.5658417
         ],
-        "position_note": "The source gives two coordinate pairs. This one was picked for the spike because it lies along the route; not a reviewed choice."
+        "position_note": "The source gives two coordinate pairs with no stated role. This one was picked for the spike because it lies along the route; not a reviewed choice."
       },
       "geometry": {
         "type": "Point",
@@ -337,7 +337,7 @@
           39.3334833,
           22.8084333
         ],
-        "position_note": "The source gives two coordinate pairs. This one was picked for the spike because it lies along the route; not a reviewed choice."
+        "position_note": "The source gives two coordinate pairs with no stated role. This one was picked for the spike because it lies along the route; not a reviewed choice."
       },
       "geometry": {
         "type": "Point",
@@ -398,11 +398,17 @@
         "seq": 16,
         "stage": 3,
         "name": "ثنية المَرّة",
-        "position": "pending",
-        "when_source": null,
+        "position": "source",
+        "when_source": "صباح الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
         "review": "draft"
       },
-      "geometry": null
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2883972,
+          22.7999222
+        ]
+      }
     },
     {
       "type": "Feature",
@@ -413,11 +419,435 @@
         "seq": 17,
         "stage": 3,
         "name": "وادي لَقْف",
-        "position": "pending",
-        "when_source": null,
+        "position": "source",
+        "when_source": "الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
         "review": "draft"
       },
-      "geometry": null
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2886,
+          23.095025
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-18",
+      "properties": {
+        "id": "hijra-18",
+        "section": "route",
+        "seq": 18,
+        "stage": 4,
+        "name": "مدلجة لَقْف",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft",
+        "stretch_end": [
+          39.3274167,
+          23.1441333
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3311972,
+          23.1278417
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-19",
+      "properties": {
+        "id": "hijra-19",
+        "section": "route",
+        "seq": 19,
+        "stage": 4,
+        "name": "مدلجة مَجاج",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft",
+        "stretch_end": [
+          39.3111778,
+          23.1789306
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3274167,
+          23.1441333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-20",
+      "properties": {
+        "id": "hijra-20",
+        "section": "route",
+        "seq": 20,
+        "stage": 4,
+        "name": "مَرْجَح مَجاج",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3083083,
+          23.1815139
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-21",
+      "properties": {
+        "id": "hijra-21",
+        "section": "route",
+        "seq": 21,
+        "stage": 4,
+        "name": "مَرْجَح ذي العصوين",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2949028,
+          23.2012389
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-22",
+      "properties": {
+        "id": "hijra-22",
+        "section": "route",
+        "seq": 22,
+        "stage": 4,
+        "name": "بطن ذي كشد",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.289175,
+          23.2266583
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-23",
+      "properties": {
+        "id": "hijra-23",
+        "section": "route",
+        "seq": 23,
+        "stage": 4,
+        "name": "الجداجد",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2627278,
+          23.2847889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-24",
+      "properties": {
+        "id": "hijra-24",
+        "section": "route",
+        "seq": 24,
+        "stage": 4,
+        "name": "الأجرد (الأجيرد)",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft",
+        "stretch_end": [
+          39.2577111,
+          23.3192944
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2602917,
+          23.2849083
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-25",
+      "properties": {
+        "id": "hijra-25",
+        "section": "route",
+        "seq": 25,
+        "stage": 4,
+        "name": "بطن ريع",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft",
+        "stretch_end": [
+          39.2842528,
+          23.3502306
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2577111,
+          23.3192944
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-26",
+      "properties": {
+        "id": "hijra-26",
+        "section": "route",
+        "seq": 26,
+        "stage": 4,
+        "name": "وادي ذي سلم",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft",
+        "stretch_end": [
+          39.3085278,
+          23.393225
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2842528,
+          23.3502306
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-27",
+      "properties": {
+        "id": "hijra-27",
+        "section": "route",
+        "seq": 27,
+        "stage": 4,
+        "name": "مدلجة تعهن",
+        "position": "source",
+        "when_source": null,
+        "review": "draft",
+        "stretch_end": [
+          39.3005667,
+          23.4182028
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3085278,
+          23.393225
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-28",
+      "properties": {
+        "id": "hijra-28",
+        "section": "route",
+        "seq": 28,
+        "stage": 4,
+        "name": "الغثريانة (العبايب)",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2966861,
+          23.4325889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-29",
+      "properties": {
+        "id": "hijra-29",
+        "section": "route",
+        "seq": 29,
+        "stage": 4,
+        "name": "وادي الفاجة",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2886444,
+          23.4580361
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-30",
+      "properties": {
+        "id": "hijra-30",
+        "section": "route",
+        "seq": 30,
+        "stage": 4,
+        "name": "وادي الفاحة",
+        "position": "source",
+        "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
+        "review": "draft",
+        "stretch_end": [
+          39.2743389,
+          23.7402639
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2886444,
+          23.4580361
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-31",
+      "properties": {
+        "id": "hijra-31",
+        "section": "route",
+        "seq": 31,
+        "stage": 5,
+        "name": "العَرْج",
+        "position": "source",
+        "when_source": "الجمعة 5 ربيع الأول 1هـ، الموافق 16 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.1604444,
+          23.8055167
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-32",
+      "properties": {
+        "id": "hijra-32",
+        "section": "route",
+        "seq": 32,
+        "stage": 6,
+        "name": "الجدوات",
+        "position": "source",
+        "when_source": "السبت 6 ربيع الأول 1هـ، الموافق 17 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.1604444,
+          23.8055167
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-33",
+      "properties": {
+        "id": "hijra-33",
+        "section": "route",
+        "seq": 33,
+        "stage": 6,
+        "name": "ركوبة",
+        "position": "source",
+        "when_source": "السبت 6 ربيع الأول 1هـ، الموافق 17 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2868806,
+          23.8720556
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-34",
+      "properties": {
+        "id": "hijra-34",
+        "section": "route",
+        "seq": 34,
+        "stage": 6,
+        "name": "ثنية الغائر",
+        "position": "source",
+        "when_source": "السبت 6 ربيع الأول 1هـ، الموافق 17 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2896972,
+          23.9187694
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-35",
+      "properties": {
+        "id": "hijra-35",
+        "section": "route",
+        "seq": 35,
+        "stage": 6,
+        "name": "وادي ريم",
+        "position": "source",
+        "when_source": "السبت 6 ربيع الأول 1هـ، الموافق 17 سبتمبر 622م",
+        "review": "draft",
+        "stretch_end": [
+          39.5393917,
+          24.0554444
+        ],
+        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.3601361,
+          23.9119194
+        ]
+      }
     }
   ]
 }

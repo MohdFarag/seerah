@@ -126,10 +126,10 @@ private fun SpikeScreen() {
 /** Result of preparing the base map. [dir] is null when it was not bundled. */
 private class BaseState(val dir: String?)
 
-/** Bounds of the sample data: Makkah up to the last extracted waypoint, with room for the label column. */
+/** Bounds of the sample data: Makkah up to the last waypoint in the log, with room for the label column. */
 private val sampleBounds: LatLngBounds = LatLngBounds.Builder()
     .include(LatLng(21.25, 37.7))
-    .include(LatLng(22.95, 39.95))
+    .include(LatLng(24.2, 39.95))
     .build()
 
 @Composable

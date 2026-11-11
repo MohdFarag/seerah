@@ -111,3 +111,7 @@ Build 6 switches the relief to Copernicus GLO-30. Built off-device; **not yet ru
 - The debug APK is about 143 MB. Roughly 80 MB of that is the base map; the rest is the unshrunk debug build.
 
 This size is for a 2° × 4° area only. Covering all Seerah regions at this detail would be several hundred megabytes, so the real package needs one of: fine relief only along routes and around cities, the engine's own hillshading from compact elevation tiles, or a lower zoom cap outside key areas. Not decided.
+
+## 2026-11-11: route data extended to waypoint 35 (build 7)
+
+The owner's Notion log now holds route waypoints 1–35 (six of eight stages, up to Wadi Rim). The log itself states that the last 6 waypoints, in stages 7 and 8 and ending at Quba, are still missing. Build 7 carries the 35 waypoints; **not yet run on a device**. How the two-pair waypoints are read is recorded in `map-data/historical/spike/README.md`.
