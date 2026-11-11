@@ -19,13 +19,13 @@ jobs:
       - uses: actions/checkout@v7
 
       # The base map (land outline and relief) is too large for git, so it is
-      # built here and cached until the pipeline or the route changes.
+      # built here and cached until the pipeline changes.
       - name: Restore base map
         id: base
         uses: actions/cache@v6
         with:
           path: map-data/dist
-          key: base-map-${{ hashFiles('tools/spike/build_base.sh', 'tools/spike/shade_to_rgba.py', 'tools/spike/trim_relief.py', 'map-data/historical/spike/hijra-route.geojson') }}
+          key: base-map-${{ hashFiles('tools/spike/build_base.sh', 'tools/spike/relief_style.py') }}
 
       - name: Install map tools
         if: steps.base.outputs.cache-hit != 'true'

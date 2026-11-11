@@ -169,8 +169,8 @@ private fun SpikeMap(
         mapView.addOnDidFailLoadingMapListener { message -> onStatus("خطأ: $message") }
         mapView.getMapAsync { loaded ->
             loaded.uiSettings.isLogoEnabled = false
-            // Relief tiles go to zoom 14 near the route; beyond 15.5 they only enlarge.
-            loaded.setMaxZoomPreference(15.5)
+            // The relief fades out from zoom 12.5; past that the map is paper, names and route.
+            loaded.setMaxZoomPreference(16.0)
             loaded.uiSettings.isAttributionEnabled = false
             loaded.moveCamera(CameraUpdateFactory.newLatLngBounds(sampleBounds, 48))
             val report = { onScale(metresPerPixel(loaded, mapView.width, mapView.height)) }
