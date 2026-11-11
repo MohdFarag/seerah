@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +26,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -75,13 +77,22 @@ private fun SpikeScreen() {
     }
 
     Box(Modifier.fillMaxSize()) {
+        var metresPerPixel by remember { mutableStateOf(0.0) }
         base?.let { ready ->
             SpikeMap(
                 styleJson = MapStyle.json(textPath, font, labelTest, ready.dir),
                 systemLabelFont = font.takeIf { textPath == TextPath.SystemImages },
                 onStatus = { status = if (ready.dir == null) "$it · بلا أساس" else it },
+                onScale = { metresPerPixel = it },
             )
         }
+        ScaleBar(
+            metresPerPixel = metresPerPixel,
+            modifier = Modifier
+                .align(AbsoluteAlignment.BottomLeft)
+                .navigationBarsPadding()
+                .padding(start = 20.dp, bottom = 20.dp),
+        )
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -133,7 +144,12 @@ private val sampleBounds: LatLngBounds = LatLngBounds.Builder()
     .build()
 
 @Composable
-private fun SpikeMap(styleJson: String, systemLabelFont: MapFont?, onStatus: (String) -> Unit) {
+private fun SpikeMap(
+    styleJson: String,
+    systemLabelFont: MapFont?,
+    onStatus: (String) -> Unit,
+    onScale: (Double) -> Unit,
+) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val mapView = remember { MapView(context).apply { onCreate(null) } }
@@ -157,6 +173,9 @@ private fun SpikeMap(styleJson: String, systemLabelFont: MapFont?, onStatus: (St
             loaded.setMaxZoomPreference(15.5)
             loaded.uiSettings.isAttributionEnabled = false
             loaded.moveCamera(CameraUpdateFactory.newLatLngBounds(sampleBounds, 48))
+            val report = { onScale(metresPerPixel(loaded, mapView.width, mapView.height)) }
+            loaded.addOnCameraMoveListener { report() }
+            loaded.addOnCameraIdleListener { report() }
             map = loaded
         }
         onDispose {
