@@ -153,6 +153,8 @@ private fun SpikeMap(styleJson: String, systemLabelFont: MapFont?, onStatus: (St
         mapView.addOnDidFailLoadingMapListener { message -> onStatus("خطأ: $message") }
         mapView.getMapAsync { loaded ->
             loaded.uiSettings.isLogoEnabled = false
+            // The relief is built from 90 m data, which turns to blur beyond this zoom.
+            loaded.setMaxZoomPreference(12.5)
             loaded.uiSettings.isAttributionEnabled = false
             loaded.moveCamera(CameraUpdateFactory.newLatLngBounds(sampleBounds, 48))
             map = loaded

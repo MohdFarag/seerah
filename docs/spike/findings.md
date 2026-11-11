@@ -78,3 +78,18 @@ Built off-device; **not yet run on a device**.
 - Natural Earth's finest scale is 1:10m, so the coast will look angular when zoomed in past the relief's detail. A finer coastline source is a later decision.
 
 To check on a device: that both PMTiles sources load from storage, how the relief looks against the Penpot design, and panning smoothness on the Oppo A55.
+
+## 2026-11-11: build 4 on Galaxy A54 (both renderers)
+
+Reported by the owner with screenshots.
+
+| Check | Result |
+| --- | --- |
+| PMTiles read from app storage | Works on Vulkan and OpenGL, for both the vector land and the raster relief. |
+| Relief appearance | Reads well under the route and labels at regional zoom. |
+| Land outline | **Bug:** at some zooms whole rectangles showed sea colour where there is land. |
+| Zooming far in (Makkah streets) | Relief turns into blurred blobs. The 90 m data has no detail at that scale. |
+
+Cause of the land bug, found off-device: tippecanoe dropped the largest polygons from some tiles when the three Natural Earth scales shared one input file with per-feature zoom ranges. The pipeline now cuts the finer scales into 10-degree cells, builds one tileset per scale and joins them. A check comparing every tile with its four children over lon 30–50, lat 14–32, zoom 2–8 (325 tiles) found no mismatches. **Not yet re-run on a device.**
+
+Also changed: the map's maximum zoom is capped at 12.5 for now. Showing the Makkah sites, which are a few hundred metres apart, needs finer elevation data for the city areas or a different treatment at that scale. The zoom limit is the owner's open decision.

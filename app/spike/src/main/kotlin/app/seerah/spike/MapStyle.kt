@@ -46,7 +46,7 @@ object MapStyle {
             """
             { "id": "sea", "type": "background", "paint": { "background-color": "$SEA" } },
             { "id": "land", "type": "fill", "source": "land", "source-layer": "land",
-              "paint": { "fill-color": "$LAND", "fill-antialias": true } },
+              "paint": { "fill-color": "$LAND", "fill-antialias": false } },
             { "id": "relief", "type": "raster", "source": "relief",
               "paint": { "raster-fade-duration": 0 } },
             """
