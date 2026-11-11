@@ -3,7 +3,8 @@
 #
 # Needs: curl, GDAL, tippecanoe, and Python with Pillow, numpy and `pmtiles`.
 # Output: map-data/dist/land.pmtiles and map-data/dist/relief.pmtiles (not committed).
-# Set DEM_RES=90 for a smaller, coarser relief.
+# RELIEF_ZOOM (default 14) sets the finest relief zoom, kept within
+# RELIEF_CORRIDOR_KM (default 12) of the route. DEM_RES=90 uses coarser source data.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -46,9 +47,9 @@ tippecanoe -q -o "$SRC/land_c.pmtiles" -l land -Z6 -z9 $T "$SRC/ne_10m_land.cell
 tile-join -q --no-tile-size-limit -o "$OUT/land.pmtiles" "$SRC/land_a.pmtiles" "$SRC/land_b.pmtiles" "$SRC/land_c.pmtiles"
 
 # 2. Relief: Copernicus DEM for the sample area (lat 21-25, lon 38-40).
-# DEM_RES=30 (default) uses GLO-30 and tiles to zoom 12; DEM_RES=90 uses GLO-90 and zoom 11.
+# DEM_RES=30 (default) uses GLO-30, DEM_RES=90 uses GLO-90.
 DEM_RES="${DEM_RES:-30}"
-if [ "$DEM_RES" = 30 ]; then ARC=10; PIXEL=38.2185; else ARC=30; PIXEL=76.437; fi
+if [ "$DEM_RES" = 30 ]; then ARC=10; else ARC=30; fi
 DEM="https://copernicus-dem-${DEM_RES}m.s3.amazonaws.com"
 tiles=()
 for lat in 21 22 23 24; do
@@ -59,16 +60,41 @@ for lat in 21 22 23 24; do
   done
 done
 gdalbuildvrt -q -overwrite "$SRC/dem.vrt" "${tiles[@]}"
-gdalwarp -q -overwrite -t_srs EPSG:3857 -r bilinear -tr "$PIXEL" "$PIXEL" "$SRC/dem.vrt" "$SRC/dem3857.tif"
-gdaldem hillshade -q -multidirectional -z 4 "$SRC/dem3857.tif" "$SRC/hillshade.tif"
-# GDAL's Python bindings are not assumed, so the colouring step goes through PNG.
-gdal_translate -q -of PNG "$SRC/hillshade.tif" "$SRC/hillshade.png"
-gdal_translate -q -of PNG -ot Byte -scale 0 1 0 255 "$SRC/dem3857.tif" "$SRC/landmask.png"
-python3 "$ROOT/tools/spike/shade_to_rgba.py" "$SRC/hillshade.png" "$SRC/landmask.png" "$SRC/relief.png"
-cp "$SRC/hillshade.png.aux.xml" "$SRC/relief.png.aux.xml"
+# The DEM is upsampled smoothly to the pixel size of RELIEF_ZOOM, so close-up
+# shading is smooth instead of blocky. It adds no detail beyond the source data.
+RELIEF_ZOOM="${RELIEF_ZOOM:-14}"
+PIXEL=$(python3 -c "print(40075016.68557849 / 256 / 2 ** $RELIEF_ZOOM)")
+rm -f "$SRC"/dem3857.tif "$SRC"/hillshade.* "$SRC"/landmask.* "$SRC"/relief.raw "$SRC"/relief.vrt
+gdalwarp -q -overwrite -t_srs EPSG:3857 -r cubicspline -tr "$PIXEL" "$PIXEL" -multi -wo NUM_THREADS=ALL_CPUS \
+  -co COMPRESS=DEFLATE -co TILED=YES -co BIGTIFF=YES "$SRC/dem.vrt" "$SRC/dem3857.tif"
+gdaldem hillshade -q -multidirectional -z 4 -of ENVI "$SRC/dem3857.tif" "$SRC/hillshade.envi"
+gdal_translate -q -of ENVI -ot Byte -scale 0 1 0 255 "$SRC/dem3857.tif" "$SRC/landmask.envi"
+python3 "$ROOT/tools/spike/shade_to_rgba.py" "$SRC/hillshade.envi" "$SRC/landmask.envi" "$SRC/relief.raw"
+python3 - "$SRC" <<'PY'
+import re, sys
+src = sys.argv[1]
+info = open(f"{src}/hillshade.hdr").read()
+w = int(re.search(r"samples\s*=\s*(\d+)", info).group(1))
+h = int(re.search(r"lines\s*=\s*(\d+)", info).group(1))
+m = re.search(r"map info\s*=\s*\{[^,]*,[^,]*,[^,]*,\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+)", info)
+x0, y0, px, py = (float(v) for v in m.groups())
+bands = "".join(
+    f'<VRTRasterBand dataType="Byte" band="{i + 1}" subClass="VRTRawRasterBand">'
+    f'<ColorInterp>{c}</ColorInterp><SourceFilename relativeToVRT="1">relief.raw</SourceFilename>'
+    f"<ImageOffset>{i}</ImageOffset><PixelOffset>4</PixelOffset><LineOffset>{w * 4}</LineOffset></VRTRasterBand>"
+    for i, c in enumerate(["Red", "Green", "Blue", "Alpha"])
+)
+open(f"{src}/relief.vrt", "w").write(
+    f'<VRTDataset rasterXSize="{w}" rasterYSize="{h}"><SRS>EPSG:3857</SRS>'
+    f"<GeoTransform>{x0}, {px}, 0, {y0}, 0, {-py}</GeoTransform>{bands}</VRTDataset>"
+)
+PY
 rm -f "$SRC/relief.mbtiles" "$OUT/relief.pmtiles"
-gdal_translate -q -of MBTILES -co TILE_FORMAT=WEBP -co QUALITY=80 "$SRC/relief.png" "$SRC/relief.mbtiles"
-gdaladdo -q -r average "$SRC/relief.mbtiles" 2 4 8 16 32 64
+gdal_translate -q -of MBTILES -co TILE_FORMAT=WEBP -co QUALITY=75 "$SRC/relief.vrt" "$SRC/relief.mbtiles"
+gdaladdo -q -r average "$SRC/relief.mbtiles" 2 4 8 16 32 64 128 256
+# The finest zoom is kept only within a corridor around the route and its places.
+python3 "$ROOT/tools/spike/trim_relief.py" "$SRC/relief.mbtiles" \
+  "$ROOT/map-data/historical/spike/hijra-route.geojson" "$RELIEF_ZOOM" "${RELIEF_CORRIDOR_KM:-12}"
 pmtiles-convert "$SRC/relief.mbtiles" "$OUT/relief.pmtiles"
 
 ls -la "$OUT"
