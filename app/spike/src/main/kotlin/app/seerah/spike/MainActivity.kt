@@ -69,6 +69,7 @@ private fun SpikeScreen() {
     Box(Modifier.fillMaxSize()) {
         SpikeMap(
             styleJson = MapStyle.json(textPath, font, labelTest),
+            systemLabelFont = font.takeIf { textPath == TextPath.SystemImages },
             onStatus = { status = it },
         )
         Surface(
@@ -119,7 +120,7 @@ private val sampleBounds: LatLngBounds = LatLngBounds.Builder()
     .build()
 
 @Composable
-private fun SpikeMap(styleJson: String, onStatus: (String) -> Unit) {
+private fun SpikeMap(styleJson: String, systemLabelFont: MapFont?, onStatus: (String) -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val mapView = remember { MapView(context).apply { onCreate(null) } }
@@ -149,8 +150,12 @@ private fun SpikeMap(styleJson: String, onStatus: (String) -> Unit) {
         }
     }
 
-    DisposableEffect(map, styleJson) {
-        map?.setStyle(Style.Builder().fromJson(styleJson)) { onStatus("تم تحميل النمط") }
+    DisposableEffect(map, styleJson, systemLabelFont) {
+        val builder = Style.Builder().fromJson(styleJson)
+        map?.setStyle(builder) { style ->
+            systemLabelFont?.let { LabelImages.addTo(style, context, it) }
+            onStatus("تم تحميل النمط")
+        }
         onDispose { }
     }
 

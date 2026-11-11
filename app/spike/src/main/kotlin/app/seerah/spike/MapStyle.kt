@@ -7,6 +7,12 @@ enum class TextPath(val label: String) {
 
     /** New path: the engine shapes text from the TTF itself (`font-faces`). */
     FontFaces("font-faces"),
+
+    /**
+     * Labels drawn by Android's own text engine into bitmaps, then placed by the
+     * map as icons. Shaping, diacritics and direction come from the system.
+     */
+    SystemImages("نص النظام"),
 }
 
 enum class MapFont(val label: String, val stack: String, val ttf: String) {
@@ -18,8 +24,8 @@ object MapStyle {
     // Colours follow the Penpot tokens (athar/day). Hard-coded here for the spike only.
     private const val LAND = "#F1E6C8"
     private const val ROUTE = "#AF5A36"
-    private const val LABEL = "#203D32"
-    private const val HALO = "#FAF7F0"
+    const val LABEL = "#203D32"
+    const val HALO = "#FAF7F0"
     private const val MARK = "#B7963A"
 
     fun json(textPath: TextPath, font: MapFont, showLabelTest: Boolean): String {
@@ -29,6 +35,39 @@ object MapStyle {
             ""
         }
         val testVisibility = if (showLabelTest) "visible" else "none"
+        val systemText = textPath == TextPath.SystemImages
+        val waypointLabel = if (systemText) {
+            """
+                "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
+                "icon-anchor": "top",
+                "icon-offset": [0, 6]
+            """
+        } else {
+            """
+                "text-field": ["get", "name"],
+                "text-font": ["${font.stack}"],
+                "text-size": ${LabelImages.WAYPOINT_SP},
+                "text-anchor": "top",
+                "text-offset": [0, 0.6],
+                "text-max-width": 9
+            """
+        }
+        val testLabel = if (systemText) {
+            """
+                "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
+                "icon-size": ${LabelImages.TEST_SP / LabelImages.WAYPOINT_SP},
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true
+            """
+        } else {
+            """
+                "text-field": ["get", "name"],
+                "text-font": ["${font.stack}"],
+                "text-size": ${LabelImages.TEST_SP},
+                "text-allow-overlap": true,
+                "text-ignore-placement": true
+            """
+        }
         return """
         {
           "version": 8,
@@ -65,26 +104,12 @@ object MapStyle {
             },
             {
               "id": "waypoint-label", "type": "symbol", "source": "waypoints",
-              "layout": {
-                "text-field": ["get", "name"],
-                "text-font": ["${font.stack}"],
-                "text-size": 15,
-                "text-anchor": "top",
-                "text-offset": [0, 0.6],
-                "text-max-width": 9
-              },
+              "layout": { $waypointLabel },
               "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
             },
             {
               "id": "label-test", "type": "symbol", "source": "label-test",
-              "layout": {
-                "visibility": "$testVisibility",
-                "text-field": ["get", "name"],
-                "text-font": ["${font.stack}"],
-                "text-size": 20,
-                "text-allow-overlap": true,
-                "text-ignore-placement": true
-              },
+              "layout": { "visibility": "$testVisibility", $testLabel },
               "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
             }
           ]

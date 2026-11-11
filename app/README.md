@@ -6,7 +6,7 @@ The Android project. For now it holds only the **technical spike** (`:spike`), a
 
 - A MapLibre Native map with no network permission at all. Everything is bundled.
 - The Hijra sample data from [`map-data/historical/spike`](../map-data/historical/spike): waypoints, candidate points and the approximate route line.
-- Arabic labels drawn two ways, switchable on screen: pre-built glyph PBFs and the engine's `font-faces` path. Two fonts: IBM Plex Sans Arabic and Amiri.
+- Arabic labels drawn three ways, switchable on screen: pre-built glyph PBFs, the engine's `font-faces` path, and labels drawn by Android's text engine and placed as images. Two fonts: IBM Plex Sans Arabic and Amiri.
 - A column of test labels (diacritics, ﷺ, digits, mixed direction) in the sea area.
 
 Not there yet: base map (coast, terrain), time states, opening an event, content updates.
