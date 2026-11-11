@@ -20,6 +20,7 @@ import numpy as np
 from PIL import ImageFont
 
 SIZE = 24  # px, the size the glyph spec expects
+SCALE = 4  # render larger, then average the field down
 BUFFER = 3
 RADIUS = 8.0
 CUTOFF = 0.25
@@ -82,27 +83,32 @@ def _edt2d(grid: np.ndarray) -> np.ndarray:
     return np.apply_along_axis(_edt1d, 1, out)
 
 
-def sdf(alpha: np.ndarray) -> bytes:
-    """Distance field of an anti-aliased coverage bitmap, padded by BUFFER.
+def sdf(alpha: np.ndarray, pad_x: int, pad_y: int) -> tuple[bytes, int, int]:
+    """Distance field of a glyph rendered SCALE times larger than SIZE.
 
-    Same approach as TinySDF: partial coverage seeds the transform, so edges
-    land between pixels instead of on them.
+    The field is computed at the large size and averaged down, which keeps
+    thin strokes and sharp corners that a 24 px bitmap loses. Returns the
+    field plus the glyph width and height at SIZE.
     """
-    h, w = alpha.shape
-    a = np.zeros((h + 2 * BUFFER, w + 2 * BUFFER))
-    a[BUFFER : BUFFER + h, BUFFER : BUFFER + w] = alpha / 255.0
+    hh, hw = alpha.shape
+    w = -(-(hw + pad_x) // SCALE)
+    h = -(-(hh + pad_y) // SCALE)
+    a = np.zeros(((h + 2 * BUFFER) * SCALE, (w + 2 * BUFFER) * SCALE))
+    y0, x0 = BUFFER * SCALE + pad_y, BUFFER * SCALE + pad_x
+    a[y0 : y0 + hh, x0 : x0 + hw] = alpha / 255.0
     outer = np.where(a == 1, 0.0, np.where(a == 0, INF, np.maximum(0, 0.5 - a) ** 2))
     inner = np.where(a == 1, INF, np.where(a == 0, 0.0, np.maximum(0, a - 0.5) ** 2))
-    dist = np.sqrt(_edt2d(outer)) - np.sqrt(_edt2d(inner))
+    dist = (np.sqrt(_edt2d(outer)) - np.sqrt(_edt2d(inner))) / SCALE
+    dist = dist.reshape(h + 2 * BUFFER, SCALE, w + 2 * BUFFER, SCALE).mean(axis=(1, 3))
     val = 255.0 - 255.0 * (dist / RADIUS + CUTOFF)
-    return np.clip(np.round(val), 0, 255).astype(np.uint8).tobytes()
+    return np.clip(np.round(val), 0, 255).astype(np.uint8).tobytes(), w, h
 
 
 def main() -> int:
     font_path, stack, out_dir = sys.argv[1], sys.argv[2], pathlib.Path(sys.argv[3])
     fonts = []
     for path in [font_path, *sys.argv[4:5]]:
-        f = ImageFont.truetype(path, SIZE, layout_engine=ImageFont.Layout.BASIC)
+        f = ImageFont.truetype(path, SIZE * SCALE, layout_engine=ImageFont.Layout.BASIC)
         nd = f.getmask2(chr(0xFFFF), mode="L")[0]
         fonts.append((f, (nd.size, bytes(nd))))
     target = out_dir / stack
@@ -120,20 +126,23 @@ def main() -> int:
                     mask, (left, top) = font.getmask2(ch, mode="L")
                 except OSError:
                     continue  # glyph too large to rasterise (e.g. U+FDFD)
-                w, h = mask.size
-                if w > 200 or h > 200 or ((w, h), bytes(mask)) == notdef_bytes:
+                hw, hh = mask.size
+                if hw > 200 * SCALE or hh > 200 * SCALE or ((hw, hh), bytes(mask)) == notdef_bytes:
                     continue
                 found = font
                 break
             if found is None:
                 continue
-            advance = round(found.getlength(ch))
+            advance = round(found.getlength(ch) / SCALE)
+            left_lo, top_lo = left // SCALE, top // SCALE
             g = field(1, 0, varint(cp))
-            if w and h:
-                alpha = np.frombuffer(bytes(mask), dtype=np.uint8).reshape(h, w)
-                g += bytes_field(2, sdf(alpha))
+            w = h = 0
+            if hw and hh:
+                alpha = np.frombuffer(bytes(mask), dtype=np.uint8).reshape(hh, hw)
+                data, w, h = sdf(alpha, left - left_lo * SCALE, top - top_lo * SCALE)
+                g += bytes_field(2, data)
             g += field(3, 0, varint(w)) + field(4, 0, varint(h))
-            g += field(5, 0, varint(zigzag(left))) + field(6, 0, varint(zigzag(-top)))
+            g += field(5, 0, varint(zigzag(left_lo))) + field(6, 0, varint(zigzag(-top_lo)))
             g += field(7, 0, varint(advance))
             glyphs += bytes_field(3, g)
             covered += 1
