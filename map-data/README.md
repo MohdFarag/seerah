@@ -22,6 +22,6 @@ Rules:
 | File | Content | Source |
 | --- | --- | --- |
 | `land.pmtiles` | World land outline, zoom 0–9 | Natural Earth, three scales, cut into 10-degree cells |
-| `relief.pmtiles` | Shaded relief for lat 21–25, lon 38–40: zoom 6–12 everywhere, 13 within 40 km of the route, 14 within 12 km; about 540 MB | Copernicus DEM GLO-30, upsampled to the zoom-14 pixel size |
+| `relief.pmtiles` | Shaded relief for lat 21–25, lon 38–40: zoom 6–11 everywhere, 12 within 60 km of the route, 13 within 22 km, 14 within 12 km; about 400 MB | Copernicus DEM GLO-30, upsampled to the zoom-14 pixel size |
 
 It needs curl, GDAL, tippecanoe, and Python with Pillow, numpy and `pmtiles`. Copernicus DEM requires attribution; the wording must be added to the app before any release.
