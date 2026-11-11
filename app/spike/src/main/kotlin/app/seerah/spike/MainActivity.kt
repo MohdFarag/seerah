@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -34,6 +35,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -65,13 +68,20 @@ private fun SpikeScreen() {
     var font by rememberSaveable { mutableStateOf(MapFont.Plex) }
     var labelTest by rememberSaveable { mutableStateOf(true) }
     var status by remember { mutableStateOf("جارٍ التحميل") }
+    val context = LocalContext.current
+    // null while the base map is being copied to storage on first launch.
+    val base by produceState<BaseState?>(initialValue = null) {
+        value = withContext(Dispatchers.IO) { BaseState(BaseMap.prepare(context)) }
+    }
 
     Box(Modifier.fillMaxSize()) {
-        SpikeMap(
-            styleJson = MapStyle.json(textPath, font, labelTest),
-            systemLabelFont = font.takeIf { textPath == TextPath.SystemImages },
-            onStatus = { status = it },
-        )
+        base?.let { ready ->
+            SpikeMap(
+                styleJson = MapStyle.json(textPath, font, labelTest, ready.dir),
+                systemLabelFont = font.takeIf { textPath == TextPath.SystemImages },
+                onStatus = { status = if (ready.dir == null) "$it · بلا أساس" else it },
+            )
+        }
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -112,6 +122,9 @@ private fun SpikeScreen() {
         }
     }
 }
+
+/** Result of preparing the base map. [dir] is null when it was not bundled. */
+private class BaseState(val dir: String?)
 
 /** Bounds of the sample data: Makkah up to the last extracted waypoint, with room for the label column. */
 private val sampleBounds: LatLngBounds = LatLngBounds.Builder()

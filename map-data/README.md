@@ -14,3 +14,14 @@ Rules:
 - Borders cover **states, kingdoms and major ruled regions** only. No tribal borders in v1.
 - Borders change by swapping in the next reviewed shape. Never animate or interpolate between shapes.
 - Detail exists only inside the reviewed Seerah coverage. Panning somewhere else never creates historical detail.
+
+## Spike base map
+
+`tools/spike/build_base.sh` builds two files into `map-data/dist/` (not committed):
+
+| File | Content | Source |
+| --- | --- | --- |
+| `land.pmtiles` | World land outline, zoom 0–9 | Natural Earth, three scales |
+| `relief.pmtiles` | Shaded relief for lat 21–25, lon 38–40, zoom 6–11 | Copernicus DEM GLO-90 |
+
+It needs curl, GDAL, tippecanoe, and Python with Pillow, numpy and `pmtiles`. Copernicus DEM requires attribution; the wording must be added to the app before any release.
