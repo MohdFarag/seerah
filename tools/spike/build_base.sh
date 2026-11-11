@@ -96,7 +96,9 @@ gdaladdo -q -r average "$SRC/relief.mbtiles" 2 4 8 16 32 64 128 256
 python3 "$ROOT/tools/spike/trim_relief.py" "$SRC/relief.mbtiles" \
   "$ROOT/map-data/historical/spike/hijra-route.geojson" "$RELIEF_ZOOM" "${RELIEF_CORRIDOR_KM:-12}"
 python3 "$ROOT/tools/spike/trim_relief.py" "$SRC/relief.mbtiles" \
-  "$ROOT/map-data/historical/spike/hijra-route.geojson" "$((RELIEF_ZOOM - 1))" "${RELIEF_WIDE_KM:-40}"
+  "$ROOT/map-data/historical/spike/hijra-route.geojson" "$((RELIEF_ZOOM - 1))" "${RELIEF_WIDE_KM:-22}"
+python3 "$ROOT/tools/spike/trim_relief.py" "$SRC/relief.mbtiles" \
+  "$ROOT/map-data/historical/spike/hijra-route.geojson" "$((RELIEF_ZOOM - 2))" "${RELIEF_AREA_KM:-60}"
 pmtiles-convert "$SRC/relief.mbtiles" "$OUT/relief.pmtiles"
 
 ls -la "$OUT"
