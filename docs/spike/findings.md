@@ -119,3 +119,14 @@ The owner's Notion log now holds route waypoints 1–35 (six of eight stages, up
 ## 2026-11-11: full route, 41 waypoints (build 8)
 
 The owner completed the Notion log. Build 8 carries all 41 route waypoints, ending at Quba; coordinates of waypoints 1–35 are unchanged from build 7. **Not yet run on a device.**
+
+## 2026-11-11: build 8 on Galaxy A54, and zoom-14 relief (build 9)
+
+Build 8 (Vulkan and OpenGL), reported by the owner: all 41 waypoints show, and the full route reads well at regional zoom. Close in, the 30 m relief at zoom 12 turned blocky. The owner asked for sharper relief and said package size is not a constraint, because the app will download content.
+
+Build 9, built off-device and **not yet run on a device**:
+
+- The DEM is upsampled smoothly (cubic spline) to the zoom-14 pixel size before shading, so close-up relief is smooth rather than blocky. This adds no detail beyond the 30 m source; there is no free finer elevation data for the region.
+- Zoom 14 is kept within 12 km of the route, zoom 13 within 40 km, and zooms 6–12 everywhere in the area.
+- Transparency is back to full precision: at 16 levels it banded visibly at zoom 13 and above.
+- `relief.pmtiles` is 539 MB and the debug APK about 615 MB. The map zoom cap is 15.5.
