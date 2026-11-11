@@ -60,3 +60,9 @@ Reported by the owner with screenshots.
 **Decision for the spike:** map labels are drawn by the system text engine and placed as images. Glyph PBFs stay as the fallback for unvocalised names that must follow a curved line. `font-faces` is dropped until the engine fixes right-to-left shaping.
 
 Not yet run: build 3 on Vulkan, and anything on the Oppo A55 or the Huawei tablet.
+
+## 2026-11-11: build 3 on Galaxy A54 (Vulkan)
+
+Reported by the owner with screenshots. Same results as the OpenGL run: system-drawn labels are correct in Plex and Amiri, glyph PBFs are good only without diacritics, and `font-faces` reverses every label. The label decision above therefore holds on both renderers for this device.
+
+Not yet run: anything on the Oppo A55 or the Huawei tablet.
