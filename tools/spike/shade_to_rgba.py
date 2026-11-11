@@ -16,6 +16,7 @@ Image.MAX_IMAGE_PIXELS = None
 FLAT = 181.0  # hillshade value of flat ground
 SHADOW = (74, 56, 32)  # warm brown, close to the Penpot terrain
 LIGHT = (255, 250, 235)
+ALPHA_BITS = 4
 
 
 def main() -> int:
@@ -29,7 +30,11 @@ def main() -> int:
     rgba = np.empty((*shade.shape, 4), dtype=np.uint8)
     for i in range(3):
         rgba[..., i] = np.where(dark > 0, SHADOW[i], LIGHT[i])
-    rgba[..., 3] = (alpha * 255).astype(np.uint8)
+    # Transparency is stored losslessly and dominates the file size. Sixteen
+    # levels look the same on the map and cut the relief by about 40%.
+    step = 256 >> ALPHA_BITS
+    level = (alpha * 255).astype(np.uint8) // step
+    rgba[..., 3] = np.where(level == 0, 0, level * step + step // 2)
     Image.fromarray(rgba, "RGBA").save(out_path)
     return 0
 

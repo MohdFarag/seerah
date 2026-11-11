@@ -3,6 +3,7 @@
 #
 # Needs: curl, GDAL, tippecanoe, and Python with Pillow, numpy and `pmtiles`.
 # Output: map-data/dist/land.pmtiles and map-data/dist/relief.pmtiles (not committed).
+# Set DEM_RES=90 for a smaller, coarser relief.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -44,18 +45,21 @@ tippecanoe -q -o "$SRC/land_b.pmtiles" -l land -Z3 -z5 $T "$SRC/ne_50m_land.cell
 tippecanoe -q -o "$SRC/land_c.pmtiles" -l land -Z6 -z9 $T "$SRC/ne_10m_land.cells.geojson"
 tile-join -q --no-tile-size-limit -o "$OUT/land.pmtiles" "$SRC/land_a.pmtiles" "$SRC/land_b.pmtiles" "$SRC/land_c.pmtiles"
 
-# 2. Relief: Copernicus DEM GLO-90 for the sample area (lat 21-25, lon 38-40).
-DEM=https://copernicus-dem-90m.s3.amazonaws.com
+# 2. Relief: Copernicus DEM for the sample area (lat 21-25, lon 38-40).
+# DEM_RES=30 (default) uses GLO-30 and tiles to zoom 12; DEM_RES=90 uses GLO-90 and zoom 11.
+DEM_RES="${DEM_RES:-30}"
+if [ "$DEM_RES" = 30 ]; then ARC=10; PIXEL=38.2185; else ARC=30; PIXEL=76.437; fi
+DEM="https://copernicus-dem-${DEM_RES}m.s3.amazonaws.com"
 tiles=()
 for lat in 21 22 23 24; do
   for lon in 038 039; do
-    n="Copernicus_DSM_COG_30_N${lat}_00_E${lon}_00_DEM"
+    n="Copernicus_DSM_COG_${ARC}_N${lat}_00_E${lon}_00_DEM"
     fetch "$DEM/$n/$n.tif" "$SRC/$n.tif"
     tiles+=("$SRC/$n.tif")
   done
 done
 gdalbuildvrt -q -overwrite "$SRC/dem.vrt" "${tiles[@]}"
-gdalwarp -q -overwrite -t_srs EPSG:3857 -r bilinear -tr 76.437 76.437 "$SRC/dem.vrt" "$SRC/dem3857.tif"
+gdalwarp -q -overwrite -t_srs EPSG:3857 -r bilinear -tr "$PIXEL" "$PIXEL" "$SRC/dem.vrt" "$SRC/dem3857.tif"
 gdaldem hillshade -q -multidirectional -z 4 "$SRC/dem3857.tif" "$SRC/hillshade.tif"
 # GDAL's Python bindings are not assumed, so the colouring step goes through PNG.
 gdal_translate -q -of PNG "$SRC/hillshade.tif" "$SRC/hillshade.png"
@@ -64,7 +68,7 @@ python3 "$ROOT/tools/spike/shade_to_rgba.py" "$SRC/hillshade.png" "$SRC/landmask
 cp "$SRC/hillshade.png.aux.xml" "$SRC/relief.png.aux.xml"
 rm -f "$SRC/relief.mbtiles" "$OUT/relief.pmtiles"
 gdal_translate -q -of MBTILES -co TILE_FORMAT=WEBP -co QUALITY=80 "$SRC/relief.png" "$SRC/relief.mbtiles"
-gdaladdo -q -r average "$SRC/relief.mbtiles" 2 4 8 16 32
+gdaladdo -q -r average "$SRC/relief.mbtiles" 2 4 8 16 32 64
 pmtiles-convert "$SRC/relief.mbtiles" "$OUT/relief.pmtiles"
 
 ls -la "$OUT"
