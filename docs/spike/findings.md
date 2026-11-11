@@ -45,3 +45,18 @@ Reported by the owner with screenshots. The screens show two label modes only, s
 | `font-faces` | Fails in **both** layers on Vulkan: every label is reversed. This removes the earlier unexplained case where waypoint labels looked unaffected. |
 
 Still open: build 3 on any device, and any run on the Oppo A55 or the Huawei tablet.
+
+## 2026-11-11: build 3 on Galaxy A54 (OpenGL)
+
+Reported by the owner with screenshots.
+
+| Path | Result |
+| --- | --- |
+| System-drawn labels ("نص النظام"), Plex | Works. Diacritics sit on their letters, joining and direction are right, ﷺ, digits and the arrow render, and edges are sharp. |
+| System-drawn labels, Amiri | Works. Amiri places its marks high, and the test lines were close enough that one line's marks touched the line above. That is test spacing, not a shaping fault; the lines are now further apart. |
+| Glyph PBFs | Unchanged: good without diacritics, wrong with them. |
+| `font-faces` | Unchanged: reversed. |
+
+**Decision for the spike:** map labels are drawn by the system text engine and placed as images. Glyph PBFs stay as the fallback for unvocalised names that must follow a curved line. `font-faces` is dropped until the engine fixes right-to-left shaping.
+
+Not yet run: build 3 on Vulkan, and anything on the Oppo A55 or the Huawei tablet.
