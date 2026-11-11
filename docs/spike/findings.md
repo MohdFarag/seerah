@@ -93,3 +93,21 @@ Reported by the owner with screenshots.
 Cause of the land bug, found off-device: tippecanoe dropped the largest polygons from some tiles when the three Natural Earth scales shared one input file with per-feature zoom ranges. The pipeline now cuts the finer scales into 10-degree cells, builds one tileset per scale and joins them. A check comparing every tile with its four children over lon 30–50, lat 14–32, zoom 2–8 (325 tiles) found no mismatches. **Not yet re-run on a device.**
 
 Also changed: the map's maximum zoom is capped at 12.5 for now. Showing the Makkah sites, which are a few hundred metres apart, needs finer elevation data for the city areas or a different treatment at that scale. The zoom limit is the owner's open decision.
+
+## 2026-11-11: build 5 on Galaxy A54, and finer relief (build 6)
+
+Build 5, reported by the owner with screenshots (OpenGL): the land outline is now correct at every zoom shown, from the regional view down to the sample area. The owner asked for finer relief overall; at the zoom cap the 90 m relief was still blurred.
+
+Build 6 switches the relief to Copernicus GLO-30. Built off-device; **not yet run on a device**.
+
+| Relief for lat 21–25, lon 38–40 | Max tile zoom | Size |
+| --- | --- | --- |
+| GLO-90 | 11 | 26 MB |
+| GLO-30, full transparency precision | 12 | 110 MB |
+| GLO-30, transparency in 16 levels (used) | 12 | 71 MB |
+
+- Lowering the WebP quality barely changes the size, because the transparency channel is stored losslessly and dominates it. Reducing transparency to 16 levels cuts about 40% with no visible difference in a side-by-side tile.
+- Zoom 12 alone is about half the file. The zoom cap is now 13.5.
+- The debug APK is about 143 MB. Roughly 80 MB of that is the base map; the rest is the unshrunk debug build.
+
+This size is for a 2° × 4° area only. Covering all Seerah regions at this detail would be several hundred megabytes, so the real package needs one of: fine relief only along routes and around cities, the engine's own hillshading from compact elevation tiles, or a lower zoom cap outside key areas. Not decided.
