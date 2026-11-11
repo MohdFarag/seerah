@@ -130,3 +130,11 @@ Build 9, built off-device and **not yet run on a device**:
 - Zoom 14 is kept within 12 km of the route, zoom 13 within 14 km, zoom 12 within 35 km, and zooms 6–11 everywhere in the area. The corridors were narrowed so the APK fits the 400 MB file-sharing limit.
 - Transparency is back to full precision: at 16 levels it banded visibly at zoom 13 and above.
 - `relief.pmtiles` is about 300 MB and the debug APK under 400 MB. The map zoom cap is 15.5.
+
+## 2026-11-11: build 9 on Galaxy A54, and relief style
+
+Build 9 (Vulkan), reported by the owner: relief near the route is smooth and readable at mid zoom, but at the closest zooms it turns into large soft blobs, and the owner finds the relief **too realistic** for the app's look. The owner asked for a scale bar and for examples of how historical map apps handle deep zoom.
+
+- **Scale bar (build 10):** MapLibre Android has no built-in scale bar, so the spike draws one in Compose from the map projection, snapped to 1, 2 or 5 × 10ⁿ, with Arabic-Indic digits. Bottom-left, as in the Penpot design.
+- **Relief style:** four styles were rendered off-device from the same 30 m data for the owner to choose: A (current, realistic), B (generalized, single light, elevation tint), C (generalized, shading in three soft bands, painted look), D (only the major ridges, very soft). Not decided.
+- **Deep zoom:** the 30 m source cannot give real detail past about zoom 13. Options recorded for the owner: cap the zoom, fade the relief out at high zoom so the map turns to plain paper, use a generalized style that does not pretend to more detail, or switch to a plan or illustration at that scale, as the Penpot "No more detail at this zoom" screen already does.
