@@ -48,7 +48,10 @@ object MapStyle {
             { "id": "land", "type": "fill", "source": "land", "source-layer": "land",
               "paint": { "fill-color": "$LAND", "fill-antialias": false } },
             { "id": "relief", "type": "raster", "source": "relief",
-              "paint": { "raster-fade-duration": 0 } },
+              "paint": {
+                "raster-fade-duration": 0,
+                "raster-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 1, 14.5, 0]
+              } },
             """
         } else {
             """{ "id": "land", "type": "background", "paint": { "background-color": "$LAND" } },"""

@@ -138,3 +138,9 @@ Build 9 (Vulkan), reported by the owner: relief near the route is smooth and rea
 - **Scale bar (build 10):** MapLibre Android has no built-in scale bar, so the spike draws one in Compose from the map projection, snapped to 1, 2 or 5 × 10ⁿ, with Arabic-Indic digits. Bottom-left, as in the Penpot design.
 - **Relief style:** four styles were rendered off-device from the same 30 m data for the owner to choose: A (current, realistic), B (generalized, single light, elevation tint), C (generalized, shading in three soft bands, painted look), D (only the major ridges, very soft). Not decided.
 - **Deep zoom:** the 30 m source cannot give real detail past about zoom 13. Options recorded for the owner: cap the zoom, fade the relief out at high zoom so the map turns to plain paper, use a generalized style that does not pretend to more detail, or switch to a plan or illustration at that scale, as the Penpot "No more detail at this zoom" screen already does.
+
+## 2026-11-11: owner chose the painted relief (build 11)
+
+The owner accepted the recommendation: style C (generalized terrain, shading in three soft bands), relief faded out between zoom 12.5 and 14.5 so close-up views are plain paper with names and route, and diagrams for the few places that need detail (Makkah sites, Badr, Uhud) as later design work.
+
+Build 11: `relief.pmtiles` is now about 21 MB (zoom 6–12, no route corridor), down from about 312 MB. Map zoom cap is 16. **Not yet run on a device.**
