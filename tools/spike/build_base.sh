@@ -95,6 +95,8 @@ gdaladdo -q -r average "$SRC/relief.mbtiles" 2 4 8 16 32 64 128 256
 # The finest zoom is kept only within a corridor around the route and its places.
 python3 "$ROOT/tools/spike/trim_relief.py" "$SRC/relief.mbtiles" \
   "$ROOT/map-data/historical/spike/hijra-route.geojson" "$RELIEF_ZOOM" "${RELIEF_CORRIDOR_KM:-12}"
+python3 "$ROOT/tools/spike/trim_relief.py" "$SRC/relief.mbtiles" \
+  "$ROOT/map-data/historical/spike/hijra-route.geojson" "$((RELIEF_ZOOM - 1))" "${RELIEF_WIDE_KM:-40}"
 pmtiles-convert "$SRC/relief.mbtiles" "$OUT/relief.pmtiles"
 
 ls -la "$OUT"

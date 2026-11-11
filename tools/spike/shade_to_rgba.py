@@ -17,7 +17,7 @@ import numpy as np
 FLAT = 181.0  # hillshade value of flat ground
 SHADOW = (74, 56, 32)  # warm brown, close to the Penpot terrain
 LIGHT = (255, 250, 235)
-ALPHA_BITS = 4
+ALPHA_BITS = 8  # 4 cuts the size by about 40% but bands visibly at zoom 13 and above
 STRIP = 1024  # rows per strip
 
 
@@ -47,8 +47,7 @@ def main() -> int:
         block = out[y : y + STRIP]
         for i in range(3):
             block[..., i] = np.where(dark > 0, SHADOW[i], LIGHT[i])
-        # Transparency is stored losslessly and dominates the file size. Sixteen
-        # levels look the same on the map and cut the relief by about 40%.
+        # Transparency is stored losslessly and dominates the file size.
         level = (alpha * 255).astype(np.uint8) // step
         block[..., 3] = np.where(level == 0, 0, level * step + step // 2)
     out.flush()
