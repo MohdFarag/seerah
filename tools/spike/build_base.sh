@@ -12,13 +12,37 @@ mkdir -p "$SRC" "$OUT"
 
 fetch() { [ -s "$2" ] || curl -fsSL --retry 3 -o "$2" "$1"; }
 
-# 1. Land: Natural Earth (public domain), three scales merged into one layer.
+# 1. Land: Natural Earth (public domain), three scales.
 NE=https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson
 for f in ne_110m_land ne_50m_land ne_10m_land; do fetch "$NE/$f.geojson" "$SRC/$f.geojson"; done
-python3 "$ROOT/tools/spike/merge_land.py" "$SRC" "$SRC/land.geojson"
-rm -f "$OUT/land.pmtiles"
-tippecanoe -q -o "$OUT/land.pmtiles" -l land -Z0 -z9 \
-  --detect-shared-borders --no-tile-size-limit "$SRC/land.geojson"
+# The largest land polygon (Africa, Europe and Asia in one piece) is dropped from
+# some tiles when tiled whole, so the two finer scales are cut into 10-degree cells.
+split() {
+  local name="$1" gpkg="$SRC/$1.gpkg" cells="$SRC/$1_cells.gpkg"
+  [ -s "$SRC/$name.cells.geojson" ] && return
+  rm -f "$gpkg" "$cells"
+  ogr2ogr -q -f GPKG -makevalid -nln land "$gpkg" "$SRC/$name.geojson"
+  for lon in $(seq -180 10 170); do
+    for lat in $(seq -90 10 80); do
+      ogr2ogr -q -f GPKG -append -nln land -nlt MULTIPOLYGON -makevalid \
+        -clipsrc "$lon" "$lat" "$((lon + 10))" "$((lat + 10))" "$cells" "$gpkg" land 2>/dev/null || true
+    done
+  done
+  ogr2ogr -q -f GeoJSON "$SRC/$name.cells.geojson" "$cells" land
+}
+split ne_50m_land
+split ne_10m_land
+# One tileset per scale, joined afterwards. Putting the three scales in one file
+# with per-feature zoom ranges made tippecanoe drop polygons from some tiles.
+T="--no-tile-size-limit --no-feature-limit --no-tiny-polygon-reduction"
+rm -f "$SRC"/land_*.pmtiles "$OUT/land.pmtiles"
+# shellcheck disable=SC2086
+tippecanoe -q -o "$SRC/land_a.pmtiles" -l land -Z0 -z2 $T "$SRC/ne_110m_land.geojson"
+# shellcheck disable=SC2086
+tippecanoe -q -o "$SRC/land_b.pmtiles" -l land -Z3 -z5 $T "$SRC/ne_50m_land.cells.geojson"
+# shellcheck disable=SC2086
+tippecanoe -q -o "$SRC/land_c.pmtiles" -l land -Z6 -z9 $T "$SRC/ne_10m_land.cells.geojson"
+tile-join -q --no-tile-size-limit -o "$OUT/land.pmtiles" "$SRC/land_a.pmtiles" "$SRC/land_b.pmtiles" "$SRC/land_c.pmtiles"
 
 # 2. Relief: Copernicus DEM GLO-90 for the sample area (lat 21-25, lon 38-40).
 DEM=https://copernicus-dem-90m.s3.amazonaws.com
