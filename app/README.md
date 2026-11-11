@@ -29,7 +29,9 @@ This produces one APK per map renderer under `spike/build/outputs/apk/`:
 | `vulkan` | Vulkan (MapLibre default since 13.0) | `app.seerah.spike.vulkan` |
 | `opengl` | OpenGL ES | `app.seerah.spike.opengl` |
 
-Both install side by side. The `Spike APK` workflow also builds them and attaches them to the run as an artifact.
+Both install side by side.
+
+**From GitHub:** every push to `main` or a `claude/**` branch that touches the app, map data or spike tools runs the `Spike APK` workflow. It builds the base map (cached between runs), then the two APKs, and attaches them to the run as `spike-vulkan` and `spike-opengl`. Open the run under the repository's **Actions** tab and download them from **Artifacts**. A first run without the cache takes about 20 minutes.
 
 ## Regenerating glyphs
 

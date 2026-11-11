@@ -2,10 +2,10 @@ name: Spike APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths: ["app/**", "map-data/**", ".github/workflows/spike-apk.yml"]
+    branches: [main, "claude/**"]
+    paths: ["app/**", "map-data/**", "tools/spike/**", ".github/workflows/spike-apk.yml"]
   pull_request:
-    paths: ["app/**", "map-data/**", ".github/workflows/spike-apk.yml"]
+    paths: ["app/**", "map-data/**", "tools/spike/**", ".github/workflows/spike-apk.yml"]
 permissions:
   contents: read
 concurrency:
@@ -14,18 +14,50 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
+
+      # The base map (land outline and relief) is too large for git, so it is
+      # built here and cached until the pipeline or the route changes.
+      - name: Restore base map
+        id: base
+        uses: actions/cache@v6
+        with:
+          path: map-data/dist
+          key: base-map-${{ hashFiles('tools/spike/build_base.sh', 'tools/spike/shade_to_rgba.py', 'tools/spike/trim_relief.py', 'map-data/historical/spike/hijra-route.geojson') }}
+
+      - name: Install map tools
+        if: steps.base.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gdal-bin tippecanoe
+          pip install --quiet numpy pmtiles
+
+      - name: Build base map
+        if: steps.base.outputs.cache-hit != 'true'
+        run: bash tools/spike/build_base.sh
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: gradle
+
       - name: Build debug APKs
         working-directory: app
         run: ./gradlew :spike:assembleDebug --console=plain
+
       - uses: actions/upload-artifact@v4
         with:
-          name: spike-apks
-          path: app/spike/build/outputs/apk/*/debug/*.apk
+          name: spike-vulkan
+          path: app/spike/build/outputs/apk/vulkan/debug/*.apk
           if-no-files-found: error
+          compression-level: 0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spike-opengl
+          path: app/spike/build/outputs/apk/opengl/debug/*.apk
+          if-no-files-found: error
+          compression-level: 0
