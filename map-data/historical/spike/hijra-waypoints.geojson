@@ -447,7 +447,7 @@
           39.3274167,
           23.1441333
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
@@ -473,7 +473,7 @@
           39.3111778,
           23.1789306
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
@@ -583,7 +583,7 @@
           39.2577111,
           23.3192944
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
@@ -609,7 +609,7 @@
           39.2842528,
           23.3502306
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
@@ -635,7 +635,7 @@
           39.3085278,
           23.393225
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
@@ -661,7 +661,7 @@
           39.3005667,
           23.4182028
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
@@ -729,7 +729,7 @@
           39.2743389,
           23.7402639
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
@@ -839,13 +839,144 @@
           39.5393917,
           24.0554444
         ],
-        "position_note": "The source gives two coordinate pairs. They join up with the neighbouring waypoints, so they are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           39.3601361,
           23.9119194
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-36",
+      "properties": {
+        "id": "hijra-36",
+        "section": "route",
+        "seq": 36,
+        "stage": 7,
+        "name": "الخلّاق (آبار الماشي)",
+        "position": "source",
+        "when_source": "الأحد 7 ربيع الأول 1هـ، الموافق 18 سبتمبر 622م",
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.5493528,
+          24.1707806
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-37",
+      "properties": {
+        "id": "hijra-37",
+        "section": "route",
+        "seq": 37,
+        "stage": 7,
+        "name": "وادي العقيق",
+        "position": "source",
+        "when_source": null,
+        "review": "draft",
+        "stretch_end": [
+          39.5586944,
+          24.3160056
+        ],
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.5493528,
+          24.1707806
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-38",
+      "properties": {
+        "id": "hijra-38",
+        "section": "route",
+        "seq": 38,
+        "stage": 7,
+        "name": "الجثجاثة",
+        "position": "source",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.546125,
+          24.2312444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-39",
+      "properties": {
+        "id": "hijra-39",
+        "section": "route",
+        "seq": 39,
+        "stage": 8,
+        "name": "طريق الطبي",
+        "position": "source",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.5829472,
+          24.3546083
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-40",
+      "properties": {
+        "id": "hijra-40",
+        "section": "route",
+        "seq": 40,
+        "stage": 8,
+        "name": "العصبة",
+        "position": "source",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.6055722,
+          24.4308806
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "hijra-41",
+      "properties": {
+        "id": "hijra-41",
+        "section": "route",
+        "seq": 41,
+        "stage": 8,
+        "name": "قباء",
+        "position": "source",
+        "when_source": null,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.6172111,
+          24.4390472
         ]
       }
     }
