@@ -32,3 +32,16 @@ Changes made in response (built, **not yet run on a device**):
 Known limits of the third path: a label cannot follow a curved line, each distinct label costs one bitmap in memory, and labels do not reflow when the user changes the system font size until the style is rebuilt.
 
 Checked off-device after regenerating: a Plex glyph rendered back from its PBF is clean, but an Amiri glyph still shows a broken thin stroke. Amiri's hairlines are under one pixel at the 24 px size the glyph format uses, so the PBF path is a poor fit for Amiri regardless of the generator. Plex suits it.
+
+## 2026-11-11: Vulkan run on Galaxy A54 (build 2)
+
+Reported by the owner with screenshots. The screens show two label modes only, so this is build 2; build 3 with the system-drawn path has not been run yet. The owner also confirmed the first run was on the same Galaxy A54.
+
+| Check | Result |
+| --- | --- |
+| Vulkan renderer on Galaxy A54 | Works. Map, route and markers draw correctly. |
+| Glyph PBFs, no diacritics | Works in both fonts. Edges are now smooth, so the build 2 generator fix held on a device. The arrow in "يثرب ← المدينة" shows in Amiri. |
+| Glyph PBFs, with diacritics | Still fails: marks are misplaced and break the joining. |
+| `font-faces` | Fails in **both** layers on Vulkan: every label is reversed. This removes the earlier unexplained case where waypoint labels looked unaffected. |
+
+Still open: build 3 on any device, and any run on the Oppo A55 or the Huawei tablet.
