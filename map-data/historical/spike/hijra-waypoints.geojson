@@ -276,37 +276,21 @@
     },
     {
       "type": "Feature",
-      "id": "hijra-11-a",
+      "id": "hijra-11",
       "properties": {
-        "id": "hijra-11-a",
+        "id": "hijra-11",
         "section": "route",
         "seq": 11,
         "stage": 2,
         "name": "حادثة سراقة (وادي كلية)",
-        "position": "candidate",
+        "position": "source",
         "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
+        "review": "draft",
+        "other_source_pair": [
           39.3789667,
           22.5658417
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "hijra-11-b",
-      "properties": {
-        "id": "hijra-11-b",
-        "section": "route",
-        "seq": 11,
-        "stage": 2,
-        "name": "حادثة سراقة (وادي كلية)",
-        "position": "candidate",
-        "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
+        ],
+        "position_note": "The source gives two coordinate pairs. This one was picked for the spike because it lies along the route; not a reviewed choice."
       },
       "geometry": {
         "type": "Point",
@@ -339,43 +323,27 @@
     },
     {
       "type": "Feature",
-      "id": "hijra-13-a",
+      "id": "hijra-13",
       "properties": {
-        "id": "hijra-13-a",
+        "id": "hijra-13",
         "section": "route",
         "seq": 13,
         "stage": 2,
         "name": "الخرّار",
-        "position": "candidate",
+        "position": "source",
         "when_source": null,
-        "review": "draft"
+        "review": "draft",
+        "other_source_pair": [
+          39.3334833,
+          22.8084333
+        ],
+        "position_note": "The source gives two coordinate pairs. This one was picked for the spike because it lies along the route; not a reviewed choice."
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           39.1470167,
           22.7052083
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "hijra-13-b",
-      "properties": {
-        "id": "hijra-13-b",
-        "section": "route",
-        "seq": 13,
-        "stage": 2,
-        "name": "الخرّار",
-        "position": "candidate",
-        "when_source": null,
-        "review": "draft"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.3334833,
-          22.8084333
         ]
       }
     },

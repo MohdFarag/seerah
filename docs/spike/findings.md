@@ -66,3 +66,15 @@ Not yet run: build 3 on Vulkan, and anything on the Oppo A55 or the Huawei table
 Reported by the owner with screenshots. Same results as the OpenGL run: system-drawn labels are correct in Plex and Amiri, glyph PBFs are good only without diacritics, and `font-faces` reverses every label. The label decision above therefore holds on both renderers for this device.
 
 Not yet run: anything on the Oppo A55 or the Huawei tablet.
+
+## 2026-11-11: base map pipeline (build 4)
+
+Built off-device; **not yet run on a device**.
+
+- The owner approved installing the standard tools. GDAL 3.8.4, tippecanoe 2.49 and the Python `pmtiles` package build the base from Natural Earth and Copernicus DEM GLO-90.
+- Sizes for the sample area: `land.pmtiles` 5.1 MB (whole world, zoom 0–9) and `relief.pmtiles` 26.2 MB (lat 21–25, lon 38–40, zoom 6–11, WebP). Relief is the size driver, as expected.
+- A preview of the relief rendered off-device shows the Hijaz ranges and lava fields clearly.
+- The APK bundles both files and copies them to app storage on first launch, because the engine cannot read PMTiles from assets.
+- Natural Earth's finest scale is 1:10m, so the coast will look angular when zoomed in past the relief's detail. A finer coastline source is a later decision.
+
+To check on a device: that both PMTiles sources load from storage, how the relief looks against the Penpot design, and panning smoothness on the Oppo A55.

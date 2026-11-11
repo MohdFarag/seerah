@@ -23,12 +23,36 @@ enum class MapFont(val label: String, val stack: String, val ttf: String) {
 object MapStyle {
     // Colours follow the Penpot tokens (athar/day). Hard-coded here for the spike only.
     private const val LAND = "#F1E6C8"
+    private const val SEA = "#809B94"
     private const val ROUTE = "#AF5A36"
     const val LABEL = "#203D32"
     const val HALO = "#FAF7F0"
     private const val MARK = "#B7963A"
 
-    fun json(textPath: TextPath, font: MapFont, showLabelTest: Boolean): String {
+    /**
+     * @param baseDir folder on device storage holding land.pmtiles and relief.pmtiles,
+     *   or null when the base map was not bundled.
+     */
+    fun json(textPath: TextPath, font: MapFont, showLabelTest: Boolean, baseDir: String?): String {
+        val baseSources = if (baseDir != null) {
+            """
+            "land": { "type": "vector", "url": "pmtiles://file://$baseDir/land.pmtiles" },
+            "relief": { "type": "raster", "url": "pmtiles://file://$baseDir/relief.pmtiles", "tileSize": 256 },
+            """
+        } else {
+            ""
+        }
+        val baseLayers = if (baseDir != null) {
+            """
+            { "id": "sea", "type": "background", "paint": { "background-color": "$SEA" } },
+            { "id": "land", "type": "fill", "source": "land", "source-layer": "land",
+              "paint": { "fill-color": "$LAND", "fill-antialias": true } },
+            { "id": "relief", "type": "raster", "source": "relief",
+              "paint": { "raster-fade-duration": 0 } },
+            """
+        } else {
+            """{ "id": "land", "type": "background", "paint": { "background-color": "$LAND" } },"""
+        }
         val fontFaces = if (textPath == TextPath.FontFaces) {
             """"font-faces": { "${font.stack}": "asset://fonts/${font.ttf}" },"""
         } else {
@@ -75,12 +99,13 @@ object MapStyle {
           $fontFaces
           "glyphs": "asset://glyphs/{fontstack}/{range}.pbf",
           "sources": {
+            $baseSources
             "waypoints": { "type": "geojson", "data": "asset://hijra-waypoints.geojson" },
             "route": { "type": "geojson", "data": "asset://hijra-route.geojson" },
             "label-test": { "type": "geojson", "data": "asset://label-test.geojson" }
           },
           "layers": [
-            { "id": "land", "type": "background", "paint": { "background-color": "$LAND" } },
+            $baseLayers
             {
               "id": "route", "type": "line", "source": "route",
               "layout": { "line-cap": "round", "line-join": "round" },

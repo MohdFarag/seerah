@@ -9,7 +9,9 @@ The Android project. For now it holds only the **technical spike** (`:spike`), a
 - Arabic labels drawn three ways, switchable on screen: pre-built glyph PBFs, the engine's `font-faces` path, and labels drawn by Android's text engine and placed as images. Two fonts: IBM Plex Sans Arabic and Amiri.
 - A column of test labels (diacritics, ﷺ, digits, mixed direction) in the sea area.
 
-Not there yet: base map (coast, terrain), time states, opening an event, content updates.
+- A base map from local PMTiles: world land outline and shaded relief for the sample area, when `tools/spike/build_base.sh` has been run before the build.
+
+Not there yet: time states, opening an event, content updates.
 
 ## Build
 
