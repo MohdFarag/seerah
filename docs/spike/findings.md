@@ -127,6 +127,6 @@ Build 8 (Vulkan and OpenGL), reported by the owner: all 41 waypoints show, and t
 Build 9, built off-device and **not yet run on a device**:
 
 - The DEM is upsampled smoothly (cubic spline) to the zoom-14 pixel size before shading, so close-up relief is smooth rather than blocky. This adds no detail beyond the 30 m source; there is no free finer elevation data for the region.
-- Zoom 14 is kept within 12 km of the route, zoom 13 within 22 km, zoom 12 within 60 km, and zooms 6–11 everywhere in the area. The corridors were narrowed so the APK fits the 500 MB file-sharing limit.
+- Zoom 14 is kept within 12 km of the route, zoom 13 within 14 km, zoom 12 within 35 km, and zooms 6–11 everywhere in the area. The corridors were narrowed so the APK fits the 400 MB file-sharing limit.
 - Transparency is back to full precision: at 16 levels it banded visibly at zoom 13 and above.
-- `relief.pmtiles` is about 400 MB and the debug APK under 500 MB. The map zoom cap is 15.5.
+- `relief.pmtiles` is about 300 MB and the debug APK under 400 MB. The map zoom cap is 15.5.
