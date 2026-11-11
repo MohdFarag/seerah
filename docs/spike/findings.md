@@ -115,3 +115,7 @@ This size is for a 2° × 4° area only. Covering all Seerah regions at this det
 ## 2026-11-11: route data extended to waypoint 35 (build 7)
 
 The owner's Notion log now holds route waypoints 1–35 (six of eight stages, up to Wadi Rim). The log itself states that the last 6 waypoints, in stages 7 and 8 and ending at Quba, are still missing. Build 7 carries the 35 waypoints; **not yet run on a device**. How the two-pair waypoints are read is recorded in `map-data/historical/spike/README.md`.
+
+## 2026-11-11: full route, 41 waypoints (build 8)
+
+The owner completed the Notion log. Build 8 carries all 41 route waypoints, ending at Quba; coordinates of waypoints 1–35 are unchanged from build 7. **Not yet run on a device.**
