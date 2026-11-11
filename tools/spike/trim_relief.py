@@ -9,6 +9,7 @@ line in ROUTE.geojson. Coarser zooms are kept everywhere.
 
 import json
 import math
+import pathlib
 import sqlite3
 import sys
 
@@ -33,9 +34,10 @@ def seg_dist(p, a, b) -> float:
 def main() -> int:
     db, route_path, zoom, km = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4])
     lines = []
-    for f in json.load(open(route_path, encoding="utf-8"))["features"]:
+    route = json.loads(pathlib.Path(route_path).read_text(encoding="utf-8"))
+    for f in route["features"]:
         pts = [merc(*c) for c in f["geometry"]["coordinates"]]
-        lines += list(zip(pts, pts[1:]))
+        lines += list(zip(pts, pts[1:], strict=False))
     # Mercator stretches distances by 1/cos(lat); at ~23° that is about 1.09.
     limit = km * 1000 * 1.09
     n = 2**zoom
