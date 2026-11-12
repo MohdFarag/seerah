@@ -32,12 +32,12 @@ Spike inputs set by the owner (2026-11-10):
 
 Exit: the owner approves the stack. Done 2026-11-13: [ADR 0002](adr/0002-proposed-stack.md) accepted; results in [spike/summary.md](spike/summary.md).
 
-## 2. Content sample
+## 2. v1: from Taif to Badr
 
-Fill one complete event in `content/` (e.g. the Hijra journey or Badr) to the per-event minimum. The owner reviews it.
+Scope set by the owner (2026-11-11): one continuous period, from the journey to Taif (with a short lead-in on the Year of Sorrow) to Badr and its outcome. 26 draft events in 5 phases ([index](../content/index/phases.json)). The map covers the Hijaz only, with no world view.
 
-## 3. v1 build
+The app and its content are built together; there is no separate content-sample stage (owner, 2026-11-13). Each event's situations, places, narrations and sources are worked out when that event is prepared, and the owner reviews each event before it ships.
 
-Map and time, index, event and situation reader, follow-along, offline package and updates, feedback, analytics.
+App: map and time, index, event and situation reader, free exploration and follow-along, offline package and updates, feedback, analytics.
 
-## 4. Closed beta → public release
+## 3. Closed beta → public release

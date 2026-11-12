@@ -1,6 +1,6 @@
 <div align="center">
 
-# السيرة · Al-Seerah
+# سيرة رسول الله ﷺ
 
 **Explore the Prophet's ﷺ biography through place, time and the original texts.**
 
@@ -16,13 +16,13 @@
 
 ## Overview
 
-**السيرة** is a free Arabic Android app (phones and tablets) that turns the Seerah into a journey across a 2D historical map. Users either **follow the Seerah** step by step or **explore freely**. As time moves, the map changes with it: place names, borders of kingdoms and landmarks such as the Prophet's Mosque all appear in their own time.
+**سيرة رسول الله ﷺ** is a free Arabic Android app (phones and tablets) that turns the Seerah into a journey across a 2D historical map. Users either **follow the Seerah** step by step or **explore freely**. As time moves, the map changes with it: place names, borders of kingdoms and landmarks such as the Prophet's Mosque all appear in their own time.
 
 Every event shows its **original texts first** (Quran, hadith, athar, and narrations as carried in Seerah books), each with its source and a simple explanation on request.
 
 | | |
 | --- | --- |
-| 🗺️ **Map first** | The whole world at overview zoom, with detail inside the Seerah's regions |
+| 🗺️ **Map first** | A detailed historical map of the Hijaz: Makkah, Taif, Madinah, Quba, Badr and the routes between |
 | ⏳ **Time-synced** | Browse by year; names, borders and landmarks match the selected time |
 | 📜 **Texts first** | Original wording shown directly, sourced, with a simple explanation on request |
 | 🧭 **Follow or explore** | Manual step-by-step follow-along, with free map movement at every step |
@@ -37,7 +37,7 @@ Every event shows its **original texts first** (Quran, hadith, athar, and narrat
 
 ## Status
 
-Pre-implementation. The requirements are in [PRD v0.2](docs/prd/PRD-v0.2.ar.md) (a draft for review), and the next milestone is the technical spike in the [roadmap](docs/roadmap.md).
+The first release covers one continuous period, **from the journey to Taif to the Battle of Badr**. The technical spike is done and the stack is accepted ([ADR 0002](docs/adr/0002-proposed-stack.md)); next is building v1, app and content together ([roadmap](docs/roadmap.md)). Requirements: [PRD v0.2](docs/prd/PRD-v0.2.ar.md).
 
 ## Getting started
 

@@ -9,6 +9,7 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 - **Primary user:** a young Muslim using the app alone, who knows the Seerah in general but has no clear picture of the geography. Children are not direct users.
 - **Language:** Arabic only (RTL).
 - **Scope of content:** the Seerah only. No commitment to wider Islamic history.
+- **v1 goal (owner, 2026-11-11):** one continuous historical period with a clear identity, not scattered events: from the journey to Taif (about year 10 of prophethood) to Badr (Ramadan 2 AH), following the move from pressure in Makkah to the victory at Badr. Priority: understanding and following the Hijra on the map; accuracy and sourcing underlie everything. The rest of the Seerah comes in later releases.
 
 ## v1 scope
 
@@ -16,10 +17,10 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 | --- | --- |
 | Platform | Android phones **and** tablets |
 | Distribution | Free. A small closed beta first, then public |
-| Time span | From an agreed point before the birth until the Prophet's ﷺ death, with selected key events |
-| Map | Fully **2D**, historical style. The whole world at overview zoom, with detail only inside the reviewed Seerah coverage |
+| Time span | From the journey to Taif, with a short lead-in on the Year of Sorrow, to Badr and its outcome (Ramadan 2 AH). 26 draft events in 5 phases: [content/index/phases.json](../content/index/phases.json) |
+| Map | Fully **2D**, historical style. Detail focused on the **Hijaz** (Makkah, Taif, Madinah, Quba, Badr and the routes between), with wider bounds inside Arabia where needed. Panning and zooming out are limited to that area; **no world view** in v1 |
 | Changes over time | Place names, borders of states, kingdoms and major ruled regions, and key landmarks (e.g. the Prophet's Mosque appears when it was built) |
-| Access | Map, phase and event index, guided follow-along ("story mode"). **No search** |
+| Access | Map, phase and event index. **Free exploration is the main mode**; guided follow-along ("story mode") is started by the user. **No search** |
 | Content | Quran, hadith, athar, and narrations as carried in Seerah books, each with its source and a simple explanation |
 | Narrations | **One** chosen narration per situation. No alternatives and no comparison |
 | Offline | Texts, map and situation sequence work offline inside the downloaded coverage |
@@ -30,7 +31,9 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 
 ## Content model
 
-**Phase → Event → Situations (only when needed).** A simple event can be a single situation, and there is no fixed count. Linked but separate events stay separate stations (e.g. al-Ahzab, then Banu Qurayza).
+**Phase → Event → smaller events or situations (only when needed).** No fixed number of levels; a simple situation shows its text directly. Linked but separate events stay separate stations (e.g. al-Ahzab, then Banu Qurayza).
+
+**Depth per event** (set in the index): *deep* (situations, original texts, checked places and routes), *medium* (sourced narrative, key places), *brief* (context only, no invented coordinates).
 
 **Minimum content per event:**
 
@@ -69,7 +72,6 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 - Changing the time **suspends** the follow-along and keeps its place, with a way back.
 - Opening another event is exploration and keeps the follow-along point. Moving that point is an explicit user choice.
 - On relaunch, restore the last place and time, and offer to resume. Never auto-start.
-- Events before the birth can be skipped, starting from the birth.
 - Other story-mode details will be decided during implementation.
 
 ## Out of v1

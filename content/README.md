@@ -5,15 +5,16 @@ The Seerah content, kept separate from the app so it can ship as an independent,
 ```text
 content/
   schema/content.schema.json   entity definitions (phase, event, situation, text, source, place, display date)
-  index/phases.json            the 4 approved phases and the approved event titles
+  index/phases.json            v1: 5 phases, 26 draft events, Taif to Badr (owner, 2026-11-11)
+  index/full-seerah-titles.json  the earlier whole-Seerah title list, kept for later releases (not validated, not shipped)
   events/<event-id>.json       full event content (added during content preparation)
 ```
 
 ## Status of the index
 
-Event titles in `index/phases.json` are **approved for inclusion only**. The owner hasn't reviewed their narrations, dates or locations yet. Every event starts as `review: "title-approved"`.
+The v1 index follows the owner's decision of 2026-11-11: the story opens with the journey to Taif, after a short lead-in on the state of the call after the Year of Sorrow, and ends with Badr and its outcome. The 26 events and their depth are a **working draft**: every event is `review: "draft"`. Narrations, exact dates and coordinates are not approved. Detail per event (situations, places, narrations, sources) is worked out when that event's content is prepared, not before.
 
-The Phase 3 dates the owner supplied are kept in `preliminary_date_note`, exactly as given. They are a **preliminary compilation, not production data**, and must not be used as display dates until reviewed.
+The whole-Seerah title list from PRD v0.2 is kept in `full-seerah-titles.json` for later releases. Its Phase 3 dates are a preliminary compilation, not production data.
 
 ## Rules the schema enforces
 
