@@ -96,6 +96,8 @@
         "order": { "type": "integer", "minimum": 1 },
         "title": { "type": "string" },
         "review": { "$ref": "#/$defs/review" },
+        "depth": { "enum": ["deep", "medium", "brief"], "description": "Planned depth: deep = situations, original texts, checked places and routes; medium = sourced narrative and key places; brief = context only, no invented coordinates." },
+        "note": { "type": "string", "description": "Working note from the owner's event list. Not shown in the app." },
         "preliminary_date_note": { "type": "string", "description": "Owner's preliminary compilation, kept as given. NOT a display date." },
         "date": { "$ref": "#/$defs/displayDate" },
         "place": { "$ref": "#/$defs/placeRef" },

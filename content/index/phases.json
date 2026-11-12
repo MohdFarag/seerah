@@ -2,345 +2,259 @@
   "content_version": "0.0.0-index",
   "phases": [
     {
-      "id": "pre-birth",
+      "id": "seeking-support",
       "order": 1,
-      "title": "ما قبل المولد",
-      "skippable": true,
+      "title": "البحث عن النصرة والطريق إلى الهجرة",
+      "note": "نحو 619–622م؛ التواريخ تقريبية. يسبقها تمهيد موجز عن حال الدعوة وعام الحزن (ليس فصلًا كاملًا).",
       "events": [
-        {
-          "id": "world-and-arabia-intro",
-          "phase_id": "pre-birth",
-          "order": 1,
-          "title": "مقدمة جغرافية وسياسية عن العالم وشبه الجزيرة",
-          "review": "title-approved"
-        },
-        {
-          "id": "people-of-the-elephant",
-          "phase_id": "pre-birth",
-          "order": 2,
-          "title": "قصة أصحاب الفيل",
-          "review": "title-approved"
-        }
-      ],
-      "note": "مقدمة جغرافية وسياسية عن العالم وشبه الجزيرة ثم أصحاب الفيل؛ يمكن تخطي أحداث ما قبل المولد"
-    },
-    {
-      "id": "birth-to-prophethood",
-      "order": 2,
-      "title": "المولد وما قبل البعثة",
-      "skippable": false,
-      "events": [
-        {
-          "id": "birth",
-          "phase_id": "birth-to-prophethood",
-          "order": 1,
-          "title": "المولد",
-          "review": "title-approved"
-        },
-        {
-          "id": "nursing-and-childhood",
-          "phase_id": "birth-to-prophethood",
-          "order": 2,
-          "title": "الرضاعة والطفولة",
-          "review": "title-approved"
-        },
-        {
-          "id": "mother-death-and-guardianship",
-          "phase_id": "birth-to-prophethood",
-          "order": 3,
-          "title": "وفاة الأم ثم كفالة الجد والعم",
-          "review": "title-approved"
-        },
-        {
-          "id": "hilf-al-fudul",
-          "phase_id": "birth-to-prophethood",
-          "order": 4,
-          "title": "حلف الفضول",
-          "review": "title-approved"
-        },
-        {
-          "id": "marriage-to-khadijah",
-          "phase_id": "birth-to-prophethood",
-          "order": 5,
-          "title": "الزواج من خديجة رضي الله عنها",
-          "review": "title-approved"
-        },
-        {
-          "id": "rebuilding-the-kaaba",
-          "phase_id": "birth-to-prophethood",
-          "order": 6,
-          "title": "بناء الكعبة",
-          "review": "title-approved"
-        },
-        {
-          "id": "devotion-in-hira",
-          "phase_id": "birth-to-prophethood",
-          "order": 7,
-          "title": "التعبد في حراء قبل البعثة",
-          "review": "title-approved"
-        }
-      ]
-    },
-    {
-      "id": "makkan-period",
-      "order": 3,
-      "title": "البعثة والعهد المكي حتى ما قبل الهجرة",
-      "skippable": false,
-      "events": [
-        {
-          "id": "start-of-revelation",
-          "phase_id": "makkan-period",
-          "order": 1,
-          "title": "بدء الوحي والبعثة النبوية",
-          "review": "title-approved",
-          "preliminary_date_note": "رمضان - السنة 1 للبعثة (610م)"
-        },
-        {
-          "id": "secret-call-dar-al-arqam",
-          "phase_id": "makkan-period",
-          "order": 2,
-          "title": "الدعوة السرية ودار الأرقم",
-          "review": "title-approved",
-          "preliminary_date_note": "السنة 1 إلى 3 للبعثة"
-        },
-        {
-          "id": "public-call-at-safa",
-          "phase_id": "makkan-period",
-          "order": 3,
-          "title": "الجهر بالدعوة على جبل الصفا",
-          "review": "title-approved",
-          "preliminary_date_note": "مطلع السنة 4 للبعثة"
-        },
-        {
-          "id": "first-hijra-to-abyssinia",
-          "phase_id": "makkan-period",
-          "order": 4,
-          "title": "الهجرة الأولى إلى الحبشة",
-          "review": "title-approved",
-          "preliminary_date_note": "رجب - السنة 5 للبعثة"
-        },
-        {
-          "id": "hamzah-and-umar-embrace-islam",
-          "phase_id": "makkan-period",
-          "order": 5,
-          "title": "إسلام حمزة بن عبد المطلب وعمر بن الخطاب",
-          "review": "title-approved",
-          "preliminary_date_note": "أواخر السنة 6 للبعثة"
-        },
-        {
-          "id": "boycott-shib-abi-talib",
-          "phase_id": "makkan-period",
-          "order": 6,
-          "title": "المقاطعة الشاملة في شِعْب أبي طالب",
-          "review": "title-approved",
-          "preliminary_date_note": "محرم السنة 7 إلى السنة 10 للبعثة"
-        },
-        {
-          "id": "year-of-sorrow",
-          "phase_id": "makkan-period",
-          "order": 7,
-          "title": "عام الحزن: وفاة أبي طالب وخديجة",
-          "review": "title-approved",
-          "preliminary_date_note": "شوال - السنة 10 للبعثة"
-        },
         {
           "id": "journey-to-taif",
-          "phase_id": "makkan-period",
+          "phase_id": "seeking-support",
+          "order": 1,
+          "title": "رحلة النبي ﷺ إلى الطائف وعودته",
+          "review": "draft",
+          "depth": "deep",
+          "note": "الافتتاحية المعتمدة"
+        },
+        {
+          "id": "calling-the-tribes",
+          "phase_id": "seeking-support",
+          "order": 2,
+          "title": "عرض الدعوة على القبائل في المواسم",
+          "review": "draft",
+          "depth": "medium"
+        },
+        {
+          "id": "khazraj-at-hajj",
+          "phase_id": "seeking-support",
+          "order": 3,
+          "title": "لقاء نفر من الخزرج في موسم الحج وعودتهم إلى يثرب",
+          "review": "draft",
+          "depth": "deep",
+          "note": "يفسر أصل العلاقة السابقة لبيعة العقبة الأولى"
+        },
+        {
+          "id": "first-aqabah",
+          "phase_id": "seeking-support",
+          "order": 4,
+          "title": "بيعة العقبة الأولى",
+          "review": "draft",
+          "depth": "medium"
+        },
+        {
+          "id": "musab-in-yathrib",
+          "phase_id": "seeking-support",
+          "order": 5,
+          "title": "إرسال مصعب بن عمير وانتشار الإسلام في يثرب",
+          "review": "draft",
+          "depth": "medium"
+        },
+        {
+          "id": "second-aqabah",
+          "phase_id": "seeking-support",
+          "order": 6,
+          "title": "بيعة العقبة الثانية",
+          "review": "draft",
+          "depth": "deep"
+        },
+        {
+          "id": "companions-migrate",
+          "phase_id": "seeking-support",
+          "order": 7,
+          "title": "هجرة الصحابة إلى المدينة",
+          "review": "draft",
+          "depth": "medium"
+        },
+        {
+          "id": "quraysh-plot-and-permission",
+          "phase_id": "seeking-support",
           "order": 8,
-          "title": "الخروج إلى الطائف",
-          "review": "title-approved",
-          "preliminary_date_note": "شوال - السنة 10 للبعثة"
-        },
-        {
-          "id": "isra-and-miraj",
-          "phase_id": "makkan-period",
-          "order": 9,
-          "title": "رحلة الإسراء والمعراج",
-          "review": "title-approved",
-          "preliminary_date_note": "السنة 10 أو 11 للبعثة"
-        },
-        {
-          "id": "tribes-and-aqabah-pledges",
-          "phase_id": "makkan-period",
-          "order": 10,
-          "title": "عرض النفس على القبائل وبيعتا العقبة",
-          "review": "title-approved",
-          "preliminary_date_note": "مواسم الحج - السنوات 11 إلى 13 للبعثة"
-        },
-        {
-          "id": "dar-al-nadwa-and-permission-to-migrate",
-          "phase_id": "makkan-period",
-          "order": 11,
-          "title": "مؤامرة دار الندوة والإذن للنبي ﷺ بالخروج للهجرة",
-          "review": "title-approved",
-          "preliminary_date_note": "صفر - السنة 14 للبعثة (622م)"
+          "title": "تآمر قريش والإذن بالهجرة",
+          "review": "draft",
+          "depth": "deep"
         }
       ]
     },
     {
-      "id": "hijra-and-madinan-period",
-      "order": 4,
-      "title": "الهجرة والعهد المدني حتى الوفاة",
-      "skippable": false,
+      "id": "hijra-journey",
+      "order": 2,
+      "title": "رحلة الهجرة",
+      "note": "622م",
       "events": [
         {
-          "id": "hijra-journey",
-          "phase_id": "hijra-and-madinan-period",
+          "id": "preparing-to-leave",
+          "phase_id": "hijra-journey",
           "order": 1,
-          "title": "رحلة الهجرة من مكة إلى المدينة",
-          "review": "title-approved"
+          "title": "الاستعداد للخروج من مكة",
+          "review": "draft",
+          "depth": "deep"
         },
         {
-          "id": "quba-madinah-and-mosque",
-          "phase_id": "hijra-and-madinan-period",
+          "id": "cave-of-thawr",
+          "phase_id": "hijra-journey",
           "order": 2,
-          "title": "الوصول إلى قباء ثم المدينة وبناء المسجد النبوي",
-          "review": "title-approved"
+          "title": "الخروج إلى غار ثور والمكث فيه",
+          "review": "draft",
+          "depth": "deep"
         },
         {
-          "id": "brotherhood-and-madinah-society",
-          "phase_id": "hijra-and-madinan-period",
+          "id": "leaving-the-cave",
+          "phase_id": "hijra-journey",
           "order": 3,
-          "title": "المؤاخاة وتنظيم المجتمع والعلاقات في المدينة",
-          "review": "title-approved"
+          "title": "الانطلاق من الغار ومسار الرحلة",
+          "review": "draft",
+          "depth": "deep"
+        },
+        {
+          "id": "events-on-the-road",
+          "phase_id": "hijra-journey",
+          "order": 4,
+          "title": "أحداث الطريق والمحطات المرتبطة بها",
+          "review": "draft",
+          "depth": "deep",
+          "note": "بعد تحقيق تفاصيلها"
+        },
+        {
+          "id": "arrival-at-quba",
+          "phase_id": "hijra-journey",
+          "order": 5,
+          "title": "الوصول إلى قباء والإقامة فيها",
+          "review": "draft",
+          "depth": "deep"
+        },
+        {
+          "id": "entering-madinah",
+          "phase_id": "hijra-journey",
+          "order": 6,
+          "title": "الانتقال إلى المدينة ودخولها",
+          "review": "draft",
+          "depth": "deep"
+        }
+      ]
+    },
+    {
+      "id": "founding-the-community",
+      "order": 3,
+      "title": "تأسيس المجتمع",
+      "note": "السنة الأولى وما حولها",
+      "events": [
+        {
+          "id": "building-the-mosque",
+          "phase_id": "founding-the-community",
+          "order": 1,
+          "title": "بناء المسجد النبوي",
+          "review": "draft",
+          "depth": "deep"
+        },
+        {
+          "id": "brotherhood",
+          "phase_id": "founding-the-community",
+          "order": 2,
+          "title": "المؤاخاة بين المهاجرين والأنصار",
+          "review": "draft",
+          "depth": "medium"
+        },
+        {
+          "id": "madinah-charter",
+          "phase_id": "founding-the-community",
+          "order": 3,
+          "title": "صحيفة المدينة وتنظيم العلاقات",
+          "review": "draft",
+          "depth": "medium",
+          "note": "مع تدقيق تاريخ وضعها ونصها"
+        },
+        {
+          "id": "adhan-and-new-life",
+          "phase_id": "founding-the-community",
+          "order": 4,
+          "title": "الأذان ومظاهر الحياة الجديدة",
+          "review": "draft",
+          "depth": "brief"
+        }
+      ]
+    },
+    {
+      "id": "road-to-badr",
+      "order": 4,
+      "title": "الطريق إلى بدر",
+      "note": "السنتان الأولى والثانية",
+      "events": [
+        {
+          "id": "permission-to-fight",
+          "phase_id": "road-to-badr",
+          "order": 1,
+          "title": "الإذن بالقتال وتغير الأوضاع",
+          "review": "draft",
+          "depth": "brief",
+          "note": "مع تحرّي سياق الآيات والأحداث"
+        },
+        {
+          "id": "early-expeditions",
+          "phase_id": "road-to-badr",
+          "order": 2,
+          "title": "الغزوات والسرايا المبكرة",
+          "review": "draft",
+          "depth": "medium",
+          "note": "كأحداث مستقلة داخل المجموعة عند ثبوت ترتيبها ومواضعها، لا كنقطة واحدة على الخريطة"
         },
         {
           "id": "change-of-qiblah",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 4,
+          "phase_id": "road-to-badr",
+          "order": 3,
           "title": "تحويل القبلة",
-          "review": "title-approved"
+          "review": "draft",
+          "depth": "medium",
+          "note": "مع تدقيق التاريخ"
         },
         {
-          "id": "badr",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 5,
-          "title": "غزوة بدر وما بعدها",
-          "review": "title-approved"
+          "id": "fasting-of-ramadan",
+          "phase_id": "road-to-badr",
+          "order": 4,
+          "title": "فرض صيام رمضان",
+          "review": "draft",
+          "depth": "brief"
+        }
+      ]
+    },
+    {
+      "id": "badr",
+      "order": 5,
+      "title": "بدر الكبرى",
+      "note": "رمضان 2هـ",
+      "events": [
+        {
+          "id": "march-to-badr",
+          "phase_id": "badr",
+          "order": 1,
+          "title": "أسباب الخروج والتحركات السابقة لبدر",
+          "review": "draft",
+          "depth": "deep"
         },
         {
-          "id": "uhud",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 6,
-          "title": "غزوة أحد وما بعدها",
-          "review": "title-approved"
+          "id": "positions-at-badr",
+          "phase_id": "badr",
+          "order": 2,
+          "title": "الوصول إلى بدر ومواقع الأطراف",
+          "review": "draft",
+          "depth": "deep",
+          "note": "مع تحديد مستوى الثقة المكاني"
         },
         {
-          "id": "banu-nadir",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 7,
-          "title": "بنو النضير والجلاء",
-          "review": "title-approved"
+          "id": "battle-of-badr",
+          "phase_id": "badr",
+          "order": 3,
+          "title": "أحداث الغزوة والنصر",
+          "review": "draft",
+          "depth": "deep",
+          "note": "بلا مشاهد تمثيل تجسيدي للنبي ﷺ أو الصحابة"
         },
         {
-          "id": "al-ahzab",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 8,
-          "title": "غزوة الأحزاب",
-          "review": "title-approved",
-          "related_event_ids": [
-            "banu-qurayzah"
-          ]
-        },
-        {
-          "id": "banu-qurayzah",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 9,
-          "title": "بنو قريظة",
-          "review": "title-approved",
-          "related_event_ids": [
-            "al-ahzab"
-          ]
-        },
-        {
-          "id": "hudaybiyyah",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 10,
-          "title": "صلح الحديبية",
-          "review": "title-approved"
-        },
-        {
-          "id": "letters-to-rulers",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 11,
-          "title": "مراسلة الملوك والحكام",
-          "review": "title-approved"
-        },
-        {
-          "id": "khaybar",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 12,
-          "title": "غزوة خيبر",
-          "review": "title-approved"
-        },
-        {
-          "id": "umrat-al-qada",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 13,
-          "title": "عمرة القضاء",
-          "review": "title-approved"
-        },
-        {
-          "id": "mutah",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 14,
-          "title": "مؤتة",
-          "review": "title-approved"
-        },
-        {
-          "id": "conquest-of-makkah",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 15,
-          "title": "فتح مكة",
-          "review": "title-approved"
-        },
-        {
-          "id": "hunayn",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 16,
-          "title": "غزوة حنين",
-          "review": "title-approved",
-          "related_event_ids": [
-            "siege-of-taif"
-          ]
-        },
-        {
-          "id": "siege-of-taif",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 17,
-          "title": "حصار الطائف",
-          "review": "title-approved",
-          "related_event_ids": [
-            "hunayn"
-          ]
-        },
-        {
-          "id": "tabuk",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 18,
-          "title": "غزوة تبوك",
-          "review": "title-approved"
-        },
-        {
-          "id": "delegations",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 19,
-          "title": "الوفود وانتشار الإسلام في الجزيرة",
-          "review": "title-approved"
-        },
-        {
-          "id": "farewell-pilgrimage",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 20,
-          "title": "حجة الوداع",
-          "review": "title-approved"
-        },
-        {
-          "id": "illness-and-death",
-          "phase_id": "hijra-and-madinan-period",
-          "order": 21,
-          "title": "مرض النبي ﷺ ووفاته",
-          "review": "title-approved"
+          "id": "aftermath-of-badr",
+          "phase_id": "badr",
+          "order": 4,
+          "title": "نتائج بدر وآثارها المباشرة",
+          "review": "draft",
+          "depth": "medium"
         }
       ]
     }
