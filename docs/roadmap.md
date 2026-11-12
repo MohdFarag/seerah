@@ -40,4 +40,6 @@ The app and its content are built together; there is no separate content-sample 
 
 App: map and time, index, event and situation reader, free exploration and follow-along, offline package and updates, feedback, analytics.
 
+The app is written from scratch to the [engineering standards](engineering.md); the spike is a reference only. First step: an ADR for the v1 architecture and module layout, compared against official guidance and reference apps, for the owner's approval before scaffolding.
+
 ## 3. Closed beta → public release

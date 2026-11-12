@@ -1,39 +1,40 @@
 # app
 
-The Android project. For now it holds only the **technical spike** (`:spike`), a throwaway app that tests the stack proposed in [ADR 0002](../docs/adr/0002-proposed-stack.md). The real app is scaffolded after the spike.
+The Android project (Gradle). It holds one module today:
 
-## What the spike shows today
+| Module | Status | Purpose |
+| --- | --- | --- |
+| `:spike` | Finished, reference only | The technical spike that proved the stack in [ADR 0002](../docs/adr/0002-proposed-stack.md). Results: [summary](../docs/spike/summary.md), [findings](../docs/spike/findings.md). |
 
-- A MapLibre Native map with no network permission at all. Everything is bundled.
-- The Hijra sample data from [`map-data/historical/spike`](../map-data/historical/spike): waypoints, candidate points and the approximate route line.
-- Arabic labels drawn three ways, switchable on screen: pre-built glyph PBFs, the engine's `font-faces` path, and labels drawn by Android's text engine and placed as images. Two fonts: IBM Plex Sans Arabic and Amiri.
-- A column of test labels (diacritics, ﷺ, digits, mixed direction) in the sea area.
+The v1 app is written **from scratch** in new modules, following [docs/engineering.md](../docs/engineering.md). The spike shows what works and what failed; its code is not copied into v1. It is removed once v1 covers what it shows.
 
-- A base map from local PMTiles: world land outline and shaded relief for the sample area, when `tools/spike/build_base.sh` has been run before the build.
+## The spike
 
-Not there yet: time states, opening an event, content updates.
+What it proved: Arabic map labels drawn by the system text engine, a PMTiles base map with painted relief, time states with cross-fades, opening an event, offline cold start, an interruptible content update, and performance on three devices.
 
-## Build
+### Build
 
-Needs JDK 17+ and the Android SDK (platform 36).
+Needs JDK 21 and the Android SDK (platform 36). The base map must be built first with `tools/spike/build_base.sh` (GDAL, tippecanoe, Python with numpy and `pmtiles`).
 
 ```sh
 cd app
-./gradlew :spike:assembleDebug
+./gradlew :spike:assembleDebug :spike:assembleRelease
 ```
 
-This produces one APK per map renderer under `spike/build/outputs/apk/`:
+One APK per renderer and build type under `spike/build/outputs/apk/`:
 
-| Flavor | Renderer | App id |
+| Flavor | Renderer | App id (debug / release) |
 | --- | --- | --- |
-| `vulkan` | Vulkan (MapLibre default since 13.0) | `app.seerah.spike.vulkan` |
-| `opengl` | OpenGL ES | `app.seerah.spike.opengl` |
+| `vulkan` | Vulkan | `app.seerah.spike.vulkan` / `….release` |
+| `opengl` | OpenGL ES (the v1 choice) | `app.seerah.spike.opengl` / `….release` |
 
-Both install side by side.
+All four install side by side. The release build is minified with R8 and signed with the debug key; use it for measurements.
 
-**From GitHub:** every push to `main` or a `claude/**` branch that touches the app, map data or spike tools runs the `Spike APK` workflow. It builds the base map (cached between runs), then the two APKs, and attaches them to the run as `spike-vulkan` and `spike-opengl`. Open the run under the repository's **Actions** tab and download them from **Artifacts**. A first run without the cache takes about 20 minutes.
+**From GitHub:** every push to `main` or a `claude/**` branch that touches the app, map data or spike tools runs the `Spike APK` workflow. It builds the base map (cached between runs), then the APKs, and attaches them to the run as `spike-vulkan` and `spike-opengl`. Download them from the run's **Artifacts** on the **Actions** tab. A run without the cache takes about 20 minutes.
 
-## Regenerating glyphs
+### Regenerating glyphs
+
+The spike's glyph mode (rejected for Arabic, kept for comparison) uses pre-built glyph files:
 
 ```sh
 F=map-data/style/fonts

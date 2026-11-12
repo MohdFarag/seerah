@@ -43,6 +43,10 @@ A commit-msg hook checks this format locally, and CI checks PR titles.
 5. Only the owner can mark content `approved`.
 6. `python3 tools/validate_content.py` must pass.
 
+## Standards and definition of done
+
+Read [AGENTS.md](AGENTS.md) (quality bar, definition of done, documentation review) and [docs/engineering.md](docs/engineering.md) (architecture, code, tests, docs) before your first change. They apply equally to people and AI agents.
+
 ## Pull requests
 
 - Keep PRs small and focused, and fill in the template.

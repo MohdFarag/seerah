@@ -66,26 +66,28 @@ pre-commit run --all-files          # all linters and formatters
 
 ```text
 .
-├── app/                 Android app (scaffolded after the stack is approved)
+├── app/                 Android project (v1 app to come; :spike is the finished technical spike)
 ├── content/
 │   ├── schema/          JSON Schema for phases, events, situations, texts, sources
-│   ├── index/           approved phases and event titles
+│   ├── index/           v1 phases and events (draft)
 │   └── events/          full event content
 ├── map-data/            base map, historical layers, map style (large binaries not in git)
-├── docs/
+├── docs/                see docs/README.md for the full index
 │   ├── prd/             PRD snapshot (Notion is the source of truth)
 │   ├── adr/             Architecture Decision Records
 │   ├── requirements.md  English requirements digest
+│   ├── engineering.md   engineering standards
 │   ├── open-decisions.md
 │   ├── roadmap.md
 │   └── maintaining.md   branch protection, releases, repo settings
 ├── tools/               validation and packaging scripts
+├── AGENTS.md            instructions for contributors and AI agents
 └── .github/             CI, issue and PR templates
 ```
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Commits follow [Conventional Commits](https://www.conventionalcommits.org/), and releases follow [Semantic Versioning](https://semver.org/) (see the [CHANGELOG](CHANGELOG.md)). Found a mistake in the content? Open a **Content correction** issue.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) (also the instructions for AI agents) and the [engineering standards](docs/engineering.md). Commits follow [Conventional Commits](https://www.conventionalcommits.org/), and releases follow [Semantic Versioning](https://semver.org/) (see the [CHANGELOG](CHANGELOG.md)). Found a mistake in the content? Open a **Content correction** issue.
 
 ## License
 
