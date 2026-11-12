@@ -57,8 +57,13 @@ object Content {
         data class Failed(val message: String) : State
     }
 
-    /** Partial download kept between attempts, for showing progress before resuming. */
-    fun partial(c: Context): Long = root(c).listFiles { f -> f.name.endsWith(".part") }?.sumOf { it.length() } ?: 0
+    /** A download interrupted earlier (even by closing the app), as a paused state, or null. */
+    fun pending(c: Context): State.Paused? {
+        val part = root(c).listFiles { f -> f.name.endsWith(".part") }?.firstOrNull() ?: return null
+        val total = File(root(c), part.name.removeSuffix(".part") + ".size").takeIf { it.exists() }
+            ?.readText()?.trim()?.toLongOrNull() ?: return null
+        return State.Paused(part.length(), total)
+    }
 
     suspend fun update(c: Context, report: (State) -> Unit) {
         report(State.Checking)
@@ -67,6 +72,7 @@ object Content {
         if (version <= version(c)) return report(State.UpToDate(version(c)))
         val total = manifest.getLong("size")
         val part = File(root(c), "content-$version.part")
+        File(root(c), "content-$version.size").writeText(total.toString())
 
         // Resume from what is already on disk.
         while (part.length() < total) {
@@ -112,6 +118,7 @@ object Content {
         val tmp = File(root(c), "current.tmp").apply { writeText(target.name) }
         tmp.renameTo(pointer(c))
         part.delete()
+        File(root(c), "content-$version.size").delete()
         report(State.Installed(version))
     }
 }

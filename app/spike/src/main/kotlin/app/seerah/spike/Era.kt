@@ -36,7 +36,7 @@ object Era {
     val years: List<Int> = (-13..-1) + (1..11)
 
     private val digits = "٠١٢٣٤٥٦٧٨٩"
-    private fun arabic(n: Int) = n.toString().map { digits[it - '0'] }.joinToString("")
+    fun arabic(n: Int) = n.toString().map { digits[it - '0'] }.joinToString("")
 
     fun label(year: Int): String = if (year < 0) "${arabic(-year)} ق.هـ" else "${arabic(year)} هـ"
 

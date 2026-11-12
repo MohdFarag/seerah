@@ -233,3 +233,11 @@ Built off-device; **not yet run on a device**.
 To check on a device: interrupt and resume (including by force-closing the app or turning on airplane mode mid-download), then restart the app in airplane mode and confirm مسجد قباء is still there.
 
 Owner (2026-11-12): the Hijra route framing issue is fixed in build 17; no further change needed.
+
+## 2026-11-12: build 18 on Galaxy A54 — content update passes
+
+Reported by the owner (OpenGL): stop and resume by tapping works; closing the app mid-download and reopening, then tapping again, resumes from where it stopped; the update installs and مسجد قباء appears; and the other cases, including reopening in airplane mode, work.
+
+One gap: after reopening, the chip read "تحديث المحتوى · ن1" instead of showing the paused download. Build 19 records the expected size beside the partial file, so a download cut off by closing the app shows as "متوقف …٪" on the next launch. Numbers on the chip now use Arabic-Indic digits.
+
+Spike items now covered on the Galaxy A54: Arabic labels, base map and relief, time states, opening an event, offline after a cold restart, and an interrupted content update. Still open: measurements on the Oppo A55 and the Huawei tablet.
