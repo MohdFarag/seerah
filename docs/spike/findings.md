@@ -245,3 +245,9 @@ Spike items now covered on the Galaxy A54: Arabic labels, base map and relief, t
 ## 2026-11-12: measurement line (build 20)
 
 Built off-device; **not yet run on a device**. The app shows device, frames per second, the slowest second, memory and open time. The steps and a results table are in [measurements.md](measurements.md).
+
+## 2026-11-13: first measurements, Oppo A55 (build 20)
+
+OpenGL build, glyph-PBF mode, Plex (see [measurements.md](measurements.md)). Panning and zooming ran at roughly 20–35 frames per second, with short peaks near 57 and dips near 18; memory 165–196 MB; 7.2 s from process start to the first fully drawn map. Everything worked, including the content update. The "lowest" figure in build 20 was wrong (it counted idle pauses); build 21 measures only while the map moves.
+
+Early reading, to confirm with the Vulkan build and the system-text mode: the low-end phone is usable but not smooth, and the 7 s cold start is long. Likely contributors to check: the relief raster tiles, the number of symbol layers, and debug-build overhead (the spike is a debug build; release builds are faster).
