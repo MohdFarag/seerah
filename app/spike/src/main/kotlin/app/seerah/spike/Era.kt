@@ -6,6 +6,8 @@ import org.json.JSONObject
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
+import androidx.core.animation.doOnEnd
+import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
 
@@ -28,7 +30,7 @@ data class EraFeature(val id: String, val kind: String, val from: Int, val to: I
  * eye can follow what appeared and what went.
  */
 object Era {
-    private const val FADE_MS = 450L
+    private const val FADE_MS = 700L
 
     /** Years on the bar: 13 ق.هـ to 11 هـ. There is no year 0. */
     val years: List<Int> = (-13..-1) + (1..11)
@@ -61,13 +63,19 @@ object Era {
             for (layerId in feature.layers) {
                 val layer = style.getLayer(layerId) ?: continue
                 val from = current(layer)
+                // A hidden layer still takes part in label collisions even at zero
+                // opacity, so it is switched off once faded out (يثرب sat under an
+                // invisible المدينة at the same point and never showed).
+                if (target > 0f) layer.setProperties(PropertyFactory.visibility(Property.VISIBLE))
                 if (!animate || from == target) {
                     set(layer, target)
+                    if (target == 0f) layer.setProperties(PropertyFactory.visibility(Property.NONE))
                     continue
                 }
                 running += ValueAnimator.ofFloat(from, target).apply {
                     duration = FADE_MS
                     addUpdateListener { set(layer, it.animatedValue as Float) }
+                    doOnEnd { if (target == 0f) layer.setProperties(PropertyFactory.visibility(Property.NONE)) }
                     start()
                 }
             }

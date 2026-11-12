@@ -104,7 +104,7 @@ object MapStyle {
                 "paint": { "line-color": "$ROUTE", "line-width": 1.5, "line-dasharray": [4, 3], "line-opacity": 0 } }"""
         }
         eras.filter { it.kind == "route" }.forEach {
-            layers += """{ "id": "era-${it.id}", "type": "line", "source": "route", "filter": ${byId(it.id)},
+            layers += """{ "id": "era-${it.id}", "type": "line", "source": "route", "minzoom": 5, "filter": ${byId(it.id)},
                 "layout": { "line-cap": "round", "line-join": "round" },
                 "paint": { "line-color": "$ROUTE", "line-opacity": 0, "line-dasharray": [2, 2],
                   "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1, 10, 2.5] } }"""

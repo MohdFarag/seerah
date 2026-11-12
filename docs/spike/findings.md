@@ -207,3 +207,16 @@ Built off-device; **not yet run on a device**.
 - Three event chips above the year bar: الهجرة، بناء المسجد النبوي، غزوة بدر. Tapping one moves the year bar to the event's year and flies the camera to its place over 1.8 s (the whole route for the Hijra, the mosque up close, Badr at zoom 11.5).
 - Badr appears from 2 هـ. Its point is the modern town from Wikipedia (23.78, 38.7906), marked for the spike only, not a reviewed battlefield point.
 - The two decisions above are applied: the sample area of influence and its name are gone, and city names hide below zoom 4.
+
+## 2026-11-12: build 16 feedback (build 17)
+
+Owner feedback on build 16 (OpenGL, Galaxy A54): opening an event works and the camera move is smooth, but a little fast; "يثرب" never showed before the Hijra; the Hijra line stayed visible when zoomed far out; and "الهجرة" did not frame the whole route, part of it sat under the panels.
+
+Build 17 (not yet run on a device):
+
+- **يثرب before the Hijra.** Cause: a symbol layer faded to zero opacity still takes part in label collisions, so the invisible "المدينة" at the same point always won. Faded-out layers are now switched off at the end of the fade and switched on before a fade-in.
+- The Hijra line now starts at zoom 5, like the stations.
+- Camera moves take 3 s (was 1.8 s); year cross-fades take 0.7 s (was 0.45 s).
+- "الهجرة" frames the route inside the area left clear by the top panel and the bottom bar.
+
+Testing note: this container has no hardware virtualisation (no /dev/kvm), so an Android emulator cannot run here; device checks stay with the owner.
