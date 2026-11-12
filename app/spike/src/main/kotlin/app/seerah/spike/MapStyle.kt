@@ -38,7 +38,14 @@ object MapStyle {
     private const val CITY_MAX = 11.5
     private val tierZoom = mapOf(1 to 6.5, 2 to 8.5, 3 to 11.0)
 
-    fun json(textPath: TextPath, font: MapFont, showLabelTest: Boolean, baseDir: String?, eras: List<EraFeature>): String {
+    fun json(
+        textPath: TextPath,
+        font: MapFont,
+        showLabelTest: Boolean,
+        baseDir: String?,
+        eras: List<EraFeature>,
+        url: (String) -> String,
+    ): String {
         val system = textPath == TextPath.SystemImages
         val fontFaces = if (textPath == TextPath.FontFaces) {
             """"font-faces": { "${font.stack}": "asset://fonts/${font.ttf}" },"""
@@ -142,10 +149,10 @@ object MapStyle {
           "glyphs": "asset://glyphs/{fontstack}/{range}.pbf",
           "sources": {
             $baseSources
-            "waypoints": { "type": "geojson", "data": "asset://hijra-waypoints.geojson" },
-            "route": { "type": "geojson", "data": "asset://hijra-route.geojson" },
+            "waypoints": { "type": "geojson", "data": "${url("hijra-waypoints.geojson")}" },
+            "route": { "type": "geojson", "data": "${url("hijra-route.geojson")}" },
             "label-test": { "type": "geojson", "data": "asset://label-test.geojson" },
-            "eras": { "type": "geojson", "data": "asset://time-states.geojson" }
+            "eras": { "type": "geojson", "data": "${url("time-states.geojson")}" }
           },
           "layers": [
             $baseLayers

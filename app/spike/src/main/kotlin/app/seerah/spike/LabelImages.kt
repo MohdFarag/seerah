@@ -65,7 +65,7 @@ object LabelImages {
     }
 
     private fun names(context: Context, file: String, kind: String? = null): Set<String> = buildSet {
-        val json = context.assets.open(file).bufferedReader().use { it.readText() }
+        val json = Content.read(context, file)
         val features = JSONObject(json).getJSONArray("features")
         for (i in 0 until features.length()) {
             val p = features.getJSONObject(i).getJSONObject("properties")
