@@ -194,3 +194,8 @@ How Google Maps does it, and what build 15 copies (not yet run on a device):
 - Label images no longer carry font padding, which made each label's collision box taller than the text.
 
 Owner screenshots of build 15 (Vulkan, Galaxy A54, system text, Amiri), no written comment: small dots with names beside them read cleanly from world view down to the Madinah mosque; key stations show at regional zoom and minor ones only closer in; al-Usba and Quba sit side by side without hiding each other. At world zoom only "المدينة" shows, because it collides with "مكة" and wins.
+
+Owner decisions for the next build (2026-11-12), not yet implemented:
+
+- Drop the "نطاق سلطة المدينة" sample and its name. Historical areas of influence must not look like modern borders: no crisp line. Show them as a soft, blurred tint (or another imprecise treatment) instead.
+- Hide all city names when zoomed far out (below about zoom 4).
