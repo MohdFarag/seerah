@@ -91,7 +91,7 @@ object MapStyle {
             { "id": "sea", "type": "background", "paint": { "background-color": "$SEA" } },
             { "id": "land", "type": "fill", "source": "land", "source-layer": "land",
               "paint": { "fill-color": "$LAND", "fill-antialias": false } },
-            { "id": "coast", "type": "line", "source": "land", "source-layer": "land",
+            { "id": "coast", "type": "line", "source": "land", "source-layer": "coast",
               "paint": { "line-color": "#6F8F88", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 10, 1.2] } },
             { "id": "relief", "type": "raster", "source": "relief",
               "paint": { "raster-fade-duration": 0,

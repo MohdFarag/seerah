@@ -21,13 +21,23 @@ Use the Vulkan build, then repeat with the OpenGL build. Font Amiri, «نص ال
 
 ## Results
 
+Release builds (build 21), 2026-11-13, one run per row:
+
 | Device | Renderer | Open time | fps while moving | Lowest fps | Memory |
 | --- | --- | --- | --- | --- | --- |
-| Galaxy A54 | Vulkan | | | | |
-| Galaxy A54 | OpenGL | | | | |
-| Oppo A55 | Vulkan | | | | |
+| Oppo A55 (Android 13) | OpenGL | 3.5 s | 59 | 23 | 142 MB |
+| Oppo A55 (Android 13) | Vulkan | 5.4 s | 60 | 39 | 205 MB |
+| Galaxy A54 (Android 16) | OpenGL | 1.3 s | 60 | 56 | 128 MB |
+| Galaxy A54 (Android 16) | Vulkan | 1.0 s | 60 | 45 | 241 MB |
+| Huawei MatePad 11.5 (120 Hz) | OpenGL | 0.8 s | 119 | 89 | 88 MB |
+| Huawei MatePad 11.5 (120 Hz) | Vulkan | 1.0 s | 120 | 63 | 181 MB |
+
+The owner reports all six as smooth. The tablet's screen runs at 120 Hz, so its fps is out of 120.
+
+Earlier debug build (build 20), for comparison:
+
+| Device | Renderer | Open time | fps while moving | Lowest fps | Memory |
+| --- | --- | --- | --- | --- | --- |
 | Oppo A55 | OpenGL | 7.2 s | about 18–57, mostly 20–35 | not valid (build 20) | 165–196 MB |
-| Huawei MatePad 11.5 | Vulkan | | | | |
-| Huawei MatePad 11.5 | OpenGL | | | | |
 
 Notes on the Oppo A55 OpenGL run (build 20, 2026-11-13): measured in glyph-PBF mode with Plex, not the system-text mode with Amiri that the steps ask for. Values read from a 53-second screen recording and four screenshots.
