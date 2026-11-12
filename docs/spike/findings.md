@@ -192,3 +192,5 @@ How Google Maps does it, and what build 15 copies (not yet run on a device):
 - **Every city has a dot**, with a larger name.
 - **A label hides only when it collides, and the more important one wins.** Al-Usba disappeared because the large "يثرب" label, placed above its point with wide padding, overlapped it at that zoom; with tight labels the collision zone is much smaller. The engine still hides a lower-priority label when two genuinely overlap, as Google does.
 - Label images no longer carry font padding, which made each label's collision box taller than the text.
+
+Owner screenshots of build 15 (Vulkan, Galaxy A54, system text, Amiri), no written comment: small dots with names beside them read cleanly from world view down to the Madinah mosque; key stations show at regional zoom and minor ones only closer in; al-Usba and Quba sit side by side without hiding each other. At world zoom only "المدينة" shows, because it collides with "مكة" and wins.
