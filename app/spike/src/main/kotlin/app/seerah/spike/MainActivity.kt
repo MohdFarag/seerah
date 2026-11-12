@@ -7,12 +7,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -82,6 +85,7 @@ private fun SpikeScreen() {
     Box(Modifier.fillMaxSize()) {
         var metresPerPixel by remember { mutableStateOf(0.0) }
         val eras = remember { Era.load(context) }
+        var map by remember { mutableStateOf<MapLibreMap?>(null) }
         var yearIndex by rememberSaveable { mutableStateOf(Era.years.indexOf(1)) }
         val year = Era.years[yearIndex]
         base?.let { ready ->
@@ -93,6 +97,7 @@ private fun SpikeScreen() {
                 eras = eras,
                 onStatus = { status = if (ready.dir == null) "$it · بلا أساس" else it },
                 onScale = { metresPerPixel = it },
+                onMap = { map = it },
                 year = year,
             )
         }
@@ -109,6 +114,21 @@ private fun SpikeScreen() {
                     .align(AbsoluteAlignment.Left)
                     .padding(start = 8.dp, bottom = 8.dp),
             )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 8.dp),
+            ) {
+                SpikeEvent.entries.forEach { event ->
+                    AssistChip(
+                        onClick = {
+                            yearIndex = Era.years.indexOf(event.year)
+                            map?.animateCamera(event.camera(), 1800)
+                        },
+                        label = { Text(event.title) },
+                        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surface),
+                    )
+                }
+            }
             YearBar(yearIndex = yearIndex, onYearIndex = { yearIndex = it })
         }
         Surface(
@@ -168,6 +188,7 @@ private fun SpikeMap(
     eras: List<EraFeature>,
     onStatus: (String) -> Unit,
     onScale: (Double) -> Unit,
+    onMap: (MapLibreMap) -> Unit,
     year: Int,
 ) {
     val context = LocalContext.current
@@ -197,6 +218,7 @@ private fun SpikeMap(
             loaded.addOnCameraMoveListener { report() }
             loaded.addOnCameraIdleListener { report() }
             map = loaded
+            onMap(loaded)
         }
         onDispose {
             lifecycle.removeObserver(observer)
