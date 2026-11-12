@@ -122,7 +122,9 @@ private fun SpikeScreen() {
                     AssistChip(
                         onClick = {
                             yearIndex = Era.years.indexOf(event.year)
-                            map?.animateCamera(event.camera(), 1800)
+                            val d = context.resources.displayMetrics.density
+                            // Keeps the whole place clear of the top panel and the bottom bar.
+                            map?.animateCamera(event.camera((230 * d).toInt(), (230 * d).toInt(), (32 * d).toInt()), 3000)
                         },
                         label = { Text(event.title) },
                         colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surface),

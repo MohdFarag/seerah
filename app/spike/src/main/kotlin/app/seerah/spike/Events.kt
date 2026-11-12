@@ -15,10 +15,11 @@ enum class SpikeEvent(val title: String, val year: Int) {
     Badr("غزوة بدر", 2),
     ;
 
-    fun camera(): CameraUpdate = when (this) {
+    /** [top] and [bottom] are the pixels covered by the panels above and below the map. */
+    fun camera(top: Int, bottom: Int, side: Int): CameraUpdate = when (this) {
         Hijra -> CameraUpdateFactory.newLatLngBounds(
             LatLngBounds.Builder().include(LatLng(21.33, 39.1)).include(LatLng(24.47, 39.9)).build(),
-            64,
+            side, top, side, bottom,
         )
         Mosque -> CameraUpdateFactory.newLatLngZoom(LatLng(24.4686, 39.6111), 14.5)
         // Spike only: the modern town of Badr, not a reviewed battlefield point.
