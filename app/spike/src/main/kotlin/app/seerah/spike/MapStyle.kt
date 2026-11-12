@@ -45,20 +45,22 @@ object MapStyle {
             ""
         }
 
-        /** A marker with its name below it; [prefix] picks the image set in system-text mode. */
-        fun marker(prefix: String, dot: String): String = if (system) {
+        /** A marker with its name beside it; [prefix] picks the image set in system-text mode. */
+        fun marker(prefix: String, dot: String, sizeSp: Float = LabelImages.TEXT_SP): String = if (system) {
             """
                 "icon-image": ["concat", "$prefix", ["get", "name"]],
-                "icon-anchor": "top", "icon-offset": [0, -6]
+                "icon-anchor": "left", "icon-offset": [-${LabelImages.dotRadiusDp(prefix)}, 0],
+                "icon-padding": 1
             """
         } else {
             """
                 "icon-image": "$dot",
-                "icon-size": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 12, 1],
                 "text-field": ["get", "name"],
                 "text-font": ["${font.stack}"],
-                "text-size": ${LabelImages.TEXT_SP},
-                "text-anchor": "top", "text-offset": [0, 0.7], "text-max-width": 9
+                "text-size": $sizeSp,
+                "text-variable-anchor": ["left", "right", "top", "bottom"],
+                "text-radial-offset": 0.5,
+                "text-justify": "auto", "text-max-width": 9, "text-padding": 1
             """
         }
 
@@ -124,7 +126,7 @@ object MapStyle {
         }
         eras.filter { it.kind == "place" }.forEach {
             layers += """{ "id": "era-${it.id}", "type": "symbol", "source": "eras", "maxzoom": $CITY_MAX,
-                "filter": ${byId(it.id)}, "layout": { ${text(LabelImages.CITY_SP)}, "text-allow-overlap": true, "icon-allow-overlap": true },
+                "filter": ${byId(it.id)}, "layout": { ${marker(LabelImages.CITY, LabelImages.DOT_CITY, LabelImages.CITY_SP)} },
                 "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 2, "text-opacity": 0, "icon-opacity": 0 } }"""
         }
         layers += """{ "id": "label-test", "type": "symbol", "source": "label-test",
