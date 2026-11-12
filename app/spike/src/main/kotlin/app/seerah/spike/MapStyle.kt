@@ -79,6 +79,20 @@ object MapStyle {
                 "text-max-width": 9
             """
         }
+        // Same label treatment as the waypoints, for the time-state places and landmarks.
+        val eraLabel = waypointLabel
+        val eraCentred = if (systemText) {
+            """
+                "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
+                "icon-size": ${LabelImages.ERA_SP / LabelImages.WAYPOINT_SP}
+            """
+        } else {
+            """
+                "text-field": ["get", "name"],
+                "text-font": ["${font.stack}"],
+                "text-size": ${LabelImages.ERA_SP}
+            """
+        }
         val testLabel = if (systemText) {
             """
                 "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
@@ -105,10 +119,21 @@ object MapStyle {
             $baseSources
             "waypoints": { "type": "geojson", "data": "asset://hijra-waypoints.geojson" },
             "route": { "type": "geojson", "data": "asset://hijra-route.geojson" },
-            "label-test": { "type": "geojson", "data": "asset://label-test.geojson" }
+            "label-test": { "type": "geojson", "data": "asset://label-test.geojson" },
+            "eras": { "type": "geojson", "data": "asset://time-states.geojson" }
           },
           "layers": [
             $baseLayers
+            {
+              "id": "${Era.REGION_FILL}", "type": "fill", "source": "eras",
+              "filter": ["==", ["get", "kind"], "region"],
+              "paint": { "fill-color": "$ROUTE", "fill-opacity": 0.08 }
+            },
+            {
+              "id": "${Era.REGION_LINE}", "type": "line", "source": "eras",
+              "filter": ["==", ["get", "kind"], "region"],
+              "paint": { "line-color": "$ROUTE", "line-width": 1.5, "line-dasharray": [4, 3], "line-opacity": 0.7 }
+            },
             {
               "id": "route", "type": "line", "source": "route",
               "layout": { "line-cap": "round", "line-join": "round" },
@@ -134,6 +159,32 @@ object MapStyle {
               "id": "waypoint-label", "type": "symbol", "source": "waypoints",
               "layout": { $waypointLabel },
               "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
+            },
+            {
+              "id": "${Era.LANDMARK}", "type": "circle", "source": "eras",
+              "filter": ["==", ["get", "kind"], "landmark"],
+              "paint": {
+                "circle-radius": 6, "circle-color": "$LABEL",
+                "circle-stroke-color": "$HALO", "circle-stroke-width": 2
+              }
+            },
+            {
+              "id": "${Era.LANDMARK_LABEL}", "type": "symbol", "source": "eras",
+              "filter": ["==", ["get", "kind"], "landmark"],
+              "layout": { $eraLabel },
+              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
+            },
+            {
+              "id": "${Era.PLACE}", "type": "symbol", "source": "eras",
+              "filter": ["==", ["get", "kind"], "place"],
+              "layout": { $eraCentred, ${if (systemText) "\"icon-offset\": [0, -22]" else "\"text-offset\": [0, -1.4]"} },
+              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 2 }
+            },
+            {
+              "id": "${Era.REGION_LABEL}", "type": "symbol", "source": "eras",
+              "filter": ["==", ["get", "kind"], "region"],
+              "layout": { $eraCentred, "symbol-placement": "point" },
+              "paint": { "text-color": "$ROUTE", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
             },
             {
               "id": "label-test", "type": "symbol", "source": "label-test",

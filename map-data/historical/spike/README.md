@@ -11,6 +11,7 @@ Sample data for the technical spike only. **Not reviewed and not shippable.**
 | --- | --- |
 | `hijra-waypoints.geojson` | One point per place. `position` is `source` or `pending`. |
 | `hijra-route.geojson` | Two lines: home → Thawr cave, and the route so far. Both are marked `approximate`. |
+| `time-states.geojson` | The three time-state tests: يثرب → المدينة (name change, 1 AH), المسجد النبوي (landmark appearing, 1 AH), and a **sample** authority area around Madinah that grows to include Makkah in 8 AH (border change). `from`/`to` are Hijri years, pre-Hijra years negative; a feature shows when `from <= year < to`. |
 
 ## Rules applied
 
@@ -20,3 +21,5 @@ Sample data for the technical spike only. **Not reviewed and not shippable.**
 - Waypoints 31 (al-Arj) and 32 (al-Jadawat) have the same coordinates in the source, so their markers coincide.
 - The route line joins consecutive points with straight segments. It is not the path walked.
 - Dates are kept as the source words them in `when_source`. They are not display dates.
+
+- The border change in `time-states.geojson` is a placeholder shape agreed with the owner for the spike. It is marked `sample: true` and is not a historical claim.
