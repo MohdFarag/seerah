@@ -30,7 +30,7 @@ Spike inputs set by the owner (2026-11-10):
 - **Arabic test labels:** taken from the map data and reference maps the owner supplies.
 - **Atlas pages:** the owner supplies Hijra-route pages as a working reference for the data trial.
 
-Exit: the owner approves the stack (update ADR 0002 to Accepted).
+Exit: the owner approves the stack (update ADR 0002 to Accepted). Results and the proposal are in [spike/summary.md](spike/summary.md).
 
 ## 2. Content sample
 

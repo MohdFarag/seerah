@@ -15,7 +15,7 @@ fetch() { [ -s "$2" ] || curl -fsSL --retry 3 -o "$2" "$1"; }
 
 # 1. Land: Natural Earth (public domain), three scales.
 NE=https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson
-for f in ne_110m_land ne_50m_land ne_10m_land; do fetch "$NE/$f.geojson" "$SRC/$f.geojson"; done
+for f in ne_110m_land ne_50m_land ne_10m_land ne_110m_coastline ne_50m_coastline ne_10m_coastline; do fetch "$NE/$f.geojson" "$SRC/$f.geojson"; done
 # The largest land polygon (Africa, Europe and Asia in one piece) is dropped from
 # some tiles when tiled whole, so the two finer scales are cut into 10-degree cells.
 split() {
@@ -43,7 +43,15 @@ tippecanoe -q -o "$SRC/land_a.pmtiles" -l land -Z0 -z2 $T "$SRC/ne_110m_land.geo
 tippecanoe -q -o "$SRC/land_b.pmtiles" -l land -Z3 -z5 $T "$SRC/ne_50m_land.cells.geojson"
 # shellcheck disable=SC2086
 tippecanoe -q -o "$SRC/land_c.pmtiles" -l land -Z6 -z9 $T "$SRC/ne_10m_land.cells.geojson"
-tile-join -q --no-tile-size-limit -o "$OUT/land.pmtiles" "$SRC/land_a.pmtiles" "$SRC/land_b.pmtiles" "$SRC/land_c.pmtiles"
+# The coastline is drawn from Natural Earth's coastline lines, not from the land
+# outline: the land is cut into cells, and the cell edges would show as lines.
+# shellcheck disable=SC2086
+tippecanoe -q -o "$SRC/land_d.pmtiles" -l coast -Z0 -z2 $T "$SRC/ne_110m_coastline.geojson"
+# shellcheck disable=SC2086
+tippecanoe -q -o "$SRC/land_e.pmtiles" -l coast -Z3 -z5 $T "$SRC/ne_50m_coastline.geojson"
+# shellcheck disable=SC2086
+tippecanoe -q -o "$SRC/land_f.pmtiles" -l coast -Z6 -z9 $T "$SRC/ne_10m_coastline.geojson"
+tile-join -q --no-tile-size-limit -o "$OUT/land.pmtiles" "$SRC"/land_[a-f].pmtiles
 
 # 2. Relief: Copernicus DEM for the sample area (lat 21-25, lon 38-40).
 # DEM_RES=30 (default) uses GLO-30, DEM_RES=90 uses GLO-90.

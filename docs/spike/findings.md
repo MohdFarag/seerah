@@ -260,3 +260,14 @@ Built off-device; **not yet run on a device**.
 - **Spike UI:** colours from the Penpot tokens and IBM Plex Sans Arabic for the interface. The top panel collapses to the app name and the measurement line; the settings (label mode, font, test labels, content update) open on tap. Event buttons and the year bar are restyled; the year bar names the phase and marks the start, the Hijra and the end.
 - **Defaults:** system-text labels with Amiri, the mode the spike chose.
 - **Map:** a thin coastline, and names for البحر الأحمر، الحجاز، تهامة in Amiri with wider letter spacing, shown at regional zoom only. Their positions are placed by eye.
+
+## 2026-11-13: release builds measured on all three devices (build 21)
+
+Figures in [measurements.md](measurements.md). The owner reports all six runs as smooth.
+
+- **The release build matters.** On the Oppo A55 the open time fell from 7.2 s (debug) to 3.5 s (OpenGL release), and motion went from mostly 20–35 fps to about 59 fps. The debug-build numbers should not be used for targets.
+- **OpenGL vs Vulkan.** OpenGL uses less memory on every device (60–110 MB less) and opens faster on the low-end phone (3.5 s vs 5.4 s). Vulkan held a better lowest fps on the Oppo (39 vs 23) but a worse one on the A54 and the tablet. Both run at the screen's full rate on all three devices.
+- **R8 did not break the map engine.** The release build loads the map on both renderers on all three devices.
+- **Coastline artefact.** The screenshots show a thin straight line on land (for example along 40°E). The coastline was drawn from the outline of the land polygons, which are cut into 10° cells, so the cell edges were drawn too. Build 22 draws it from Natural Earth's coastline lines instead.
+
+Spike summary, proposed targets and renderer recommendation: [summary.md](summary.md).
