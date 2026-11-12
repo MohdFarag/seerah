@@ -1,30 +1,34 @@
 package app.seerah.spike
 
+import android.animation.ValueAnimator
+import android.content.Context
+import org.json.JSONObject
 import org.maplibre.android.maps.Style
-import org.maplibre.android.style.expressions.Expression
-import org.maplibre.android.style.expressions.Expression.all
-import org.maplibre.android.style.expressions.Expression.eq
-import org.maplibre.android.style.expressions.Expression.get
-import org.maplibre.android.style.expressions.Expression.gt
-import org.maplibre.android.style.expressions.Expression.literal
-import org.maplibre.android.style.expressions.Expression.lte
-import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
 
+/** A feature that exists only for some years. `from <= year < to`, Hijri, pre-Hijra negative. */
+data class EraFeature(val id: String, val kind: String, val from: Int, val to: Int) {
+    fun visibleIn(year: Int) = year in from until to
+
+    /** Every style layer that draws this feature. */
+    val layers: List<String>
+        get() = when (kind) {
+            "region" -> listOf("era-$id-fill", "era-$id-line")
+            "route" -> listOf("era-$id")
+            else -> listOf("era-$id")
+        }
+}
+
 /**
- * Time states. Years are Hijri; pre-Hijra years are negative (13 ق.هـ is -13).
- * A feature shows when `from <= year < to`. The year means the state at the end
- * of that year; nothing is interpolated between states.
+ * Time states. The year means the state at the end of that year; nothing is
+ * interpolated between shapes. Each change cross-fades over [FADE_MS] so the
+ * eye can follow what appeared and what went.
  */
 object Era {
-    const val REGION_FILL = "era-region-fill"
-    const val REGION_LINE = "era-region-line"
-    const val REGION_LABEL = "era-region-label"
-    const val PLACE = "era-place"
-    const val LANDMARK = "era-landmark"
-    const val LANDMARK_LABEL = "era-landmark-label"
+    private const val FADE_MS = 450L
 
     /** Years on the bar: 13 ق.هـ to 11 هـ. There is no year 0. */
     val years: List<Int> = (-13..-1) + (1..11)
@@ -34,18 +38,54 @@ object Era {
 
     fun label(year: Int): String = if (year < 0) "${arabic(-year)} ق.هـ" else "${arabic(year)} هـ"
 
-    private fun filter(kind: String, year: Int): Expression = all(
-        eq(get("kind"), literal(kind)),
-        lte(get("from"), literal(year)),
-        gt(get("to"), literal(year)),
-    )
+    fun load(context: Context): List<EraFeature> = buildList {
+        for (file in listOf("time-states.geojson", "hijra-route.geojson")) {
+            val json = context.assets.open(file).bufferedReader().use { it.readText() }
+            val features = JSONObject(json).getJSONArray("features")
+            for (i in 0 until features.length()) {
+                val f = features.getJSONObject(i)
+                val p = f.getJSONObject("properties")
+                if (!p.has("from")) continue
+                add(EraFeature(f.getString("id"), p.optString("kind", "route"), p.getInt("from"), p.getInt("to")))
+            }
+        }
+    }
 
-    fun apply(style: Style, year: Int) {
-        (style.getLayer(REGION_FILL) as? FillLayer)?.setFilter(filter("region", year))
-        (style.getLayer(REGION_LINE) as? LineLayer)?.setFilter(filter("region", year))
-        (style.getLayer(REGION_LABEL) as? SymbolLayer)?.setFilter(filter("region-label", year))
-        (style.getLayer(PLACE) as? SymbolLayer)?.setFilter(filter("place", year))
-        (style.getLayer(LANDMARK) as? CircleLayer)?.setFilter(filter("landmark", year))
-        (style.getLayer(LANDMARK_LABEL) as? SymbolLayer)?.setFilter(filter("landmark", year))
+    private val running = mutableListOf<ValueAnimator>()
+
+    fun apply(style: Style, features: List<EraFeature>, year: Int, animate: Boolean) {
+        running.forEach { it.cancel() }
+        running.clear()
+        for (feature in features) {
+            val target = if (feature.visibleIn(year)) 1f else 0f
+            for (layerId in feature.layers) {
+                val layer = style.getLayer(layerId) ?: continue
+                val from = current(layer)
+                if (!animate || from == target) {
+                    set(layer, target)
+                    continue
+                }
+                running += ValueAnimator.ofFloat(from, target).apply {
+                    duration = FADE_MS
+                    addUpdateListener { set(layer, it.animatedValue as Float) }
+                    start()
+                }
+            }
+        }
+    }
+
+    private fun current(layer: org.maplibre.android.style.layers.Layer): Float = when (layer) {
+        is FillLayer -> layer.fillOpacity.value?.div(0.10f)
+        is LineLayer -> layer.lineOpacity.value
+        is SymbolLayer -> layer.textOpacity.value
+        else -> null
+    } ?: 0f
+
+    private fun set(layer: org.maplibre.android.style.layers.Layer, v: Float) {
+        when (layer) {
+            is FillLayer -> layer.setProperties(PropertyFactory.fillOpacity(v * 0.10f))
+            is LineLayer -> layer.setProperties(PropertyFactory.lineOpacity(v))
+            is SymbolLayer -> layer.setProperties(PropertyFactory.textOpacity(v), PropertyFactory.iconOpacity(v))
+        }
     }
 }

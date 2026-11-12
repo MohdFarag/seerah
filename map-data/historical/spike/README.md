@@ -23,3 +23,5 @@ Sample data for the technical spike only. **Not reviewed and not shippable.**
 - Dates are kept as the source words them in `when_source`. They are not display dates.
 
 - The border change in `time-states.geojson` is a placeholder shape agreed with the owner for the spike. It is marked `sample: true` and is not a historical claim.
+- Both route lines carry `from: 1, to: 2`, so the route shows only when the year bar is at 1 هـ. Waypoints show in every year.
+- Each waypoint has a `tier` (1 key station, 2 other station, 3 house in Makkah) that sets the zoom it appears at.

@@ -169,3 +169,15 @@ Build 13 (not yet run on a device):
 - The test labels start hidden.
 
 The tiers are set in the data (`tier` on each waypoint) so content review can move a place between them.
+
+## 2026-11-12: build 13 feedback, zoom ladder and fades (build 14)
+
+Owner feedback on build 13 (Vulkan, Galaxy A54): the Makkah houses needed too much zoom; dots appeared without their names; year changes snapped instead of moving smoothly; the Madinah name disappeared and reappeared while zooming and covered the Prophet's Mosque up close, while the mosque appeared and then vanished; and the Hijra route should belong to its year, not show in every year.
+
+Build 14 (not yet run on a device):
+
+- **Marker and name are one symbol.** In glyph modes the dot is the symbol's icon; in system-text mode the dot is drawn into the label image. A marker never shows without its name.
+- **Zoom ladder:** cities 0–11.5, key stations from 6.5, other stations from 8.5, landmarks and the Makkah houses from 11.
+- **Collision priority:** layers are ordered from least to most important, cities last, so a city name wins over stations and no longer flickers. City names stop at zoom 11.5, so up close they no longer cover the landmarks inside them.
+- **Year changes cross-fade** over 450 ms: each time-dependent feature has its own layer whose opacity is animated, instead of a filter that switches instantly.
+- **The route belongs to 1 هـ**: it shows only at that year. Waypoints show in every year.

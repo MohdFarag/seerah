@@ -9,7 +9,9 @@
         "name": "من منزل النبي ﷺ إلى غار ثور",
         "approximate": true,
         "complete": true,
-        "review": "draft"
+        "review": "draft",
+        "from": 1,
+        "to": 2
       },
       "geometry": {
         "type": "LineString",
@@ -42,7 +44,9 @@
         "approximate": true,
         "complete": true,
         "last_seq": 41,
-        "review": "draft"
+        "review": "draft",
+        "from": 1,
+        "to": 2
       },
       "geometry": {
         "type": "LineString",

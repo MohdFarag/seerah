@@ -8,10 +8,7 @@ enum class TextPath(val label: String) {
     /** New path: the engine shapes text from the TTF itself (`font-faces`). */
     FontFaces("font-faces"),
 
-    /**
-     * Labels drawn by Android's own text engine into bitmaps, then placed by the
-     * map as icons. Shaping, diacritics and direction come from the system.
-     */
+    /** Labels drawn by Android's own text engine into bitmaps, placed by the map as icons. */
     SystemImages("نص النظام"),
 }
 
@@ -20,117 +17,120 @@ enum class MapFont(val label: String, val stack: String, val ttf: String) {
     Amiri("Amiri", "Amiri-Regular", "Amiri-Regular.ttf"),
 }
 
+/**
+ * Zoom ladder: each step in shows the next level of detail.
+ *
+ *  - cities (مكة، المدينة): zoom 0 to [CITY_MAX]; past that the city is the whole screen
+ *  - key Hijra stations (tier 1): from 6.5
+ *  - other stations (tier 2): from 8.5
+ *  - landmarks inside a city, and the houses in Makkah (tier 3): from 11
+ *
+ * A marker and its name are one symbol, so they always appear together.
+ */
 object MapStyle {
-    // Colours follow the Penpot tokens (athar/day). Hard-coded here for the spike only.
     private const val LAND = "#F1E6C8"
     private const val SEA = "#809B94"
-    private const val ROUTE = "#AF5A36"
+    const val ROUTE = "#AF5A36"
     const val LABEL = "#203D32"
     const val HALO = "#FAF7F0"
-    private const val MARK = "#B7963A"
 
-    /**
-     * @param baseDir folder on device storage holding land.pmtiles and relief.pmtiles,
-     *   or null when the base map was not bundled.
-     */
-    fun json(textPath: TextPath, font: MapFont, showLabelTest: Boolean, baseDir: String?): String {
-        val baseSources = if (baseDir != null) {
-            """
-            "land": { "type": "vector", "url": "pmtiles://file://$baseDir/land.pmtiles" },
-            "relief": { "type": "raster", "url": "pmtiles://file://$baseDir/relief.pmtiles", "tileSize": 256 },
-            """
+    private const val CITY_MAX = 11.5
+    private val tierZoom = mapOf(1 to 6.5, 2 to 8.5, 3 to 11.0)
+
+    fun json(textPath: TextPath, font: MapFont, showLabelTest: Boolean, baseDir: String?, eras: List<EraFeature>): String {
+        val system = textPath == TextPath.SystemImages
+        val fontFaces = if (textPath == TextPath.FontFaces) {
+            """"font-faces": { "${font.stack}": "asset://fonts/${font.ttf}" },"""
         } else {
             ""
         }
+
+        /** A marker with its name below it; [prefix] picks the image set in system-text mode. */
+        fun marker(prefix: String, dot: String): String = if (system) {
+            """
+                "icon-image": ["concat", "$prefix", ["get", "name"]],
+                "icon-anchor": "top", "icon-offset": [0, -6]
+            """
+        } else {
+            """
+                "icon-image": "$dot",
+                "icon-size": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 12, 1],
+                "text-field": ["get", "name"],
+                "text-font": ["${font.stack}"],
+                "text-size": ${LabelImages.TEXT_SP},
+                "text-anchor": "top", "text-offset": [0, 0.7], "text-max-width": 9
+            """
+        }
+
+        fun text(sizeSp: Float): String = if (system) {
+            """"icon-image": ["concat", "${LabelImages.LABEL}", ["get", "name"]]"""
+        } else {
+            """"text-field": ["get", "name"], "text-font": ["${font.stack}"], "text-size": $sizeSp"""
+        }
+
+        val textPaint = """"paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }"""
+
+        val baseSources = baseDir?.let {
+            """
+            "land": { "type": "vector", "url": "pmtiles://file://$it/land.pmtiles" },
+            "relief": { "type": "raster", "url": "pmtiles://file://$it/relief.pmtiles", "tileSize": 256 },
+            """
+        }.orEmpty()
         val baseLayers = if (baseDir != null) {
             """
             { "id": "sea", "type": "background", "paint": { "background-color": "$SEA" } },
             { "id": "land", "type": "fill", "source": "land", "source-layer": "land",
               "paint": { "fill-color": "$LAND", "fill-antialias": false } },
             { "id": "relief", "type": "raster", "source": "relief",
-              "paint": {
-                "raster-fade-duration": 0,
-                "raster-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 1, 14.5, 0]
-              } },
+              "paint": { "raster-fade-duration": 0,
+                "raster-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 1, 14.5, 0] } },
             """
         } else {
             """{ "id": "land", "type": "background", "paint": { "background-color": "$LAND" } },"""
         }
-        val fontFaces = if (textPath == TextPath.FontFaces) {
-            """"font-faces": { "${font.stack}": "asset://fonts/${font.ttf}" },"""
-        } else {
-            ""
+
+        fun byId(id: String) = """["==", ["get", "id"], "$id"]"""
+
+        // Layers later in the list are placed first and win label collisions,
+        // so the order below runs from least to most important.
+        val layers = mutableListOf<String>()
+        eras.filter { it.kind == "region" }.forEach {
+            layers += """{ "id": "era-${it.id}-fill", "type": "fill", "source": "eras", "filter": ${byId(it.id)},
+                "paint": { "fill-color": "$ROUTE", "fill-opacity": 0 } }"""
+            layers += """{ "id": "era-${it.id}-line", "type": "line", "source": "eras", "filter": ${byId(it.id)},
+                "paint": { "line-color": "$ROUTE", "line-width": 1.5, "line-dasharray": [4, 3], "line-opacity": 0 } }"""
         }
-        val testVisibility = if (showLabelTest) "visible" else "none"
-        val systemText = textPath == TextPath.SystemImages
-        val waypointLabel = if (systemText) {
-            """
-                "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
-                "icon-anchor": "top",
-                "icon-offset": [0, 6]
-            """
-        } else {
-            """
-                "text-field": ["get", "name"],
-                "text-font": ["${font.stack}"],
-                "text-size": ${LabelImages.WAYPOINT_SP},
-                "text-anchor": "top",
-                "text-offset": [0, 0.6],
-                "text-max-width": 9
-            """
+        eras.filter { it.kind == "route" }.forEach {
+            layers += """{ "id": "era-${it.id}", "type": "line", "source": "route", "filter": ${byId(it.id)},
+                "layout": { "line-cap": "round", "line-join": "round" },
+                "paint": { "line-color": "$ROUTE", "line-opacity": 0, "line-dasharray": [2, 2],
+                  "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1, 10, 2.5] } }"""
         }
-        // Same label treatment as the waypoints, for the time-state places and landmarks.
-        val eraLabel = waypointLabel
-        val eraCentred = if (systemText) {
-            """
-                "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
-                "icon-size": ${LabelImages.ERA_SP / LabelImages.WAYPOINT_SP}
-            """
-        } else {
-            """
-                "text-field": ["get", "name"],
-                "text-font": ["${font.stack}"],
-                "text-size": ${LabelImages.ERA_SP}
-            """
+        listOf(3, 2, 1).forEach { tier ->
+            layers += """{ "id": "station-$tier", "type": "symbol", "source": "waypoints", "minzoom": ${tierZoom.getValue(tier)},
+                "filter": ["==", ["get", "tier"], $tier],
+                "layout": { ${marker(LabelImages.STATION, LabelImages.DOT_STATION)} }, $textPaint }"""
         }
-        // Detail by zoom: tier 1 (key stations) first, tier 2 closer in, tier 3
-        // (the houses in Makkah, metres apart) only at street level.
-        val tiers = listOf(Triple(1, 6.5, 8.0), Triple(2, 9.0, 10.0), Triple(3, 12.5, 13.5))
-        val waypointLayers = tiers.joinToString(",\n") { (tier, dotZoom, labelZoom) ->
-            """
-            {
-              "id": "waypoint-$tier", "type": "circle", "source": "waypoints", "minzoom": $dotZoom,
-              "filter": ["==", ["get", "tier"], $tier],
-              "paint": {
-                "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 2.5, 10, 4, 14, 6],
-                "circle-color": "$MARK", "circle-stroke-color": "$HALO",
-                "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 6, 1, 10, 2]
-              }
-            },
-            {
-              "id": "waypoint-label-$tier", "type": "symbol", "source": "waypoints", "minzoom": $labelZoom,
-              "filter": ["==", ["get", "tier"], $tier],
-              "layout": { $waypointLabel, "symbol-sort-key": $tier },
-              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
-            }
-            """
-        } + ","
-        val testLabel = if (systemText) {
-            """
-                "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
-                "icon-size": ${LabelImages.TEST_SP / LabelImages.WAYPOINT_SP},
-                "icon-allow-overlap": true,
-                "icon-ignore-placement": true
-            """
-        } else {
-            """
-                "text-field": ["get", "name"],
-                "text-font": ["${font.stack}"],
-                "text-size": ${LabelImages.TEST_SP},
-                "text-allow-overlap": true,
-                "text-ignore-placement": true
-            """
+        eras.filter { it.kind == "landmark" }.forEach {
+            layers += """{ "id": "era-${it.id}", "type": "symbol", "source": "eras", "minzoom": ${tierZoom.getValue(3)},
+                "filter": ${byId(it.id)},
+                "layout": { ${marker(LabelImages.LANDMARK, LabelImages.DOT_LANDMARK)} },
+                "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5, "text-opacity": 0, "icon-opacity": 0 } }"""
         }
+        eras.filter { it.kind == "region-label" }.forEach {
+            layers += """{ "id": "era-${it.id}", "type": "symbol", "source": "eras", "minzoom": 5, "maxzoom": 10,
+                "filter": ${byId(it.id)}, "layout": { ${text(LabelImages.TEXT_SP)} },
+                "paint": { "text-color": "$ROUTE", "text-halo-color": "$HALO", "text-halo-width": 1.5, "text-opacity": 0, "icon-opacity": 0 } }"""
+        }
+        eras.filter { it.kind == "place" }.forEach {
+            layers += """{ "id": "era-${it.id}", "type": "symbol", "source": "eras", "maxzoom": $CITY_MAX,
+                "filter": ${byId(it.id)}, "layout": { ${text(LabelImages.CITY_SP)}, "text-allow-overlap": true, "icon-allow-overlap": true },
+                "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 2, "text-opacity": 0, "icon-opacity": 0 } }"""
+        }
+        layers += """{ "id": "label-test", "type": "symbol", "source": "label-test",
+            "layout": { "visibility": "${if (showLabelTest) "visible" else "none"}", ${text(LabelImages.TEST_SP)},
+              "text-allow-overlap": true, "icon-allow-overlap": true }, $textPaint }"""
+
         return """
         {
           "version": 8,
@@ -146,53 +146,7 @@ object MapStyle {
           },
           "layers": [
             $baseLayers
-            {
-              "id": "${Era.REGION_FILL}", "type": "fill", "source": "eras",
-              "filter": ["==", ["get", "kind"], "region"],
-              "paint": { "fill-color": "$ROUTE", "fill-opacity": 0.08 }
-            },
-            {
-              "id": "${Era.REGION_LINE}", "type": "line", "source": "eras",
-              "filter": ["==", ["get", "kind"], "region"],
-              "paint": { "line-color": "$ROUTE", "line-width": 1.5, "line-dasharray": [4, 3], "line-opacity": 0.7 }
-            },
-            {
-              "id": "route", "type": "line", "source": "route",
-              "layout": { "line-cap": "round", "line-join": "round" },
-              "paint": { "line-color": "$ROUTE", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1, 10, 2.5], "line-dasharray": [2, 2] }
-            },
-            $waypointLayers
-            {
-              "id": "${Era.LANDMARK}", "type": "circle", "source": "eras", "minzoom": 11,
-              "filter": ["==", ["get", "kind"], "landmark"],
-              "paint": {
-                "circle-radius": 6, "circle-color": "$LABEL",
-                "circle-stroke-color": "$HALO", "circle-stroke-width": 2
-              }
-            },
-            {
-              "id": "${Era.LANDMARK_LABEL}", "type": "symbol", "source": "eras", "minzoom": 12,
-              "filter": ["==", ["get", "kind"], "landmark"],
-              "layout": { $eraLabel },
-              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
-            },
-            {
-              "id": "${Era.PLACE}", "type": "symbol", "source": "eras",
-              "filter": ["==", ["get", "kind"], "place"],
-              "layout": { $eraCentred, ${if (systemText) "\"icon-offset\": [0, -22]" else "\"text-offset\": [0, -1.4]"} },
-              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 2 }
-            },
-            {
-              "id": "${Era.REGION_LABEL}", "type": "symbol", "source": "eras", "minzoom": 5, "maxzoom": 10,
-              "filter": ["==", ["get", "kind"], "region-label"],
-              "layout": { $eraCentred, "symbol-placement": "point" },
-              "paint": { "text-color": "$ROUTE", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
-            },
-            {
-              "id": "label-test", "type": "symbol", "source": "label-test",
-              "layout": { "visibility": "$testVisibility", $testLabel },
-              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
-            }
+            ${layers.joinToString(",\n")}
           ]
         }
         """.trimIndent()
