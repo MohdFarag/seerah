@@ -199,3 +199,11 @@ Owner decisions for the next build (2026-11-12), not yet implemented:
 
 - Drop the "نطاق سلطة المدينة" sample and its name. Historical areas of influence must not look like modern borders: no crisp line. Show them as a soft, blurred tint (or another imprecise treatment) instead.
 - Hide all city names when zoomed far out (below about zoom 4).
+
+## 2026-11-12: opening an event (build 16)
+
+Built off-device; **not yet run on a device**.
+
+- Three event chips above the year bar: الهجرة، بناء المسجد النبوي، غزوة بدر. Tapping one moves the year bar to the event's year and flies the camera to its place over 1.8 s (the whole route for the Hijra, the mosque up close, Badr at zoom 11.5).
+- Badr appears from 2 هـ. Its point is the modern town from Wikipedia (23.78, 38.7906), marked for the spike only, not a reviewed battlefield point.
+- The two decisions above are applied: the sample area of influence and its name are gone, and city names hide below zoom 4.

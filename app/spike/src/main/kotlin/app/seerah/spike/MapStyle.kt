@@ -20,7 +20,7 @@ enum class MapFont(val label: String, val stack: String, val ttf: String) {
 /**
  * Zoom ladder: each step in shows the next level of detail.
  *
- *  - cities (مكة، المدينة): zoom 0 to [CITY_MAX]; past that the city is the whole screen
+ *  - cities (مكة، المدينة): zoom [CITY_MIN] to [CITY_MAX]; past that the city is the whole screen
  *  - key Hijra stations (tier 1): from 6.5
  *  - other stations (tier 2): from 8.5
  *  - landmarks inside a city, and the houses in Makkah (tier 3): from 11
@@ -34,6 +34,7 @@ object MapStyle {
     const val LABEL = "#203D32"
     const val HALO = "#FAF7F0"
 
+    private const val CITY_MIN = 4.0
     private const val CITY_MAX = 11.5
     private val tierZoom = mapOf(1 to 6.5, 2 to 8.5, 3 to 11.0)
 
@@ -125,7 +126,7 @@ object MapStyle {
                 "paint": { "text-color": "$ROUTE", "text-halo-color": "$HALO", "text-halo-width": 1.5, "text-opacity": 0, "icon-opacity": 0 } }"""
         }
         eras.filter { it.kind == "place" }.forEach {
-            layers += """{ "id": "era-${it.id}", "type": "symbol", "source": "eras", "maxzoom": $CITY_MAX,
+            layers += """{ "id": "era-${it.id}", "type": "symbol", "source": "eras", "minzoom": $CITY_MIN, "maxzoom": $CITY_MAX,
                 "filter": ${byId(it.id)}, "layout": { ${marker(LabelImages.CITY, LabelImages.DOT_CITY, LabelImages.CITY_SP)} },
                 "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 2, "text-opacity": 0, "icon-opacity": 0 } }"""
         }
