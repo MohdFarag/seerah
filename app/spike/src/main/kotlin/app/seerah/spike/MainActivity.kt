@@ -91,6 +91,7 @@ private fun SpikeScreen() {
         var contentVersion by remember { mutableStateOf(Content.version(context)) }
         val eras = remember(contentVersion) { Era.load(context) }
         var map by remember { mutableStateOf<MapLibreMap?>(null) }
+        var stats by remember { mutableStateOf<Stats.Snapshot?>(null) }
         var yearIndex by rememberSaveable { mutableStateOf(Era.years.indexOf(1)) }
         val year = Era.years[yearIndex]
         base?.let { ready ->
@@ -103,6 +104,7 @@ private fun SpikeScreen() {
                 onStatus = { status = if (ready.dir == null) "$it · بلا أساس" else it },
                 onScale = { metresPerPixel = it },
                 onMap = { map = it },
+                onStats = { stats = it },
                 year = year,
             )
         }
@@ -153,6 +155,13 @@ private fun SpikeScreen() {
                     text = "${BuildConfig.FLAVOR} · MapLibre ${BuildConfig.MAPLIBRE_VERSION} · $status",
                     style = MaterialTheme.typography.labelMedium,
                 )
+                Text(
+                    text = Stats.device + (stats?.let { st ->
+                        " · ${st.fps} إطار/ث · أدنى ${st.minFps ?: "—"} · ${st.memoryMb} م.ب" +
+                            (st.firstMapMs?.let { " · فتح ${it} م.ث" } ?: "")
+                    } ?: ""),
+                    style = MaterialTheme.typography.labelSmall,
+                )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextPath.entries.forEach { option ->
                         FilterChip(
@@ -197,11 +206,13 @@ private fun SpikeMap(
     onStatus: (String) -> Unit,
     onScale: (Double) -> Unit,
     onMap: (MapLibreMap) -> Unit,
+    onStats: (Stats.Snapshot) -> Unit,
     year: Int,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val mapView = remember { MapView(context).apply { onCreate(null) } }
+    remember(mapView) { Stats(mapView, onStats) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
 
     DisposableEffect(lifecycle, mapView) {

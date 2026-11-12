@@ -241,3 +241,7 @@ Reported by the owner (OpenGL): stop and resume by tapping works; closing the ap
 One gap: after reopening, the chip read "تحديث المحتوى · ن1" instead of showing the paused download. Build 19 records the expected size beside the partial file, so a download cut off by closing the app shows as "متوقف …٪" on the next launch. Numbers on the chip now use Arabic-Indic digits.
 
 Spike items now covered on the Galaxy A54: Arabic labels, base map and relief, time states, opening an event, offline after a cold restart, and an interrupted content update. Still open: measurements on the Oppo A55 and the Huawei tablet.
+
+## 2026-11-12: measurement line (build 20)
+
+Built off-device; **not yet run on a device**. The app shows device, frames per second, the slowest second, memory and open time. The steps and a results table are in [measurements.md](measurements.md).
