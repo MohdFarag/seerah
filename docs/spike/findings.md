@@ -251,3 +251,12 @@ Built off-device; **not yet run on a device**. The app shows device, frames per 
 OpenGL build, glyph-PBF mode, Plex (see [measurements.md](measurements.md)). Panning and zooming ran at roughly 20–35 frames per second, with short peaks near 57 and dips near 18; memory 165–196 MB; 7.2 s from process start to the first fully drawn map. Everything worked, including the content update. The "lowest" figure in build 20 was wrong (it counted idle pauses); build 21 measures only while the map moves.
 
 Early reading, to confirm with the Vulkan build and the system-text mode: the low-end phone is usable but not smooth, and the 7 s cold start is long. Likely contributors to check: the relief raster tiles, the number of symbol layers, and debug-build overhead (the spike is a debug build; release builds are faster).
+
+## 2026-11-13: release build and UI polish (build 21)
+
+Built off-device; **not yet run on a device**.
+
+- **Release build:** GitHub now also builds an optimised, shrunk (R8) release APK per renderer, signed with the debug key so it installs without a keystore. App ids end in `.release`, so it installs beside the debug build. Measurements should use it. Risk to watch: if R8 removes a class the map engine reaches through JNI, the map will fail to load in the release build only.
+- **Spike UI:** colours from the Penpot tokens and IBM Plex Sans Arabic for the interface. The top panel collapses to the app name and the measurement line; the settings (label mode, font, test labels, content update) open on tap. Event buttons and the year bar are restyled; the year bar names the phase and marks the start, the Hijra and the end.
+- **Defaults:** system-text labels with Amiri, the mode the spike chose.
+- **Map:** a thin coastline, and names for البحر الأحمر، الحجاز، تهامة in Amiri with wider letter spacing, shown at regional zoom only. Their positions are placed by eye.

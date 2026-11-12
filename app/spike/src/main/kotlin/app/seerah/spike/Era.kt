@@ -38,6 +38,12 @@ object Era {
     private val digits = "٠١٢٣٤٥٦٧٨٩"
     fun arabic(n: Int) = n.toString().map { digits[it - '0'] }.joinToString("")
 
+    /** The phase a year falls in, from the approved index. */
+    fun phase(year: Int): String = when {
+        year < 0 -> "البعثة والعهد المكي"
+        else -> "الهجرة والعهد المدني"
+    }
+
     fun label(year: Int): String = if (year < 0) "${arabic(-year)} ق.هـ" else "${arabic(year)} هـ"
 
     fun load(context: Context): List<EraFeature> = buildList {

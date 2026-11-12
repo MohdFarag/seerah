@@ -25,3 +25,4 @@ Sample data for the technical spike only. **Not reviewed and not shippable.**
 - The sample border change was removed at the owner's request. Areas of influence, when added, are drawn as a soft blurred tint, never a crisp line.
 - Both route lines carry `from: 1, to: 2`, so the route shows only when the year bar is at 1 هـ. Waypoints show in every year.
 - Each waypoint has a `tier` (1 key station, 2 other station, 3 house in Makkah) that sets the zoom it appears at.
+- `geo-labels.geojson` holds a few names of seas and regions for the base map (البحر الأحمر، الحجاز، تهامة), placed by eye for the spike.

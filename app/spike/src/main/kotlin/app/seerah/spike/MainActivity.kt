@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -65,7 +68,7 @@ class MainActivity : ComponentActivity() {
         // Everything is bundled. Tell the engine never to try the network.
         MapLibre.setConnected(false)
         setContent {
-            MaterialTheme {
+            SeerahTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     SpikeScreen()
                 }
@@ -76,8 +79,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun SpikeScreen() {
-    var textPath by rememberSaveable { mutableStateOf(TextPath.GlyphPbf) }
-    var font by rememberSaveable { mutableStateOf(MapFont.Plex) }
+    var textPath by rememberSaveable { mutableStateOf(TextPath.SystemImages) }
+    var font by rememberSaveable { mutableStateOf(MapFont.Amiri) }
     var labelTest by rememberSaveable { mutableStateOf(false) }
     var status by remember { mutableStateOf("جارٍ التحميل") }
     val context = LocalContext.current
@@ -134,55 +137,68 @@ private fun SpikeScreen() {
                             map?.animateCamera(event.camera((230 * d).toInt(), (230 * d).toInt(), (32 * d).toInt()), 3000)
                         },
                         label = { Text(event.title) },
-                        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = AssistChipDefaults.assistChipColors(containerColor = Tokens.page, labelColor = Tokens.ink),
+                        elevation = AssistChipDefaults.assistChipElevation(elevation = 3.dp),
                     )
                 }
             }
             YearBar(yearIndex = yearIndex, onYearIndex = { yearIndex = it })
         }
+        var expanded by rememberSaveable { mutableStateOf(false) }
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .safeDrawingPadding()
                 .padding(12.dp)
                 .fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            tonalElevation = 2.dp,
-            shadowElevation = 4.dp,
+            shape = MaterialTheme.shapes.extraLarge,
+            color = Tokens.page.copy(alpha = 0.96f),
+            shadowElevation = 6.dp,
+            onClick = { expanded = !expanded },
         ) {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Text(
-                    text = "${BuildConfig.FLAVOR} · MapLibre ${BuildConfig.MAPLIBRE_VERSION} · $status",
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Text(
-                    text = Stats.device + (stats?.let { st ->
-                        " · ${st.fps} إطار/ث · أدنى ${st.minFps ?: "—"} · ${st.memoryMb} م.ب" +
-                            (st.firstMapMs?.let { " · فتح ${it} م.ث" } ?: "")
-                    } ?: ""),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextPath.entries.forEach { option ->
-                        FilterChip(
-                            selected = textPath == option,
-                            onClick = { textPath = option },
-                            label = { Text(option.label) },
-                        )
-                    }
-                    MapFont.entries.forEach { option ->
-                        FilterChip(
-                            selected = font == option,
-                            onClick = { font = option },
-                            label = { Text(option.label) },
-                        )
-                    }
-                    UpdateChip(onInstalled = { contentVersion = it })
-                    FilterChip(
-                        selected = labelTest,
-                        onClick = { labelTest = !labelTest },
-                        label = { Text("جمل الاختبار") },
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("السيرة", style = MaterialTheme.typography.titleLarge, color = Tokens.ink)
+                    Text(
+                        "  ·  تجربة تقنية",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Tokens.muted,
+                        modifier = Modifier.weight(1f),
                     )
+                    Text(if (expanded) "إخفاء ▴" else "الإعدادات ▾", style = MaterialTheme.typography.labelMedium, color = Tokens.inkSecondary)
+                }
+                Text(
+                    text = stats?.let { st ->
+                        "${Era.arabic(st.fps)} إطار/ث · أدنى ${st.minFps?.let(Era::arabic) ?: "—"} · ${Era.arabic(st.memoryMb)} م.ب" +
+                            (st.firstMapMs?.let { " · فتح ${Era.arabic(it.toInt())} م.ث" } ?: "")
+                    } ?: status,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Tokens.muted,
+                )
+                AnimatedVisibility(expanded) {
+                    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            "${Stats.device} · ${BuildConfig.FLAVOR} · ${BuildConfig.BUILD_TYPE} · MapLibre ${BuildConfig.MAPLIBRE_VERSION} · $status",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Tokens.muted,
+                        )
+                        Text("رسم الأسماء", style = MaterialTheme.typography.labelMedium, color = Tokens.inkSecondary)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextPath.entries.forEach { option ->
+                                FilterChip(selected = textPath == option, onClick = { textPath = option }, label = { Text(option.label) })
+                            }
+                        }
+                        Text("الخط", style = MaterialTheme.typography.labelMedium, color = Tokens.inkSecondary)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MapFont.entries.forEach { option ->
+                                FilterChip(selected = font == option, onClick = { font = option }, label = { Text(option.label) })
+                            }
+                            FilterChip(selected = labelTest, onClick = { labelTest = !labelTest }, label = { Text("جمل الاختبار") })
+                        }
+                        Text("المحتوى", style = MaterialTheme.typography.labelMedium, color = Tokens.inkSecondary)
+                        UpdateChip(onInstalled = { contentVersion = it })
+                    }
                 }
             }
         }
@@ -263,20 +279,40 @@ private fun SpikeMap(
 
 @Composable
 private fun YearBar(yearIndex: Int, onYearIndex: (Int) -> Unit) {
+    val year = Era.years[yearIndex]
     Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 2.dp,
-        shadowElevation = 4.dp,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = Tokens.page.copy(alpha = 0.96f),
+        shadowElevation = 6.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text("نهاية ${Era.label(Era.years[yearIndex])}", style = MaterialTheme.typography.titleSmall)
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("نهاية ${Era.label(year)}", style = MaterialTheme.typography.titleSmall, color = Tokens.ink)
+                Text(
+                    "  ·  ${Era.phase(year)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Tokens.muted,
+                )
+            }
             Slider(
                 value = yearIndex.toFloat(),
                 onValueChange = { onYearIndex(it.roundToInt()) },
                 valueRange = 0f..(Era.years.size - 1).toFloat(),
                 steps = Era.years.size - 2,
+                colors = SliderDefaults.colors(
+                    thumbColor = Tokens.goldMark,
+                    activeTrackColor = Tokens.gold,
+                    inactiveTrackColor = Tokens.border,
+                    activeTickColor = Tokens.onGold.copy(alpha = 0.35f),
+                    inactiveTickColor = Tokens.inkSecondary.copy(alpha = 0.35f),
+                ),
             )
+            Row(Modifier.fillMaxWidth()) {
+                Text("١٣ ق.هـ", style = MaterialTheme.typography.labelSmall, color = Tokens.muted, modifier = Modifier.weight(1f))
+                Text("الهجرة", style = MaterialTheme.typography.labelSmall, color = Tokens.muted, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("١١ هـ", style = MaterialTheme.typography.labelSmall, color = Tokens.muted, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+            }
         }
     }
 }

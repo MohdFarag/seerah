@@ -91,6 +91,8 @@ object MapStyle {
             { "id": "sea", "type": "background", "paint": { "background-color": "$SEA" } },
             { "id": "land", "type": "fill", "source": "land", "source-layer": "land",
               "paint": { "fill-color": "$LAND", "fill-antialias": false } },
+            { "id": "coast", "type": "line", "source": "land", "source-layer": "land",
+              "paint": { "line-color": "#6F8F88", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 10, 1.2] } },
             { "id": "relief", "type": "raster", "source": "relief",
               "paint": { "raster-fade-duration": 0,
                 "raster-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 1, 14.5, 0] } },
@@ -104,6 +106,19 @@ object MapStyle {
         // Layers later in the list are placed first and win label collisions,
         // so the order below runs from least to most important.
         val layers = mutableListOf<String>()
+        listOf("sea" to LabelImages.SEA_SP, "region" to LabelImages.REGION_SP).forEach { (kind, size) ->
+            val styleText = if (system) {
+                """"icon-image": ["concat", "${LabelImages.LABEL}", ["get", "name"]]"""
+            } else {
+                """"text-field": ["get", "name"], "text-font": ["${font.stack}"], "text-size": $size, "text-letter-spacing": 0.2"""
+            }
+            layers += """{ "id": "geo-$kind", "type": "symbol", "source": "geo",
+                "filter": ["all", ["==", ["get", "kind"], "$kind"]],
+                "minzoom": ${if (kind == "sea") 4 else 5}, "maxzoom": 9,
+                "layout": { $styleText },
+                "paint": { "text-color": "${if (kind == "sea") "#203D32" else "#526253"}", "text-halo-color": "$HALO",
+                  "text-halo-width": ${if (kind == "sea") 0 else 1}, "icon-opacity": 0.85, "text-opacity": 0.85 } }"""
+        }
         eras.filter { it.kind == "region" }.forEach {
             layers += """{ "id": "era-${it.id}-fill", "type": "fill", "source": "eras", "filter": ${byId(it.id)},
                 "paint": { "fill-color": "$ROUTE", "fill-opacity": 0 } }"""
@@ -152,7 +167,8 @@ object MapStyle {
             "waypoints": { "type": "geojson", "data": "${url("hijra-waypoints.geojson")}" },
             "route": { "type": "geojson", "data": "${url("hijra-route.geojson")}" },
             "label-test": { "type": "geojson", "data": "asset://label-test.geojson" },
-            "eras": { "type": "geojson", "data": "${url("time-states.geojson")}" }
+            "eras": { "type": "geojson", "data": "${url("time-states.geojson")}" },
+            "geo": { "type": "geojson", "data": "asset://geo-labels.geojson" }
           },
           "layers": [
             $baseLayers
