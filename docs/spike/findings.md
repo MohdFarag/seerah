@@ -231,3 +231,5 @@ Built off-device; **not yet run on a device**.
 - The app now has the INTERNET permission, used only for this update. The map and content still work with no network.
 
 To check on a device: interrupt and resume (including by force-closing the app or turning on airplane mode mid-download), then restart the app in airplane mode and confirm مسجد قباء is still there.
+
+Owner (2026-11-12): the Hijra route framing issue is fixed in build 17; no further change needed.
