@@ -220,3 +220,14 @@ Build 17 (not yet run on a device):
 - "الهجرة" frames the route inside the area left clear by the top panel and the bottom bar.
 
 Testing note: this container has no hardware virtualisation (no /dev/kvm), so an Android emulator cannot run here; device checks stay with the owner.
+
+## 2026-11-12: content update with interruption (build 18)
+
+Built off-device; **not yet run on a device**.
+
+- A chip "تحديث المحتوى · ن١" downloads a content update from the repository (`map-data/updates/manifest.json` and `content-2.zip`, built by `tools/spike/make_update.py`). The update adds "مسجد قباء" from 1 هـ, so its arrival is visible on the map.
+- The download is deliberately slowed (about 1.3 KB/s, spike only) so it can be interrupted: tap the chip again to stop. The partial file stays; the next tap resumes with an HTTP Range request from where it stopped.
+- After the download, the SHA-256 is checked against the manifest, the zip is unpacked into a new folder, and one small pointer file is replaced to switch to it. Until that step the app keeps using the current content. The map reloads with the new content without restarting the app.
+- The app now has the INTERNET permission, used only for this update. The map and content still work with no network.
+
+To check on a device: interrupt and resume (including by force-closing the app or turning on airplane mode mid-download), then restart the app in airplane mode and confirm مسجد قباء is still there.

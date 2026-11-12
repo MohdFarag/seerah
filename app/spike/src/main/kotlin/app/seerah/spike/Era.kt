@@ -42,7 +42,7 @@ object Era {
 
     fun load(context: Context): List<EraFeature> = buildList {
         for (file in listOf("time-states.geojson", "hijra-route.geojson")) {
-            val json = context.assets.open(file).bufferedReader().use { it.readText() }
+            val json = Content.read(context, file)
             val features = JSONObject(json).getJSONArray("features")
             for (i in 0 until features.length()) {
                 val f = features.getJSONObject(i)

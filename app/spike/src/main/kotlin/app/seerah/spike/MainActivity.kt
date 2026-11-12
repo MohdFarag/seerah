@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.AbsoluteAlignment
@@ -42,7 +43,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import org.maplibre.android.MapLibre
@@ -84,14 +88,15 @@ private fun SpikeScreen() {
 
     Box(Modifier.fillMaxSize()) {
         var metresPerPixel by remember { mutableStateOf(0.0) }
-        val eras = remember { Era.load(context) }
+        var contentVersion by remember { mutableStateOf(Content.version(context)) }
+        val eras = remember(contentVersion) { Era.load(context) }
         var map by remember { mutableStateOf<MapLibreMap?>(null) }
         var yearIndex by rememberSaveable { mutableStateOf(Era.years.indexOf(1)) }
         val year = Era.years[yearIndex]
         base?.let { ready ->
             SpikeMap(
-                styleJson = MapStyle.json(textPath, font, labelTest, ready.dir, eras),
-                images = remember(font, textPath) {
+                styleJson = MapStyle.json(textPath, font, labelTest, ready.dir, eras) { Content.url(context, it) },
+                images = remember(font, textPath, contentVersion) {
                     LabelImages.build(context, font, textPath == TextPath.SystemImages)
                 },
                 eras = eras,
@@ -163,6 +168,7 @@ private fun SpikeScreen() {
                             label = { Text(option.label) },
                         )
                     }
+                    UpdateChip(onInstalled = { contentVersion = it })
                     FilterChip(
                         selected = labelTest,
                         onClick = { labelTest = !labelTest },
@@ -262,4 +268,51 @@ private fun YearBar(yearIndex: Int, onYearIndex: (Int) -> Unit) {
             )
         }
     }
+}
+
+/** Spike test of a content update: start, interrupt (tap again), resume. */
+@Composable
+private fun UpdateChip(onInstalled: (Int) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var job by remember { mutableStateOf<Job?>(null) }
+    var state by remember { mutableStateOf<Content.State>(Content.State.Idle) }
+    val label = when (val s = state) {
+        Content.State.Idle -> "تحديث المحتوى · ن${Content.version(context)}"
+        Content.State.Checking -> "جارٍ الفحص…"
+        is Content.State.Downloading -> "تنزيل ${s.done * 100 / s.total}٪ · اضغط للإيقاف"
+        is Content.State.Paused -> "متوقف ${s.done * 100 / s.total}٪ · اضغط للاستكمال"
+        Content.State.Verifying -> "جارٍ التحقق…"
+        is Content.State.UpToDate -> "المحتوى محدث · ن${s.version}"
+        is Content.State.Installed -> "تم التحديث · ن${s.version}"
+        is Content.State.Failed -> "تعذّر: ${s.message}"
+    }
+    FilterChip(
+        selected = state is Content.State.Downloading,
+        onClick = {
+            val running = job
+            if (running != null && running.isActive) {
+                running.cancel()
+                return@FilterChip
+            }
+            job = scope.launch(Dispatchers.IO) {
+                try {
+                    Content.update(context) { s ->
+                        scope.launch {
+                            state = s
+                            if (s is Content.State.Installed) onInstalled(s.version)
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    // An interrupted download: the .part file stays and the next tap resumes it.
+                    val s = state
+                    if (s is Content.State.Downloading) scope.launch { state = Content.State.Paused(s.done, s.total) }
+                    throw e
+                } catch (e: Exception) {
+                    scope.launch { state = Content.State.Failed(e.message ?: e.javaClass.simpleName) }
+                }
+            }
+        },
+        label = { Text(label) },
+    )
 }
