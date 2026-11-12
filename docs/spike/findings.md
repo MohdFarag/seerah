@@ -181,3 +181,14 @@ Build 14 (not yet run on a device):
 - **Collision priority:** layers are ordered from least to most important, cities last, so a city name wins over stations and no longer flickers. City names stop at zoom 11.5, so up close they no longer cover the landmarks inside them.
 - **Year changes cross-fade** over 450 ms: each time-dependent feature has its own layer whose opacity is animated, instead of a filter that switches instantly.
 - **The route belongs to 1 هـ**: it shows only at that year. Waypoints show in every year.
+
+## 2026-11-12: build 14 feedback, Google Maps-style labels (build 15)
+
+Owner feedback on build 14 (Vulkan, Galaxy A54), compared side by side with Google Earth: al-Usba appeared, vanished and reappeared while zooming in; dots were still too big; city markers missing; names sat far below their dots, sometimes nearer another dot. The owner wants zoom behaviour like Google Maps.
+
+How Google Maps does it, and what build 15 copies (not yet run on a device):
+
+- **Small dots, name right beside the dot.** Dots are now 3.5 dp (cities 4.5 dp, dark). In system-text mode the dot and name are one image with the name just to the right of the dot; in glyph modes the engine tries right, left, above, then below.
+- **Every city has a dot**, with a larger name.
+- **A label hides only when it collides, and the more important one wins.** Al-Usba disappeared because the large "يثرب" label, placed above its point with wide padding, overlapped it at that zoom; with tight labels the collision zone is much smaller. The engine still hides a lower-priority label when two genuinely overlap, as Google does.
+- Label images no longer carry font padding, which made each label's collision box taller than the text.

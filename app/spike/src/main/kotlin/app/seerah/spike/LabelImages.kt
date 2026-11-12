@@ -24,10 +24,13 @@ object LabelImages {
     const val LANDMARK = "landmark:"
     const val DOT_STATION = "dot-station"
     const val DOT_LANDMARK = "dot-landmark"
-    const val TEXT_SP = 15f
-    const val CITY_SP = 19f
+    const val CITY = "city:"
+    const val DOT_CITY = "dot-city"
+    const val TEXT_SP = 13f
+    const val CITY_SP = 17f
     const val TEST_SP = 20f
-    private const val DOT_DP = 6f
+    private const val DOT_DP = 3.5f
+    private const val CITY_DOT_DP = 4.5f
 
     private val stationColor = Color.parseColor("#B7963A")
     private val landmarkColor = Color.parseColor(MapStyle.LABEL)
@@ -37,19 +40,20 @@ object LabelImages {
         val images = mutableMapOf(
             DOT_STATION to dot(stationColor, d),
             DOT_LANDMARK to dot(landmarkColor, d),
+            DOT_CITY to dot(landmarkColor, d, CITY_DOT_DP),
         )
         if (!systemText) return images
         val typeface = Typeface.createFromAsset(context.assets, "fonts/${font.ttf}")
         val sp = context.resources.displayMetrics.scaledDensity
         val halo = 1.5f * d
         names(context, "hijra-waypoints.geojson").forEach {
-            images[STATION + it] = withDot(render(it, typeface, TEXT_SP * sp, halo), stationColor, d)
+            images[STATION + it] = withDot(render(it, typeface, TEXT_SP * sp, halo), dot(stationColor, d), d)
         }
         names(context, "time-states.geojson", "landmark").forEach {
-            images[LANDMARK + it] = withDot(render(it, typeface, TEXT_SP * sp, halo), landmarkColor, d)
+            images[LANDMARK + it] = withDot(render(it, typeface, TEXT_SP * sp, halo), dot(landmarkColor, d), d)
         }
         names(context, "time-states.geojson", "place").forEach {
-            images[LABEL + it] = render(it, typeface, CITY_SP * sp, halo * 1.4f)
+            images[CITY + it] = withDot(render(it, typeface, CITY_SP * sp, halo * 1.4f), dot(landmarkColor, d, CITY_DOT_DP), d)
         }
         names(context, "time-states.geojson", "region-label").forEach {
             images[LABEL + it] = render(it, typeface, TEXT_SP * sp, halo, Color.parseColor(MapStyle.ROUTE))
@@ -70,8 +74,8 @@ object LabelImages {
         }
     }
 
-    private fun dot(color: Int, d: Float): Bitmap {
-        val r = DOT_DP * d
+    private fun dot(color: Int, d: Float, radiusDp: Float = DOT_DP): Bitmap {
+        val r = radiusDp * d
         val size = ceil(2 * r).toInt()
         val b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val c = Canvas(b)
@@ -79,21 +83,26 @@ object LabelImages {
         p.color = Color.parseColor(MapStyle.HALO)
         c.drawCircle(size / 2f, size / 2f, r, p)
         p.color = color
-        c.drawCircle(size / 2f, size / 2f, r - 2 * d, p)
+        c.drawCircle(size / 2f, size / 2f, r - 1.2f * d, p)
         return b
     }
 
-    /** The dot centred above the label; the image's top edge is the dot's top. */
-    private fun withDot(label: Bitmap, color: Int, d: Float): Bitmap {
-        val dot = dot(color, d)
+    /**
+     * The dot on the left with the name just to its right, as on Google Maps. The
+     * image's left edge is the dot's left edge, so the style anchors it there and
+     * shifts it by the dot's radius to put the dot's centre on the point.
+     */
+    private fun withDot(label: Bitmap, dot: Bitmap, d: Float): Bitmap {
         val gap = (2 * d).toInt()
-        val w = maxOf(label.width, dot.width)
-        val b = Bitmap.createBitmap(w, dot.height + gap + label.height, Bitmap.Config.ARGB_8888)
+        val h = maxOf(label.height, dot.height)
+        val b = Bitmap.createBitmap(dot.width + gap + label.width, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(b)
-        c.drawBitmap(dot, (w - dot.width) / 2f, 0f, null)
-        c.drawBitmap(label, (w - label.width) / 2f, (dot.height + gap).toFloat(), null)
+        c.drawBitmap(dot, 0f, (h - dot.height) / 2f, null)
+        c.drawBitmap(label, (dot.width + gap).toFloat(), (h - label.height) / 2f, null)
         return b
     }
+
+    fun dotRadiusDp(prefix: String) = if (prefix == CITY) CITY_DOT_DP else DOT_DP
 
     private fun render(
         text: String,
@@ -106,11 +115,11 @@ object LabelImages {
             this.typeface = typeface
             textSize = textPx
         }
-        val pad = ceil(haloPx * 2).toInt()
+        val pad = ceil(haloPx * 1.5f).toInt()
         val width = ceil(paint.measureText(text)).toInt() + 2 * pad
         val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
             .setAlignment(Layout.Alignment.ALIGN_CENTER)
-            .setIncludePad(true)
+            .setIncludePad(false)
             .build()
         val bitmap = Bitmap.createBitmap(width, layout.height + 2 * pad, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
