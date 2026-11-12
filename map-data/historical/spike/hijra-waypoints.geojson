@@ -12,7 +12,8 @@
         "name": "منزل النبي ﷺ بمكة",
         "position": "source",
         "when_source": "يوم الخميس، ليلة الجمعة؛ 26 صفر 1هـ (26/2/1هـ)؛ 8 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 3
       },
       "geometry": {
         "type": "Point",
@@ -33,7 +34,8 @@
         "name": "الحزورة",
         "position": "source",
         "when_source": "يوم الخميس، ليلة الجمعة؛ 26 صفر 1هـ؛ 8 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 3
       },
       "geometry": {
         "type": "Point",
@@ -54,7 +56,8 @@
         "name": "منزل أبي بكر الصديق رضي الله عنه",
         "position": "source",
         "when_source": "يوم الخميس، ليلة الجمعة؛ 26 صفر 1هـ؛ 8 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 3
       },
       "geometry": {
         "type": "Point",
@@ -75,7 +78,8 @@
         "name": "غار ثور",
         "position": "source",
         "when_source": null,
-        "review": "draft"
+        "review": "draft",
+        "tier": 1
       },
       "geometry": {
         "type": "Point",
@@ -96,7 +100,8 @@
         "name": "أسفل مكة",
         "position": "source",
         "when_source": "يوم الأحد ليلة الاثنين، 29 صفر 1هـ، الموافق 11 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -117,7 +122,8 @@
         "name": "الساحل",
         "position": "source",
         "when_source": "يوم الأحد ليلة الاثنين، 29 صفر 1هـ، الموافق 11 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -138,7 +144,8 @@
         "name": "بطن مر",
         "position": "source",
         "when_source": "يوم الاثنين، 1 ربيع الأول 1هـ، الموافق 12 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -159,7 +166,8 @@
         "name": "كراع الغميم",
         "position": "source",
         "when_source": "يوم الاثنين، 1 ربيع الأول 1هـ، الموافق 12 سبتمبر 622م؛ يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -180,7 +188,8 @@
         "name": "أسفل عسفان",
         "position": "source",
         "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -201,7 +210,8 @@
         "name": "أسفل أمج",
         "position": "source",
         "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -222,7 +232,8 @@
         "name": "خيمتا أم معبد",
         "position": "source",
         "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 1
       },
       "geometry": {
         "type": "Point",
@@ -243,7 +254,8 @@
         "name": "قديد",
         "position": "source",
         "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -264,7 +276,8 @@
         "name": "معارضة الطريق بعد قديد",
         "position": "source",
         "when_source": "يوم الثلاثاء، 2 ربيع الأول 1هـ، الموافق 13 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -290,7 +303,8 @@
           39.3789667,
           22.5658417
         ],
-        "position_note": "The source gives two coordinate pairs with no stated role. This one was picked for the spike because it lies along the route; not a reviewed choice."
+        "position_note": "The source gives two coordinate pairs with no stated role. This one was picked for the spike because it lies along the route; not a reviewed choice.",
+        "tier": 1
       },
       "geometry": {
         "type": "Point",
@@ -311,7 +325,8 @@
         "name": "الجحفة",
         "position": "source",
         "when_source": null,
-        "review": "draft"
+        "review": "draft",
+        "tier": 1
       },
       "geometry": {
         "type": "Point",
@@ -337,7 +352,8 @@
           39.3334833,
           22.8084333
         ],
-        "position_note": "The source gives two coordinate pairs with no stated role. This one was picked for the spike because it lies along the route; not a reviewed choice."
+        "position_note": "The source gives two coordinate pairs with no stated role. This one was picked for the spike because it lies along the route; not a reviewed choice.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -358,7 +374,8 @@
         "name": "غدير خم",
         "position": "source",
         "when_source": "يوم الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -379,7 +396,8 @@
         "name": "ماء أحياء",
         "position": "source",
         "when_source": "صباح يوم الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -400,7 +418,8 @@
         "name": "ثنية المَرّة",
         "position": "source",
         "when_source": "صباح الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -421,7 +440,8 @@
         "name": "وادي لَقْف",
         "position": "source",
         "when_source": "الأربعاء، 3 ربيع الأول 1هـ، الموافق 14 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -447,7 +467,8 @@
           39.3274167,
           23.1441333
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -473,7 +494,8 @@
           39.3111778,
           23.1789306
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -494,7 +516,8 @@
         "name": "مَرْجَح مَجاج",
         "position": "source",
         "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -515,7 +538,8 @@
         "name": "مَرْجَح ذي العصوين",
         "position": "source",
         "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -536,7 +560,8 @@
         "name": "بطن ذي كشد",
         "position": "source",
         "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -557,7 +582,8 @@
         "name": "الجداجد",
         "position": "source",
         "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -583,7 +609,8 @@
           39.2577111,
           23.3192944
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -609,7 +636,8 @@
           39.2842528,
           23.3502306
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -635,7 +663,8 @@
           39.3085278,
           23.393225
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -661,7 +690,8 @@
           39.3005667,
           23.4182028
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -682,7 +712,8 @@
         "name": "الغثريانة (العبايب)",
         "position": "source",
         "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -703,7 +734,8 @@
         "name": "وادي الفاجة",
         "position": "source",
         "when_source": "الخميس 4 ربيع الأول 1هـ، الموافق 15 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -729,7 +761,8 @@
           39.2743389,
           23.7402639
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -750,7 +783,8 @@
         "name": "العَرْج",
         "position": "source",
         "when_source": "الجمعة 5 ربيع الأول 1هـ، الموافق 16 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 1
       },
       "geometry": {
         "type": "Point",
@@ -771,7 +805,8 @@
         "name": "الجدوات",
         "position": "source",
         "when_source": "السبت 6 ربيع الأول 1هـ، الموافق 17 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -792,7 +827,8 @@
         "name": "ركوبة",
         "position": "source",
         "when_source": "السبت 6 ربيع الأول 1هـ، الموافق 17 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -813,7 +849,8 @@
         "name": "ثنية الغائر",
         "position": "source",
         "when_source": "السبت 6 ربيع الأول 1هـ، الموافق 17 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -839,7 +876,8 @@
           39.5393917,
           24.0554444
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -860,7 +898,8 @@
         "name": "الخلّاق (آبار الماشي)",
         "position": "source",
         "when_source": "الأحد 7 ربيع الأول 1هـ، الموافق 18 سبتمبر 622م",
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -886,7 +925,8 @@
           39.5586944,
           24.3160056
         ],
-        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start."
+        "position_note": "The source gives two coordinate pairs. They are read as the start and end of a stretch; the marker sits at the start.",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -907,7 +947,8 @@
         "name": "الجثجاثة",
         "position": "source",
         "when_source": null,
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -928,7 +969,8 @@
         "name": "طريق الطبي",
         "position": "source",
         "when_source": null,
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -949,7 +991,8 @@
         "name": "العصبة",
         "position": "source",
         "when_source": null,
-        "review": "draft"
+        "review": "draft",
+        "tier": 2
       },
       "geometry": {
         "type": "Point",
@@ -970,7 +1013,8 @@
         "name": "قباء",
         "position": "source",
         "when_source": null,
-        "review": "draft"
+        "review": "draft",
+        "tier": 1
       },
       "geometry": {
         "type": "Point",
