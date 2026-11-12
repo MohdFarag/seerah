@@ -14,11 +14,12 @@ import org.maplibre.android.maps.MapView
 class Stats(mapView: MapView, private val onChange: (Snapshot) -> Unit) {
     data class Snapshot(val fps: Int, val minFps: Int?, val memoryMb: Int, val firstMapMs: Long?)
 
-    private var frames = 0
-    private var windowStart = SystemClock.elapsedRealtime()
+    private var last = 0L
+    private val intervals = ArrayDeque<Long>()
     private var fps = 0
     private var minFps: Int? = null
     private var firstMapMs: Long? = null
+    private var lastPublish = 0L
 
     init {
         mapView.addOnDidFinishRenderingFrameListener { _, _, _ -> frame() }
@@ -30,17 +31,23 @@ class Stats(mapView: MapView, private val onChange: (Snapshot) -> Unit) {
         }
     }
 
+    /**
+     * Rate from the gaps between consecutive frames while the map keeps drawing.
+     * A gap over [IDLE_MS] means the map stopped moving, so it is not counted;
+     * the earlier version counted those idle gaps and its "lowest" read 1.
+     */
     private fun frame() {
-        frames++
         val now = SystemClock.elapsedRealtime()
-        val span = now - windowStart
-        if (span >= 1000) {
-            fps = (frames * 1000 / span).toInt()
-            // Only seconds in which the map kept drawing count towards the minimum;
-            // an idle map draws nothing and would read as 0.
-            if (frames >= 5) minFps = minOf(minFps ?: fps, fps)
-            frames = 0
-            windowStart = now
+        val gap = now - last
+        last = now
+        if (gap in 1..IDLE_MS) {
+            intervals.addLast(gap)
+            while (intervals.size > WINDOW) intervals.removeFirst()
+        }
+        if (intervals.size >= WINDOW && now - lastPublish >= 1000) {
+            fps = (1000 * intervals.size / intervals.sum()).toInt()
+            minFps = minOf(minFps ?: fps, fps)
+            lastPublish = now
             publish()
         }
     }
@@ -53,6 +60,9 @@ class Stats(mapView: MapView, private val onChange: (Snapshot) -> Unit) {
     private fun publish() = onChange(Snapshot(fps, minFps, Debug.getPss().toInt() / 1024, firstMapMs))
 
     companion object {
+        private const val IDLE_MS = 250L
+        private const val WINDOW = 30
+
         val device: String = "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}"
     }
 }
