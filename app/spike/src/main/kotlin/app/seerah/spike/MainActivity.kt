@@ -81,12 +81,16 @@ private fun SpikeScreen() {
 
     Box(Modifier.fillMaxSize()) {
         var metresPerPixel by remember { mutableStateOf(0.0) }
+        val eras = remember { Era.load(context) }
         var yearIndex by rememberSaveable { mutableStateOf(Era.years.indexOf(1)) }
         val year = Era.years[yearIndex]
         base?.let { ready ->
             SpikeMap(
-                styleJson = MapStyle.json(textPath, font, labelTest, ready.dir),
-                systemLabelFont = font.takeIf { textPath == TextPath.SystemImages },
+                styleJson = MapStyle.json(textPath, font, labelTest, ready.dir, eras),
+                images = remember(font, textPath) {
+                    LabelImages.build(context, font, textPath == TextPath.SystemImages)
+                },
+                eras = eras,
                 onStatus = { status = if (ready.dir == null) "$it · بلا أساس" else it },
                 onScale = { metresPerPixel = it },
                 year = year,
@@ -160,7 +164,8 @@ private val sampleBounds: LatLngBounds = LatLngBounds.Builder()
 @Composable
 private fun SpikeMap(
     styleJson: String,
-    systemLabelFont: MapFont?,
+    images: Map<String, android.graphics.Bitmap>,
+    eras: List<EraFeature>,
     onStatus: (String) -> Unit,
     onScale: (Double) -> Unit,
     year: Int,
@@ -199,18 +204,18 @@ private fun SpikeMap(
         }
     }
 
-    DisposableEffect(map, styleJson, systemLabelFont) {
+    DisposableEffect(map, styleJson, images) {
         val builder = Style.Builder().fromJson(styleJson)
+        images.forEach { (id, bitmap) -> builder.withImage(id, bitmap) }
         map?.setStyle(builder) { style ->
-            systemLabelFont?.let { LabelImages.addTo(style, context, it) }
-            Era.apply(style, year)
+            Era.apply(style, eras, year, animate = false)
             onStatus("تم تحميل النمط")
         }
         onDispose { }
     }
 
-    // Changing the year only swaps layer filters; the style is not reloaded.
-    LaunchedEffect(map, year) { map?.style?.let { Era.apply(it, year) } }
+    // Changing the year never reloads the style; the layers that change cross-fade.
+    LaunchedEffect(year) { map?.style?.takeIf { it.isFullyLoaded }?.let { Era.apply(it, eras, year, animate = true) } }
 
     AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
 }
