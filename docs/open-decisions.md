@@ -11,8 +11,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Long-running events, approximate or unknown dates, disputed locations | When those cases come up in content |
 | The actual display-date values (the one-date rule is decided) | Content review |
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
-| App framework, map engine, download and update mechanism | Technical spike (see [ADR 0002](adr/0002-proposed-stack.md)) |
-| Test devices, minimum Android version, performance targets, accessibility, failure states | Implementation spec |
+| Minimum Android version, accessibility, failure states | Implementation spec |
 | Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
 | Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
 | Event categories | Not decided |
@@ -21,3 +20,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | How to depict anonymous soldiers (none may be assumed) | Not decided |
 | English name, subtitle, logo; name availability check | Not decided |
 | Pre-birth intro: reference date and detailed stations | Not decided |
+
+## Decided
+
+- App framework, map engine, update mechanism and performance targets: [ADR 0002](adr/0002-proposed-stack.md), accepted 2026-11-13. Test devices: Oppo A55, Galaxy A54, Huawei MatePad 11.5 ([roadmap](roadmap.md)).
