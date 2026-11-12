@@ -276,15 +276,16 @@ private fun UpdateChip(onInstalled: (Int) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var job by remember { mutableStateOf<Job?>(null) }
-    var state by remember { mutableStateOf<Content.State>(Content.State.Idle) }
+    // A download cut off by closing the app shows as paused on the next launch.
+    var state by remember { mutableStateOf<Content.State>(Content.pending(context) ?: Content.State.Idle) }
     val label = when (val s = state) {
-        Content.State.Idle -> "تحديث المحتوى · ن${Content.version(context)}"
+        Content.State.Idle -> "تحديث المحتوى · ن${Era.arabic(Content.version(context))}"
         Content.State.Checking -> "جارٍ الفحص…"
-        is Content.State.Downloading -> "تنزيل ${s.done * 100 / s.total}٪ · اضغط للإيقاف"
-        is Content.State.Paused -> "متوقف ${s.done * 100 / s.total}٪ · اضغط للاستكمال"
+        is Content.State.Downloading -> "تنزيل ${Era.arabic((s.done * 100 / s.total).toInt())}٪ · اضغط للإيقاف"
+        is Content.State.Paused -> "متوقف ${Era.arabic((s.done * 100 / s.total).toInt())}٪ · اضغط للاستكمال"
         Content.State.Verifying -> "جارٍ التحقق…"
-        is Content.State.UpToDate -> "المحتوى محدث · ن${s.version}"
-        is Content.State.Installed -> "تم التحديث · ن${s.version}"
+        is Content.State.UpToDate -> "المحتوى محدث · ن${Era.arabic(s.version)}"
+        is Content.State.Installed -> "تم التحديث · ن${Era.arabic(s.version)}"
         is Content.State.Failed -> "تعذّر: ${s.message}"
     }
     FilterChip(
