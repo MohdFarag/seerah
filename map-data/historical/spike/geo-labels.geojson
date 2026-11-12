@@ -1,0 +1,53 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "sea",
+        "name": "البحر الأحمر",
+        "minzoom": 4,
+        "maxzoom": 9
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.2,
+          22.2
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "region",
+        "name": "الحجاز",
+        "minzoom": 5,
+        "maxzoom": 9
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.1,
+          23.2
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "region",
+        "name": "تهامة",
+        "minzoom": 6,
+        "maxzoom": 9
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.25,
+          21.9
+        ]
+      }
+    }
+  ]
+}

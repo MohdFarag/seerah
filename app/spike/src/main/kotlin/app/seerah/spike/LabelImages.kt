@@ -29,6 +29,8 @@ object LabelImages {
     const val TEXT_SP = 13f
     const val CITY_SP = 17f
     const val TEST_SP = 20f
+    const val SEA_SP = 17f
+    const val REGION_SP = 22f
     private const val DOT_DP = 3.5f
     private const val CITY_DOT_DP = 4.5f
 
@@ -57,6 +59,14 @@ object LabelImages {
         }
         names(context, "time-states.geojson", "region-label").forEach {
             images[LABEL + it] = render(it, typeface, TEXT_SP * sp, halo, Color.parseColor(MapStyle.ROUTE))
+        }
+        // Seas and regions: Amiri, wider letter spacing, quieter colours (Penpot map.label tokens).
+        val amiri = Typeface.createFromAsset(context.assets, "fonts/Amiri-Regular.ttf")
+        names(context, "geo-labels.geojson", "sea").forEach {
+            images[LABEL + it] = render(it, amiri, SEA_SP * sp, 0f, Color.parseColor("#203D32"), spacing = 0.08f)
+        }
+        names(context, "geo-labels.geojson", "region").forEach {
+            images[LABEL + it] = render(it, amiri, REGION_SP * sp, halo, Color.parseColor("#526253"), spacing = 0.25f)
         }
         names(context, "label-test.geojson").forEach {
             images[LABEL + it] = render(it, typeface, TEST_SP * sp, halo)
@@ -110,10 +120,12 @@ object LabelImages {
         textPx: Float,
         haloPx: Float,
         color: Int = Color.parseColor(MapStyle.LABEL),
+        spacing: Float = 0f,
     ): Bitmap {
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             this.typeface = typeface
             textSize = textPx
+            letterSpacing = spacing
         }
         val pad = ceil(haloPx * 1.5f).toInt()
         val width = ceil(paint.measureText(text)).toInt() + 2 * pad
@@ -128,7 +140,7 @@ object LabelImages {
         paint.strokeWidth = haloPx * 2
         paint.strokeJoin = Paint.Join.ROUND
         paint.color = Color.parseColor(MapStyle.HALO)
-        layout.draw(canvas)
+        if (haloPx > 0f) layout.draw(canvas)
         paint.style = Paint.Style.FILL
         paint.color = color
         layout.draw(canvas)

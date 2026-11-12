@@ -38,6 +38,16 @@ android {
 
     buildTypes {
         debug { }
+        // Optimised build for measuring real performance. Signed with the debug key
+        // so it installs without a keystore; never for distribution.
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".release"
+            versionNameSuffix = "-release"
+        }
     }
 
     buildFeatures {
@@ -77,6 +87,7 @@ dependencies {
 
     implementation(platform("androidx.compose:compose-bom:2025.09.00"))
     implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.10.1")
