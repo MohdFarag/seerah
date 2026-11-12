@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
 private fun SpikeScreen() {
     var textPath by rememberSaveable { mutableStateOf(TextPath.GlyphPbf) }
     var font by rememberSaveable { mutableStateOf(MapFont.Plex) }
-    var labelTest by rememberSaveable { mutableStateOf(true) }
+    var labelTest by rememberSaveable { mutableStateOf(false) }
     var status by remember { mutableStateOf("جارٍ التحميل") }
     val context = LocalContext.current
     // null while the base map is being copied to storage on first launch.

@@ -93,6 +93,28 @@ object MapStyle {
                 "text-size": ${LabelImages.ERA_SP}
             """
         }
+        // Detail by zoom: tier 1 (key stations) first, tier 2 closer in, tier 3
+        // (the houses in Makkah, metres apart) only at street level.
+        val tiers = listOf(Triple(1, 6.5, 8.0), Triple(2, 9.0, 10.0), Triple(3, 12.5, 13.5))
+        val waypointLayers = tiers.joinToString(",\n") { (tier, dotZoom, labelZoom) ->
+            """
+            {
+              "id": "waypoint-$tier", "type": "circle", "source": "waypoints", "minzoom": $dotZoom,
+              "filter": ["==", ["get", "tier"], $tier],
+              "paint": {
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 2.5, 10, 4, 14, 6],
+                "circle-color": "$MARK", "circle-stroke-color": "$HALO",
+                "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 6, 1, 10, 2]
+              }
+            },
+            {
+              "id": "waypoint-label-$tier", "type": "symbol", "source": "waypoints", "minzoom": $labelZoom,
+              "filter": ["==", ["get", "tier"], $tier],
+              "layout": { $waypointLabel, "symbol-sort-key": $tier },
+              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
+            }
+            """
+        } + ","
         val testLabel = if (systemText) {
             """
                 "icon-image": ["concat", "${LabelImages.PREFIX}", ["get", "name"]],
@@ -137,31 +159,11 @@ object MapStyle {
             {
               "id": "route", "type": "line", "source": "route",
               "layout": { "line-cap": "round", "line-join": "round" },
-              "paint": { "line-color": "$ROUTE", "line-width": 2.5, "line-dasharray": [2, 2] }
+              "paint": { "line-color": "$ROUTE", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1, 10, 2.5], "line-dasharray": [2, 2] }
             },
+            $waypointLayers
             {
-              "id": "waypoint-candidate", "type": "circle", "source": "waypoints",
-              "filter": ["==", ["get", "position"], "candidate"],
-              "paint": {
-                "circle-radius": 5, "circle-color": "$HALO",
-                "circle-stroke-color": "$ROUTE", "circle-stroke-width": 1.5
-              }
-            },
-            {
-              "id": "waypoint", "type": "circle", "source": "waypoints",
-              "filter": ["==", ["get", "position"], "source"],
-              "paint": {
-                "circle-radius": 5, "circle-color": "$MARK",
-                "circle-stroke-color": "$HALO", "circle-stroke-width": 2
-              }
-            },
-            {
-              "id": "waypoint-label", "type": "symbol", "source": "waypoints",
-              "layout": { $waypointLabel },
-              "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
-            },
-            {
-              "id": "${Era.LANDMARK}", "type": "circle", "source": "eras",
+              "id": "${Era.LANDMARK}", "type": "circle", "source": "eras", "minzoom": 11,
               "filter": ["==", ["get", "kind"], "landmark"],
               "paint": {
                 "circle-radius": 6, "circle-color": "$LABEL",
@@ -169,7 +171,7 @@ object MapStyle {
               }
             },
             {
-              "id": "${Era.LANDMARK_LABEL}", "type": "symbol", "source": "eras",
+              "id": "${Era.LANDMARK_LABEL}", "type": "symbol", "source": "eras", "minzoom": 12,
               "filter": ["==", ["get", "kind"], "landmark"],
               "layout": { $eraLabel },
               "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
@@ -181,8 +183,8 @@ object MapStyle {
               "paint": { "text-color": "$LABEL", "text-halo-color": "$HALO", "text-halo-width": 2 }
             },
             {
-              "id": "${Era.REGION_LABEL}", "type": "symbol", "source": "eras",
-              "filter": ["==", ["get", "kind"], "region"],
+              "id": "${Era.REGION_LABEL}", "type": "symbol", "source": "eras", "minzoom": 5, "maxzoom": 10,
+              "filter": ["==", ["get", "kind"], "region-label"],
               "layout": { $eraCentred, "symbol-placement": "point" },
               "paint": { "text-color": "$ROUTE", "text-halo-color": "$HALO", "text-halo-width": 1.5 }
             },

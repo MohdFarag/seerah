@@ -156,3 +156,16 @@ Built off-device; **not yet run on a device**.
 - Changing the year only swaps layer filters; the style is not reloaded, so the map should not flicker.
 
 To check on a device: that each change happens exactly at its year, that dragging the bar stays smooth, and that labels in each mode still render correctly.
+
+## 2026-11-12: build 12 feedback, detail by zoom (build 13)
+
+Owner feedback on build 12 (OpenGL, Galaxy A54): the year changes worked, but the map showed everything at every zoom. Route dots stayed large when zoomed out, and the sample area's name repeated many times.
+
+Build 13 (not yet run on a device):
+
+- **Detail by zoom.** City names (مكة، المدينة) show at every zoom. Key stations (Thawr, Umm Ma'bad, Suraqa, al-Juhfa, al-Arj, Quba) appear from zoom 6.5, other stations from 9, the Makkah houses from 12.5; each label appears about one zoom after its dot. The Prophet's Mosque appears from zoom 11.
+- Dots and the route line scale with zoom instead of keeping a fixed size.
+- **Repeated area name:** the engine labels a polygon once per tile, so the name was drawn in every tile. It now comes from one point per state, shown between zoom 5 and 10.
+- The test labels start hidden.
+
+The tiers are set in the data (`tier` on each waypoint) so content review can move a place between them.

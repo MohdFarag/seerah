@@ -43,7 +43,7 @@ object Era {
     fun apply(style: Style, year: Int) {
         (style.getLayer(REGION_FILL) as? FillLayer)?.setFilter(filter("region", year))
         (style.getLayer(REGION_LINE) as? LineLayer)?.setFilter(filter("region", year))
-        (style.getLayer(REGION_LABEL) as? SymbolLayer)?.setFilter(filter("region", year))
+        (style.getLayer(REGION_LABEL) as? SymbolLayer)?.setFilter(filter("region-label", year))
         (style.getLayer(PLACE) as? SymbolLayer)?.setFilter(filter("place", year))
         (style.getLayer(LANDMARK) as? CircleLayer)?.setFilter(filter("landmark", year))
         (style.getLayer(LANDMARK_LABEL) as? SymbolLayer)?.setFilter(filter("landmark", year))

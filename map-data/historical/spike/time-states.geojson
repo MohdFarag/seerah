@@ -3,6 +3,25 @@
   "features": [
     {
       "type": "Feature",
+      "id": "makkah",
+      "properties": {
+        "id": "makkah",
+        "kind": "place",
+        "name": "مكة",
+        "from": -99,
+        "to": 99,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.8262,
+          21.4225
+        ]
+      }
+    },
+    {
+      "type": "Feature",
       "id": "yathrib",
       "properties": {
         "id": "yathrib",
@@ -497,6 +516,46 @@
               24.4672
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "authority-a-label",
+      "properties": {
+        "id": "authority-a-label",
+        "kind": "region-label",
+        "name": "نطاق سلطة المدينة · عينة",
+        "from": 1,
+        "to": 8,
+        "sample": true,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.95,
+          24.95
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "authority-b-label",
+      "properties": {
+        "id": "authority-b-label",
+        "kind": "region-label",
+        "name": "نطاق سلطة المدينة · عينة",
+        "from": 8,
+        "to": 12,
+        "sample": true,
+        "review": "draft"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.25,
+          23.0
         ]
       }
     }
