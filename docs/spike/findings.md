@@ -271,3 +271,7 @@ Figures in [measurements.md](measurements.md). The owner reports all six runs as
 - **Coastline artefact.** The screenshots show a thin straight line on land (for example along 40°E). The coastline was drawn from the outline of the land polygons, which are cut into 10° cells, so the cell edges were drawn too. Build 22 draws it from Natural Earth's coastline lines instead.
 
 Spike summary, proposed targets and renderer recommendation: [summary.md](summary.md).
+
+## 2026-11-13: stack approved
+
+The owner approved the summary. ADR 0002 is Accepted with the OpenGL renderer and the performance targets; the roadmap moves to the content sample.

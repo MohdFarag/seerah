@@ -6,7 +6,7 @@ No dates, budget or estimates have been approved. This is only the order of work
 
 Structure, PRD snapshot, requirements digest, content schema, approved event index.
 
-## 1. Technical spike (proves the stack before it's adopted)
+## 1. Technical spike (proves the stack before it's adopted) ✅
 
 From the PRD section "ما يلزم إثباته قبل الاعتماد" (what must be proven before adoption):
 
@@ -30,7 +30,7 @@ Spike inputs set by the owner (2026-11-10):
 - **Arabic test labels:** taken from the map data and reference maps the owner supplies.
 - **Atlas pages:** the owner supplies Hijra-route pages as a working reference for the data trial.
 
-Exit: the owner approves the stack (update ADR 0002 to Accepted). Results and the proposal are in [spike/summary.md](spike/summary.md).
+Exit: the owner approves the stack. Done 2026-11-13: [ADR 0002](adr/0002-proposed-stack.md) accepted; results in [spike/summary.md](spike/summary.md).
 
 ## 2. Content sample
 

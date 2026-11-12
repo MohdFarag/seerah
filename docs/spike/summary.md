@@ -1,6 +1,6 @@
 # Spike summary
 
-**Status:** for the owner's review. Nothing here is approved until the owner says so.
+**Status:** approved by the owner on 2026-11-13; [ADR 0002](../adr/0002-proposed-stack.md) is now Accepted.
 
 The spike asked whether the stack in [ADR 0002](../adr/0002-proposed-stack.md) (Kotlin + Jetpack Compose, MapLibre Native Android, PMTiles base map, GeoJSON historical layers) can carry the app. The detailed log is in [findings.md](findings.md); the numbers are in [measurements.md](measurements.md).
 
@@ -66,9 +66,9 @@ These are set a little above what the spike reached, because the real app will c
 - The Badr point is spike-only (modern town position), not reviewed.
 - Storage (SQLite/Room) and progress kept apart from content were not exercised by the spike; they are standard Android and carry little risk.
 
-## Proposed change to ADR 0002 (needs the owner's approval)
+## Change to ADR 0002 (approved)
 
-Change the status to **Accepted** and record:
+The status is now **Accepted**, recording:
 
 - MapLibre Native Android 13.7.x with the **OpenGL** renderer; Vulkan kept as an alternative to re-measure.
 - Arabic labels are drawn by the system text engine and passed to the map as images; MapLibre glyphs and `font-faces` are not used for Arabic.
