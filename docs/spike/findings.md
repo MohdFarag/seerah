@@ -144,3 +144,15 @@ Build 9 (Vulkan), reported by the owner: relief near the route is smooth and rea
 The owner accepted the recommendation: style C (generalized terrain, shading in three soft bands), relief faded out between zoom 12.5 and 14.5 so close-up views are plain paper with names and route, and diagrams for the few places that need detail (Makkah sites, Badr, Uhud) as later design work.
 
 Build 11: `relief.pmtiles` is now about 21 MB (zoom 6–12, no route corridor), down from about 312 MB. Map zoom cap is 16. **Not yet run on a device.**
+
+Owner check on build 11 (Galaxy A54): painted relief, fade on zoom-in and scale bar all accepted.
+
+## 2026-11-12: time states and year bar (build 12)
+
+Built off-device; **not yet run on a device**.
+
+- A year bar from 13 ق.هـ to 11 هـ (no year 0). The map shows the state at the end of the chosen year.
+- Three tests from `time-states.geojson`: يثرب → المدينة at 1 هـ (name change), المسجد النبوي appears at 1 هـ (landmark), and a **sample** authority area around Madinah that grows to include Makkah at 8 هـ (border change, a placeholder shape).
+- Changing the year only swaps layer filters; the style is not reloaded, so the map should not flicker.
+
+To check on a device: that each change happens exactly at its year, that dragging the bar stays smooth, and that labels in each mode still render correctly.

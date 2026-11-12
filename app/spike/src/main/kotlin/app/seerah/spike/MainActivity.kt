@@ -16,10 +16,12 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -39,6 +41,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -78,21 +81,32 @@ private fun SpikeScreen() {
 
     Box(Modifier.fillMaxSize()) {
         var metresPerPixel by remember { mutableStateOf(0.0) }
+        var yearIndex by rememberSaveable { mutableStateOf(Era.years.indexOf(1)) }
+        val year = Era.years[yearIndex]
         base?.let { ready ->
             SpikeMap(
                 styleJson = MapStyle.json(textPath, font, labelTest, ready.dir),
                 systemLabelFont = font.takeIf { textPath == TextPath.SystemImages },
                 onStatus = { status = if (ready.dir == null) "$it · بلا أساس" else it },
                 onScale = { metresPerPixel = it },
+                year = year,
             )
         }
-        ScaleBar(
-            metresPerPixel = metresPerPixel,
-            modifier = Modifier
-                .align(AbsoluteAlignment.BottomLeft)
+        Column(
+            Modifier
+                .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(start = 20.dp, bottom = 20.dp),
-        )
+                .padding(12.dp)
+                .fillMaxWidth(),
+        ) {
+            ScaleBar(
+                metresPerPixel = metresPerPixel,
+                modifier = Modifier
+                    .align(AbsoluteAlignment.Left)
+                    .padding(start = 8.dp, bottom = 8.dp),
+            )
+            YearBar(yearIndex = yearIndex, onYearIndex = { yearIndex = it })
+        }
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -149,6 +163,7 @@ private fun SpikeMap(
     systemLabelFont: MapFont?,
     onStatus: (String) -> Unit,
     onScale: (Double) -> Unit,
+    year: Int,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -188,10 +203,34 @@ private fun SpikeMap(
         val builder = Style.Builder().fromJson(styleJson)
         map?.setStyle(builder) { style ->
             systemLabelFont?.let { LabelImages.addTo(style, context, it) }
+            Era.apply(style, year)
             onStatus("تم تحميل النمط")
         }
         onDispose { }
     }
 
+    // Changing the year only swaps layer filters; the style is not reloaded.
+    LaunchedEffect(map, year) { map?.style?.let { Era.apply(it, year) } }
+
     AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
+}
+
+@Composable
+private fun YearBar(yearIndex: Int, onYearIndex: (Int) -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text("نهاية ${Era.label(Era.years[yearIndex])}", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = yearIndex.toFloat(),
+                onValueChange = { onYearIndex(it.roundToInt()) },
+                valueRange = 0f..(Era.years.size - 1).toFloat(),
+                steps = Era.years.size - 2,
+            )
+        }
+    }
 }

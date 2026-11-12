@@ -23,8 +23,9 @@ object LabelImages {
     const val PREFIX = "label:"
     const val WAYPOINT_SP = 15f
     const val TEST_SP = 20f
+    const val ERA_SP = 18f
 
-    private val sources = listOf("hijra-waypoints.geojson", "label-test.geojson")
+    private val sources = listOf("hijra-waypoints.geojson", "label-test.geojson", "time-states.geojson")
 
     fun addTo(style: Style, context: Context, font: MapFont) {
         val metrics = context.resources.displayMetrics
