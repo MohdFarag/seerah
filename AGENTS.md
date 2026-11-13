@@ -99,7 +99,7 @@ EGM artifact directory: docs/design
 
 ## Working with the owner
 
-- The owner writes in Arabic (often Egyptian). Reply in the same language. Repository docs are in English, except the PRD snapshot and research written in Arabic.
+- **Reply in English**, even when the owner writes in Arabic (often Egyptian) (owner, 2026-11-13). Repository docs are in English, except the PRD snapshot and research written in Arabic. Arabic stays for the app itself and its content.
 - Ask before product decisions, content choices, anything outward-facing (publishing, posting, emailing) and anything hard to undo. Technical choices inside an accepted ADR don't need asking; make them, then report.
 - Report results honestly: what was verified, what was not, what failed.
 - Keep the owner's personal details out of commits, code and outside services.
