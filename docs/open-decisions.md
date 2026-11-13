@@ -12,8 +12,9 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Long-running events, approximate or unknown dates, disputed locations | When those cases come up in content |
 | The actual display-date values (the one-date rule is decided) | Content review |
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
-| Minimum Android version (proposed API 26 in ADR 0003), accessibility, failure states | Implementation spec |
-| Final application ID (permanent after the first Play Store upload) | Before the first upload |
+| Accessibility details, failure states | Implementation spec |
+| Final application ID (permanent after the first Play Store upload; `app.seerah` for development) | Before the first upload |
+| Where content updates are hosted | ADR 0006 |
 | Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
 | Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
 | Event categories | Not decided |
@@ -25,4 +26,4 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 
 ## Decided
 
-- App framework, map engine, update mechanism and performance targets: [ADR 0002](adr/0002-proposed-stack.md), accepted 2026-11-13. Test devices: Oppo A55, Galaxy A54, Huawei MatePad 11.5 ([roadmap](roadmap.md)).
+- App framework, map engine, update mechanism and performance targets: [ADR 0002](adr/0002-proposed-stack.md), accepted 2026-11-13. Test devices: Oppo A55, Galaxy A54, Huawei MatePad 11.5 ([roadmap](roadmap.md)). Minimum Android version: API 26 (owner, 2026-11-13).

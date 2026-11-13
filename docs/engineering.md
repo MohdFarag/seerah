@@ -20,7 +20,7 @@ Baseline, refined by the v1 architecture ADR:
 - **Dependency injection** with one framework across the app.
 - **Single source of truth per data type.** Content (replaceable, versioned) and user data (progress, settings) live apart, so a content update never touches progress.
 - **Offline is the normal case.** The app never needs the network except to download a content update the user asked for.
-- **Map code stays behind an interface** in a map module, so screens don't talk to MapLibre directly.
+- **Map code stays behind an interface** in a map module, so screens don't talk to MapLibre directly. The map is created once and stays on screen; other screens are panels over it.
 
 ## Code
 
@@ -55,6 +55,7 @@ Baseline, refined by the v1 architecture ADR:
 - **Screenshot tests** for design-system components and key screens (phone and tablet, RTL).
 - **Instrumented tests** for storage, the update flow and offline start.
 - **Content validation** (`tools/validate_content.py`) runs in pre-commit and CI.
+- Use fakes, not mocking libraries: tests check behaviour, not which calls were made.
 - A bug fix comes with a test that fails without it.
 - Tests are named for behaviour: `yearBeforeHijra_showsYathrib`.
 
