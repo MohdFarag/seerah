@@ -50,6 +50,6 @@ Then, in order:
 4. ADR 0007: content package format, compatibility between app and content versions, and package signing.
 5. ADR 0008: where content updates are hosted (the spike's raw GitHub link is not a delivery service).
 6. ADR 0009: the v1 map data pipeline for the Arabian Peninsula, with more detail where events happen (Makkah, Taif, Madinah, Badr and the routes), since full detail everywhere would be very large.
-7. Design: check the Penpot screens against the v1 scope (Taif to Badr, the Arabian Peninsula, panels over a map that stays on screen, months where sourced).
+7. ✅ Design: the owner reviewed the Penpot screens against the v1 scope (Taif to Badr, the Arabian Peninsula, panels over a map that stays on screen, months where sourced), on 2026-11-13.
 
 ## 3. Closed beta → public release

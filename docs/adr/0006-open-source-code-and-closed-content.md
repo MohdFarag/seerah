@@ -50,7 +50,7 @@ The repository is public and was entirely proprietary. The owner wants the **cod
 - Anyone may read, build and reuse the app's code; nobody may reuse the content, name or logo.
 - Content already committed to this public repository stays in its git history: the draft event titles (also in the PRD) and the spike's Hijra data. It remains under the content licence. Rewriting the public history is not planned; it would break every clone for little gain, since that material was already public.
 - The content build, validator and preview build must work with content from the private repository; the schema and tools stay public.
-- A code of conduct is added once the owner chooses a contact for reports.
+- A code of conduct (Contributor Covenant 2.1) is in place, with the contact the owner chose.
 - AI agents working on content need access to the private repository.
 
 ## References

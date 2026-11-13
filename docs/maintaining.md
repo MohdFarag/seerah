@@ -11,10 +11,10 @@ These live in the repository settings, not in files, so they are listed here. Th
 
 **Protect `main`** (Settings → Rules → Rulesets → New branch ruleset, target `main`):
 
-- Require a pull request before merging (1 approval is optional for a solo owner)
+- Require a pull request before merging, with **0** required approvals (a solo owner cannot approve their own pull request; raise it when there is a second maintainer)
 - Require status checks: `lint-and-validate` (CI), `conventional` (PR title), `android` (Android)
 - Require linear history; block force pushes and deletions
-- Settings → General → Pull Requests: allow **squash merge** only, use the PR title as the commit message, and turn on **Automatically delete head branches**
+- Settings → General → Pull Requests: turn off **merge commits** (linear history forbids them); allow **squash merge** with *Pull request title* as the default message; keep **rebase merge** only for a pull request whose commits are each worth keeping; turn on **Automatically delete head branches**
 
 **Actions** (Settings → Actions → General):
 
