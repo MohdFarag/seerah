@@ -1,6 +1,6 @@
 # 0008. Update hosting and the update index
 
-**Status:** Proposed on 2026-11-13, then revised twice that day: with the owner's answers on hosting and the update check, and after an [EGM design review](../design/egm-review-0008/consolidated_review_report.md) whose recommendations the owner approved. The owner's decisions marked "(owner, 2026-11-13)" below are recorded in [pull request #12](https://github.com/MohdFarag/seerah/pull/12). Awaiting the owner's acceptance.
+**Status:** Accepted by the owner on 2026-11-13, after two revisions that day: with the owner's answers on hosting and the update check, and after an [EGM design review](../design/egm-review-0008/consolidated_review_report.md) whose recommendations the owner approved. The owner's decisions marked "(owner, 2026-11-13)" below are recorded in [pull request #12](https://github.com/MohdFarag/seerah/pull/12).
 
 ## Context
 
