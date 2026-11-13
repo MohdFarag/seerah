@@ -1,8 +1,6 @@
 # Exploration and story: the content model
 
-**Status:** Draft for discussion with the owner (2026-11-13). Once agreed, it becomes ADR 0005 (content authoring and package format). Nothing here is a fact about the Seerah: names in examples are placeholders or come from the PRD's source list, and every real fact still needs a source.
-
-Decided by the owner on 2026-11-13: months where a source gives them; the map covers the whole Arabian Peninsula; content is written as files in the repository, with a preview build. Revised the same day after the owner's questions, for his confirmation: visibility, event kinds, and the one-change-per-step rule.
+**Status:** Accepted by the owner on 2026-11-13 as [ADR 0005](../adr/0005-content-model-exploration-and-story.md). This document is the detailed specification behind it. Nothing here is a fact about the Seerah: names in examples are placeholders or come from the PRD's source list, and every real fact still needs a source.
 
 ## The owner's idea
 
@@ -33,7 +31,7 @@ The owner's list, with two additions (routes and areas):
 
 | Type | What it is | Has a place | Has a time | Examples (placeholders) |
 | --- | --- | --- | --- | --- |
-| **Terrain** | The base map: land, sea, relief, valleys, lava fields. Built by the map pipeline (ADR 0007), not written per year | yes | no | — |
+| **Terrain** | The base map: land, sea, relief, valleys, lava fields. Built by the map pipeline (ADR 0008), not written per year | yes | no | — |
 | **Place** | Something with a location that the story refers to: a city, a mountain, a well, a house, a mosque, a cave | point or small area, with accuracy | when it exists; names and states that change over time | Makkah, Mount Thawr, Quba |
 | **Event** | Something that happened. Can contain smaller events and situations | one or more places, an area or a route | date with precision | a pledge, a journey, a battle |
 | **Route** *(added)* | A documented path: a journey's stations in order, or a march | the stations (places) and the line between them, if documented | the event it belongs to | the Hijra route |
@@ -83,7 +81,7 @@ Two things are **not** levels, because the facts decide them:
 
 What the owner wanted from "story only" (keeping small details off the map in free exploration, and bringing them in during the story) is what `in-context` does. What remains story-only is direction itself: camera moves, title cards and reviewed linking sentences, which are not facts.
 
-**Event kinds (recommended, for the owner's confirmation).** One primary kind per event, chosen by **what the event was about**, not by how it is drawn: a journey made to call people to Islam is a call, and its route shows the movement. The kind sets the icon and the index filter; free tags can add more.
+**Event kinds (owner, 2026-11-13).** One primary kind per event, chosen by **what the event was about**, not by how it is drawn: a journey made to call people to Islam is a call, and its route shows the movement. The kind sets the icon and the index filter; free tags can add more.
 
 | Kind | Covers |
 | --- | --- |
@@ -230,13 +228,13 @@ steps:
 - **StoryMapJS and ArcGIS StoryMaps:** slides tied to map locations; used by newsrooms and museums.
 - **Game cutscenes:** level data (the world) kept apart from scripts (what the camera and characters do), written with a limited set of commands.
 
-## Decisions and open points
+## Decisions
 
 | Point | Status |
 | --- | --- |
 | Time | Decided: by year, and by month where sourced |
 | Map extent | Decided: the whole Arabian Peninsula, most detailed where the events happen; no world view |
 | Where content is written | Decided: files in the repository, checked by the build, with a preview build |
-| Visibility | Revised to `always` and `in-context` (no "story only" for facts); for the owner's confirmation |
-| Event kinds | Seven kinds, tested against the 26 events; verses as links; for the owner's confirmation |
-| One change per step | A guideline the build warns about, with three accepted cases; for the owner's confirmation |
+| Visibility | Decided: `always` and `in-context`; no fact is story-only |
+| Event kinds | Decided: seven kinds, tested against the 26 events; verses as links |
+| One change per step | Decided: a guideline the build warns about, with three accepted cases |
