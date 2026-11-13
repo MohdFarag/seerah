@@ -1,6 +1,6 @@
 # Engineering standards
 
-How the app, the tools and the content pipeline are built. These standards apply to every change, by people and by AI agents. The stack is fixed in [ADR 0002](adr/0002-proposed-stack.md); the architecture and module layout in [ADR 0003](adr/0003-v1-architecture-and-modules.md) and the build and quality tooling in [ADR 0004](adr/0004-build-and-quality-tooling.md) (both Proposed until the owner approves).
+How the app, the tools and the content pipeline are built. These standards apply to every change, by people and by AI agents. The stack is fixed in [ADR 0002](adr/0002-proposed-stack.md); the architecture and module layout in [ADR 0003](adr/0003-v1-architecture-and-modules.md) and the build and quality tooling in [ADR 0004](adr/0004-build-and-quality-tooling.md) (both Accepted).
 
 ## Principles
 
@@ -67,7 +67,7 @@ Targets are in [ADR 0002](adr/0002-proposed-stack.md#performance-targets); measu
 
 - No accounts, no personal data. Analytics only within the scope the PRD approves.
 - Network only over HTTPS, only for content updates: the update check and the downloads the user starts. The update index and every package are verified (signature, hash, version compatibility) before use; requests carry no identifier.
-- No secrets in the repository. Signing keys stay outside git and are injected in CI.
+- No secrets in the repository. The app's upload key is a GitHub secret ([ADR 0004](adr/0004-build-and-quality-tooling.md)); content signing keys stay offline on the owner's machine, and packages and the update index are signed there ([ADR 0007](adr/0007-content-formats-compatibility-and-signing.md), [ADR 0008](adr/0008-update-hosting-and-index.md)).
 
 ## Documentation
 
