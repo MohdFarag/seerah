@@ -14,7 +14,8 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
 | Accessibility details, failure states | Implementation spec |
 | Final application ID (permanent after the first Play Store upload; `app.seerah` for development) | Before the first upload |
-| Where content updates are hosted | ADR 0008 |
+| Where content updates are hosted; whether the update index is signed and expires | [ADR 0008](adr/0008-update-hosting-and-index.md) (Proposed) |
+| When the app checks for a content update (automatically when opened, or only when the user asks) | [ADR 0008](adr/0008-update-hosting-and-index.md), owner's question |
 | Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
 | Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
 | Event categories | Not decided |

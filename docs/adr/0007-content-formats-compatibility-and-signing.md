@@ -78,7 +78,7 @@ Constraints:
 10. **Preview while writing:** debug builds can load an unpacked content folder from the writer's computer without a signature, for the preview ADR 0005 describes. A build check proves that release builds contain no unsigned loading path.
 11. **First launch:** whether an initial content package ships inside the APK or is downloaded on first launch stays [an open decision](../open-decisions.md). The format serves both: a bundled package is verified exactly like a downloaded one.
 
-**Not in scope:** delta updates, more than one publisher, signed revocation, hosting and the update index ([ADR 0008](../roadmap.md)), the map pipeline (ADR 0009).
+**Not in scope:** delta updates, more than one publisher, signed revocation, hosting and the update index ([ADR 0008](0008-update-hosting-and-index.md)), the map pipeline (ADR 0009).
 
 ## Consequences
 
