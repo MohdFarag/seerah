@@ -10,11 +10,11 @@ v1 is Android only (phone and tablet), Arabic RTL and 2D. It needs a historical 
 
 - **UI:** Kotlin + Jetpack Compose (RTL and adaptive layouts).
 - **Map:** MapLibre Native Android (BSD-2-Clause), 13.7.x, with the **OpenGL** renderer (`android-sdk-opengl`). A Vulkan build is kept to re-measure once real content is in.
-- **Base map:** local **PMTiles** files, copied to device storage before use (MapLibre cannot read PMTiles from APK assets). Historical layers are GeoJSON. Style and icons ship with the content.
+- **Base map:** local **PMTiles** files, copied to device storage before use (MapLibre cannot read PMTiles from APK assets). Historical layers are GeoJSON. Style, icons and fonts ship inside the app (amended by [ADR 0007](0007-content-formats-compatibility-and-signing.md): the code that draws the map lives in the app; this ADR first had them ship with the content).
 - **Arabic labels:** drawn by Android's text engine and passed to the map as images. MapLibre's glyph path (drops diacritics) and its `font-faces` option (reverses Arabic in 13.7.1) are not used for Arabic. Amiri for place names, IBM Plex Sans Arabic for the interface.
 - **Storage:** SQLite/Room for content. User progress and settings are stored **separately** from the replaceable content files.
 - **Time logic lives in the app:** each entity has a stable ID and time states. The app picks the reviewed state for the selected time (end of year in year view). No borders are interpolated between states; historical areas, if shown, are a soft tint, not a crisp line.
-- **Updates:** a versioned package with a SHA-256 and compatibility check, resumable download, activated in one step only when complete. The working version is kept if the download or install fails. Content updates never reset user progress.
+- **Updates:** a versioned, signed package (signature and compatibility check in [ADR 0007](0007-content-formats-compatibility-and-signing.md)), resumable download, activated in one step only when complete. The working version is kept if the download or install fails. Content updates never reset user progress.
 
 ## Performance targets
 

@@ -5,7 +5,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Topic | Decided when |
 | --- | --- |
 | Map zoom limit; story-mode details | During implementation (owner's call) |
-| Full download before use vs start while downloading (size itself is not a constraint) | During the v1 build |
+| First launch: an initial content package inside the APK, or downloaded on first launch (full download before use vs start while downloading; size itself is not a constraint) | During the v1 build ([ADR 0007](adr/0007-content-formats-compatibility-and-signing.md)) |
 | Exact map bounds within the Arabian Peninsula, detail levels and zoom levels; list of landmark and border changes | During content and map preparation |
 | Final v1 event list and depth; whether and how al-Isra is included after its dating is checked | As each phase's content is prepared |
 | Date documentation; pre-Hijra reference; Gregorian conversion | Content review with the owner |
