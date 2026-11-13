@@ -1,35 +1,40 @@
 # 0004. Build and quality tooling
 
-**Status:** Proposed (2026-11-13). Needs the owner's approval before the app is scaffolded.
+**Status:** Proposed (2026-11-13), revised after a second review the same day. Needs the owner's approval before the app is scaffolded.
 
 ## Context
 
-The owner's bar is quality first: clean code, a sound structure, real tests and documentation, and checks that catch problems before they reach a device. With about 18 modules ([ADR 0003](0003-v1-architecture-and-modules.md)), the build setup itself must not be copy-pasted between modules, and every rule must be enforced by a tool, not by memory.
+The owner's bar is quality first: clean code, a sound structure, real tests and documentation, and checks that catch problems before they reach a device. With about 15 modules at the start ([ADR 0003](0003-v1-architecture-and-modules.md)), the build setup must not be copied between modules, and every rule must be enforced by a tool, not by memory or review.
 
 ## Options compared
 
 | Need | Choice | Compared with | Why |
 | --- | --- | --- | --- |
-| Shared build setup | **Convention plugins** in an included `build-logic` build, versions in a Gradle **version catalog** | `buildSrc`; repeated build files | The pattern Now in Android uses; `buildSrc` invalidates the whole build on any change |
+| Shared build setup | **Convention plugins** in an included `build-logic` build; versions in a Gradle **version catalog** | `buildSrc`; repeated build files | The pattern Now in Android uses; `buildSrc` invalidates the whole build on any change |
 | Formatting and style | **Spotless** running **ktlint** with the **Compose Rules** rule set | kotlinter; IDE formatting only | One command formats Kotlin and Gradle files; Compose Rules catch Compose mistakes (state hoisting, modifier order, naming). Now in Android uses Spotless + ktlint |
-| Static analysis | **Android Lint** with warnings as errors | detekt | Lint knows Android and Compose. detekt 2.0 is still in alpha and 1.x lags behind Kotlin 2.4; add it when 2.0 is stable |
-| Unit tests | **JUnit 4**, `kotlin.test` assertions, kotlinx-coroutines-test, **Turbine** for flows, **Robolectric** where Android classes are needed | JUnit 5 through a third-party plugin | JUnit 4 is what the Android toolchain, Robolectric and Compose tests support out of the box |
+| Static analysis | **Android Lint**, warnings as errors | detekt | Lint knows Android and Compose. detekt 2.0 is still alpha and 1.x lags behind Kotlin 2.4; add it when 2.0 is stable |
+| Module rules | **modules-graph-assert** (`assertModuleGraph` runs in `check`) | Custom Gradle code; review only | Fails the build when a feature depends on another feature, or anything but `core:map` depends on MapLibre |
+| Declared dependencies | **Dependency Analysis Gradle Plugin** | Manual cleanup | Reports unused and wrongly declared dependencies, so module graphs stay honest |
+| Unit tests | **JUnit 4**, `kotlin.test` assertions, kotlinx-coroutines-test, **Turbine** for flows, **Robolectric** where Android classes are needed; **fakes, no mocking library** | JUnit 5 through a third-party plugin; MockK or Mockito | JUnit 4 is what the Android toolchain, Robolectric and Compose tests support out of the box. Fakes test behaviour, not call order (the Now in Android approach) |
 | Screenshot tests | **Roborazzi** (on Robolectric) | Compose Preview Screenshot Testing (Google, still alpha); Paparazzi (Cash App) | Mature, works with Hilt and Robolectric, used by Now in Android. Revisit Google's tool when it is stable |
-| Device tests | AndroidX Test and Compose UI tests; a **Gradle Managed Device** in CI | Firebase Test Lab | Free on GitHub's Linux runners; the three owner devices stay the final check |
-| Coverage | **Kover** reports in CI | JaCoCo | Kotlin-aware; thresholds set per module once the first features land |
-| Performance | **Baseline Profiles** and **Macrobenchmark** (`:benchmarks`), R8 in release | Manual timing only | The official way to cut startup and jank; measures against the ADR 0002 targets |
-| Dependency licences | **Licensee** (allowed SPDX list checked at build time) and an in-app open-source notices screen | Manual review | A dependency with a disallowed licence fails the build; fonts (OFL) and MapLibre (BSD) need attribution |
+| Device tests | AndroidX Test and Compose UI tests; a **Gradle Managed Device** in CI | Firebase Test Lab | Free on GitHub's Linux runners; the owner's three devices stay the final check |
+| Coverage | **Kover** reports in CI | JaCoCo | Kotlin-aware; minimum thresholds set per module once the first features land |
+| Performance | **Baseline Profiles** and **Macrobenchmark**, R8 in release | Manual timing only | The official way to cut startup time and jank; measured against the ADR 0002 targets |
+| Debug safety nets | **LeakCanary** and **StrictMode** in debug builds only | None | Map views leak easily; StrictMode flags disk and network work on the main thread |
+| Design tokens | **Exported from Penpot as JSON into the repository; Kotlin generated by a script** | Copying values by hand | One source for colours, type, spacing and radius. Penpot's export is not strictly the W3C format, so the script reads Penpot's own format; if export proves unreliable, one hand-kept Kotlin file with the Penpot file as its reference |
+| Licences and attribution | **Licensee** (allowed SPDX list checked at build time) and an in-app notices screen | Manual review | A disallowed licence fails the build. Fonts (OFL), MapLibre (BSD), Natural Earth and the Copernicus DEM ("Produced using Copernicus WorldDEM-30 © DLR e.V.") are credited in the app |
 | Dependency updates | **Dependabot** for the version catalog and GitHub Actions (already set up) | Renovate | Built into GitHub, enough for one repository |
 
 ## Decision
 
 ### Build
 
-- Gradle with Kotlin DSL; one version catalog (`android/gradle/libs.versions.toml`); convention plugins for application, library, Compose, feature, Hilt, test and Roborazzi setup. A module's build file names its plugins and its dependencies, nothing else.
-- Latest stable Kotlin, Android Gradle Plugin and AndroidX versions at scaffolding time; no alpha or beta libraries without an ADR note.
+- Gradle with Kotlin DSL; one version catalog (`android/gradle/libs.versions.toml`); convention plugins for application, library, Compose, feature, Hilt, test and Roborazzi setup. A module's build file names its plugins and dependencies, nothing else.
+- **Android Gradle Plugin 9** with its built-in Kotlin support (no separate `kotlin-android` plugin), with Hilt and KSP versions that support it (Hilt 2.59 or later).
+- Latest stable versions at scaffolding time; no alpha or beta library without a note in an ADR.
 - JDK 21 toolchain; Gradle configuration cache and build cache on.
-- Build types: `debug`, `release` (R8, shrunk) and the benchmark variant. No product flavors (OpenGL only, per ADR 0002).
-- Release signing key in GitHub secrets, never in git. Until the beta, release builds for testing are signed with the debug key, as in the spike.
+- Build types: `debug` and `release` (R8, shrunk), plus the benchmark variant once `:benchmarks` exists. No product flavors (OpenGL only, per ADR 0002).
+- Google Play gets an **app bundle** (AAB) with Play App Signing; the owner's test builds are APKs from CI artifacts. The upload key lives in GitHub secrets, never in git. Until the beta, test release builds are signed with the debug key, as in the spike.
 
 ### Checks
 
@@ -38,32 +43,42 @@ The owner's bar is quality first: clean code, a sound structure, real tests and 
 | Repo-wide hooks (Markdown, JSON, YAML, Python, secrets, commit messages) | pre-commit | yes |
 | Kotlin and Gradle formatting | `./gradlew spotlessApply` | `spotlessCheck` |
 | Android Lint | `./gradlew lint` | yes, warnings fail the build |
+| Module graph and dependency analysis | `./gradlew check` | yes |
 | Unit and screenshot tests | `./gradlew test`, `verifyRoborazzi` | yes |
 | Content validation | `python3 tools/validate_content.py` | yes |
-| Release build | `./gradlew assembleRelease` | yes, APK attached as an artifact |
+| Release build, 16 KB alignment of native libraries | `./gradlew assembleRelease` | yes; APK attached as an artifact |
 | Device tests (Managed Device) | on demand | on pull requests that touch the app |
 | Licences | part of the build | yes |
 
-A pull request merges only when every CI check is green.
+A pull request merges only when every check is green.
+
+### CI hygiene
+
+- Gradle wrapper validation on every run.
+- Third-party GitHub Actions pinned to a commit SHA; workflow permissions read-only unless a job needs more.
+- Caches for Gradle and the base-map build, keyed on their inputs.
 
 ### Tests by layer
 
-- `core:model`, `core:domain`: plain JVM unit tests, the bulk of the logic (time resolution, date precision).
-- `core:content`, `core:update`, `core:userdata`: unit tests with fakes and temporary files; device tests for install, interruption and offline start.
+- `core:model`, `core:domain`: plain JVM unit tests; the bulk of the logic (time resolution, date precision, follow-along rules).
+- `core:content`, `core:update`, `core:userdata`: unit tests with fakes and temporary files; device tests for install, interruption, signature failure and offline start.
 - ViewModels: unit tests with fake repositories and Turbine.
-- `core:designsystem`, `core:ui`, feature screens: Roborazzi screenshots for phone and tablet, RTL, large font scale.
-- `core:map`: unit tests for the style and layer logic; MapLibre rendering is checked on devices.
+- `core:designsystem`, `core:ui` and feature screens: Roborazzi screenshots for phone and tablet, portrait and landscape, RTL, and large font scale.
+- `core:map`: unit tests for the style and layer logic; rendering is checked on devices.
 
 ## Consequences
 
-- Formatting and Compose mistakes are fixed by a command, not discussed in review.
+- Formatting, Compose mistakes and broken module rules are caught by the build, not discussed in review.
 - Screenshot baselines live in git (small PNGs); a UI change shows up as an image diff in the pull request.
-- CI time grows with the module count; the Gradle build cache and caching in GitHub Actions keep it reasonable.
+- CI time grows with the module count; Gradle and GitHub Actions caches keep it reasonable.
 - detekt and Google's screenshot tool are tracked to adopt once stable.
 
 ## References
 
 - [Now in Android build-logic](https://github.com/android/nowinandroid/blob/main/build-logic/README.md).
-- [Compose Preview Screenshot Testing](https://developer.android.com/studio/preview/compose-screenshot-testing) and its [release notes](https://developer.android.com/studio/preview/compose-screenshot-testing-release-notes) (still alpha).
+- [AGP 9.0 release notes](https://developer.android.com/build/releases/agp-9-0-0-release-notes), [Migrate to built-in Kotlin](https://developer.android.com/build/migrate-to-built-in-kotlin), [Update your Kotlin projects for AGP 9](https://blog.jetbrains.com/kotlin/2026/01/update-your-projects-for-agp9/), [Hilt Gradle plugin and AGP 9](https://github.com/google/dagger/issues/4944).
+- [modules-graph-assert](https://github.com/jraska/modules-graph-assert) and [Modular Jetpack Compose: don't leave your architecture to code review](https://proandroiddev.com/modular-jetpack-compose-dont-leave-your-architecture-to-code-review-67b1b916097c).
+- [Compose Preview Screenshot Testing release notes](https://developer.android.com/studio/preview/compose-screenshot-testing-release-notes) (still alpha) and [screenshot tools compared](https://academy.droidcon.com/course/master-screenshot-testing-on-android-comparing-paparazzi-roborazzi-and-compose-preview-tools).
 - [detekt 2.0 changelog](https://detekt.dev/changelog-2.0.0/) (still alpha).
-- [Screenshot testing compared: Paparazzi, Roborazzi and Compose Preview](https://academy.droidcon.com/course/master-screenshot-testing-on-android-comparing-paparazzi-roborazzi-and-compose-preview-tools), droidcon.
+- [Penpot design tokens](https://help.penpot.app/user-guide/design-tokens/) and the [report that Penpot's export is not strict DTCG](https://community.penpot.app/t/token-export-is-tokens-studio-format-not-dtcg-2025-10/10544).
+- [Copernicus DEM GLO-30 licence](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/DEM/resources/license/License-COPDEM-30.pdf).
