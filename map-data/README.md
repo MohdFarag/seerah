@@ -1,6 +1,6 @@
 # map-data
 
-Map data, kept separate from the app code. Historical map data (`historical/`, `updates/`) is content: all rights reserved under the [content licence](../LICENSES/LicenseRef-Seerah-Content.txt) ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)). Today everything here belongs to the finished technical spike; the v1 map data pipeline for the Arabian Peninsula is proposed in [ADR 0009](../docs/adr/0009-map-data-pipeline.md). Its public inputs will live here: the map configuration (`coverage.yaml`), the pinned sources (`sources.lock`) and a small example configuration for CI (`example/`).
+Map data, kept separate from the app code. Historical map data (`historical/`, `updates/`) is content: all rights reserved under the [content licence](../LICENSES/LicenseRef-Seerah-Content.txt) ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)). Today everything here belongs to the finished technical spike; the v1 map data pipeline for the Arabian Peninsula is proposed in [ADR 0009](../docs/adr/0009-map-data-pipeline.md). The real map configuration and the terrain edits are private (the private repository's `map/` section); this folder will hold the documented tile schema and a small synthetic example configuration for CI (`example/`).
 
 ```text
 map-data/
