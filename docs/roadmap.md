@@ -40,6 +40,6 @@ The app and its content are built together; there is no separate content-sample 
 
 App: map and time, index, event and situation reader, free exploration and follow-along, offline package and updates, feedback, analytics.
 
-The app is written from scratch to the [engineering standards](engineering.md); the spike is a reference only. First step: an ADR for the v1 architecture and module layout, compared against official guidance and reference apps, for the owner's approval before scaffolding.
+The app is written from scratch to the [engineering standards](engineering.md); the spike is a reference only. Before scaffolding, for the owner's approval: [ADR 0003](adr/0003-v1-architecture-and-modules.md) (architecture and modules) and [ADR 0004](adr/0004-build-and-quality-tooling.md) (build and quality tooling), both Proposed. Next: ADR 0005 (content package format).
 
 ## 3. Closed beta → public release

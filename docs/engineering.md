@@ -1,6 +1,6 @@
 # Engineering standards
 
-How the app, the tools and the content pipeline are built. These standards apply to every change, by people and by AI agents. The stack itself is fixed in [ADR 0002](adr/0002-proposed-stack.md); the v1 module layout is fixed in an ADR before the app is scaffolded.
+How the app, the tools and the content pipeline are built. These standards apply to every change, by people and by AI agents. The stack is fixed in [ADR 0002](adr/0002-proposed-stack.md); the architecture and module layout in [ADR 0003](adr/0003-v1-architecture-and-modules.md) and the build and quality tooling in [ADR 0004](adr/0004-build-and-quality-tooling.md) (both Proposed until the owner approves).
 
 ## Principles
 
