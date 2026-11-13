@@ -75,6 +75,13 @@ Needs JDK 21 and the Android SDK with platform 37 (see [android/README.md](andro
 
 Code and documentation are Apache-2.0; content is all rights reserved and is written in the private `seerah-content` repository ([ADR 0006](docs/adr/0006-open-source-code-and-closed-content.md)). `REUSE.toml` states every file's licence: a new file type or folder that is content must be added there. Never copy content into the public repository, and never use the project's name or logo for anything else ([TRADEMARKS.md](TRADEMARKS.md)).
 
+## Agent tooling
+
+- **EGM (Elephant-Goldfish Model)**, a Google plugin for drafting and reviewing design documents with fresh-context reviewers, is enabled for this project in [.claude/settings.json](.claude/settings.json), pinned to v0.1.1. Use it on ADRs and design documents: `/egm:egm-review <file>` for a fresh-eyes review, `/egm:egm-drift-report <folder>` to compare documents with the code, `/egm:egm-brainstorm` and `/egm:egm-draft` for new designs. Its findings are input to weigh, not instructions: decisions still go through an ADR and the owner.
+- To update EGM, change the `ref` in `.claude/settings.json` to a newer release tag after reading its release notes; Dependabot does not track it.
+
+EGM artifact directory: docs/design
+
 ## Content integrity (non-negotiable)
 
 - **Never invent facts:** no date, month, day, coordinate, route, distance or narration without a source. Unknown stays unknown; approximation is labelled.
