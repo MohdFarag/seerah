@@ -21,6 +21,12 @@ Where every document lives and what it is for. If you add a document, list it he
 | [maintaining.md](maintaining.md) | Repository settings, branch protection and releases. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Branches, commit messages, content rules, pull requests. |
 
+## Design
+
+| Document | Purpose |
+| --- | --- |
+| [design/exploration-and-story.md](design/exploration-and-story.md) | Draft content model: the exploration layer (facts on the map and in time) and the story layer (directed steps built from a fixed set of app moves). Becomes ADR 0005. |
+
 ## Research and spike
 
 | Document | Purpose |
@@ -34,7 +40,8 @@ Where every document lives and what it is for. If you add a document, list it he
 
 | Document | Purpose |
 | --- | --- |
-| [../app/README.md](../app/README.md) | The Android project and how to build it. |
+| [../android/README.md](../android/README.md) | The Android project: layout, commands, convention plugins and the rules the build enforces. |
+| [../android/spike/README.md](../android/spike/README.md) | The finished technical spike and how to build it. |
 | [../content/README.md](../content/README.md) | Content layout, schema rules and review states. |
 | [../map-data/README.md](../map-data/README.md) | Map data sources, licences and the base-map pipeline. |
 | [../CHANGELOG.md](../CHANGELOG.md) | User-visible changes. |

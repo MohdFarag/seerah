@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main, "claude/**"]
-    paths: ["app/**", "map-data/**", "tools/spike/**", ".github/workflows/spike-apk.yml"]
+    paths: ["android/spike/**", "map-data/**", "tools/spike/**", ".github/workflows/spike-apk.yml"]
   pull_request:
-    paths: ["app/**", "map-data/**", "tools/spike/**", ".github/workflows/spike-apk.yml"]
+    paths: ["android/spike/**", "map-data/**", "tools/spike/**", ".github/workflows/spike-apk.yml"]
 permissions:
   contents: read
 concurrency:
@@ -45,19 +45,19 @@ jobs:
           cache: gradle
 
       - name: Build debug and release APKs
-        working-directory: app
+        working-directory: android/spike
         run: ./gradlew :spike:assembleDebug :spike:assembleRelease --console=plain
 
       - uses: actions/upload-artifact@v4
         with:
           name: spike-vulkan
-          path: app/spike/build/outputs/apk/vulkan/*/*.apk
+          path: android/spike/spike/build/outputs/apk/vulkan/*/*.apk
           if-no-files-found: error
           compression-level: 0
 
       - uses: actions/upload-artifact@v4
         with:
           name: spike-opengl
-          path: app/spike/build/outputs/apk/opengl/*/*.apk
+          path: android/spike/spike/build/outputs/apk/opengl/*/*.apk
           if-no-files-found: error
           compression-level: 0

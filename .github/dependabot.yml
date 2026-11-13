@@ -8,3 +8,11 @@ updates:
     directory: /
     schedule: { interval: monthly }
     commit-message: { prefix: build }
+  # The v1 app's version catalog (android/gradle/libs.versions.toml). The spike is not updated.
+  - package-ecosystem: gradle
+    directory: /android
+    schedule: { interval: weekly }
+    commit-message: { prefix: build }
+    groups:
+      androidx: { patterns: ["androidx.*"] }
+      kotlin: { patterns: ["org.jetbrains.kotlin*", "com.google.devtools.ksp*"] }

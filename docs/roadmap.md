@@ -44,8 +44,8 @@ The app is written from scratch to the [engineering standards](engineering.md); 
 
 Then, in order:
 
-1. Scaffold `android/` with the build setup and checks from ADR 0004, and move the spike there.
-2. ADR 0005: content authoring and package format, compatibility between app and content versions, and package signing.
+1. Scaffold `android/` with the build setup and checks from ADR 0004, and move the spike there. ✅ 2026-11-13 ([android/README.md](../android/README.md)).
+2. ADR 0005: the content model (exploration and story layers; draft in [design/exploration-and-story.md](design/exploration-and-story.md)), authoring and package format, compatibility between app and content versions, and package signing.
 3. ADR 0006: where content updates are hosted (the spike's raw GitHub link is not a delivery service).
 4. ADR 0007: the v1 map data pipeline for the Hijaz, including Taif and Badr.
 5. Design: check the Penpot screens against the v1 scope (Taif to Badr, Hijaz only, panels over a map that stays on screen).

@@ -41,7 +41,7 @@ A change is done only when all of these hold:
 2. It builds, and `pre-commit run --all-files` and `python3 tools/validate_content.py` pass. App changes: unit tests pass and new logic has tests.
 3. It was checked where it runs: on a device or emulator for app changes, with phone and tablet in RTL for UI. If you could not check it, say so plainly.
 4. **Documentation review**, every time:
-   - [ ] Docs describing the changed area are still true (README, `app/README.md`, module READMEs, `docs/requirements.md`, `docs/engineering.md`, `map-data/README.md`, `content/README.md`).
+   - [ ] Docs describing the changed area are still true (README, `android/README.md`, module READMEs, `docs/requirements.md`, `docs/engineering.md`, `map-data/README.md`, `content/README.md`).
    - [ ] New public types and non-obvious functions have KDoc / docstrings.
    - [ ] A significant decision has an ADR; a superseded ADR is marked so.
    - [ ] `CHANGELOG.md` has an entry under **Unreleased** for user-visible changes.
@@ -52,11 +52,11 @@ A change is done only when all of these hold:
 ## Repository map
 
 ```text
-app/          Android project (Gradle). :spike is the finished technical spike: reference only.
+android/      Android project (Gradle): :app, build-logic/, and spike/ (the finished technical spike, a separate build: reference only)
 content/      Seerah content as JSON: schema/, index/ (v1 phases and events), events/
 map-data/     base-map pipeline inputs, historical layers, map style (large binaries not in git)
 tools/        validation and build scripts (Python, Bash)
-docs/         requirements, engineering standards, ADRs, roadmap, research, spike results
+docs/         requirements, engineering standards, ADRs, design drafts, roadmap, research, spike results
 .github/      CI, APK builds, issue and PR templates
 ```
 
@@ -65,10 +65,11 @@ docs/         requirements, engineering standards, ADRs, roadmap, research, spik
 ```sh
 pre-commit run --all-files               # lint and format everything
 python3 tools/validate_content.py        # content against the schema and cross-checks
-cd app && ./gradlew :spike:assembleDebug # build the spike (JDK 21, Android SDK 36)
+cd android && ./gradlew spotlessApply     # format Kotlin and Gradle files
+cd android && ./gradlew check buildHealth assembleRelease  # lint, tests, module rules, licences, release build
 ```
 
-APKs for the owner are built by GitHub Actions and downloaded from the run's artifacts; don't send APK files in chat.
+Needs JDK 21 and the Android SDK with platform 37 (see [android/README.md](android/README.md)). APKs for the owner are built by GitHub Actions (`Android` workflow, artifact `seerah-app`) and downloaded from the run's artifacts; don't send APK files in chat.
 
 ## Content integrity (non-negotiable)
 
@@ -81,7 +82,7 @@ APKs for the owner are built by GitHub Actions and downloaded from the run's art
 
 ## The technical spike
 
-`app/spike`, `tools/spike` and `map-data/historical/spike` proved the stack ([ADR 0002](docs/adr/0002-proposed-stack.md), [summary](docs/spike/summary.md)). **v1 is written from scratch.** Use the spike to learn what works and what failed ([findings](docs/spike/findings.md)); do not copy its code, files or structure into v1. It is removed once v1 covers what it shows.
+`android/spike`, `tools/spike` and `map-data/historical/spike` proved the stack ([ADR 0002](docs/adr/0002-proposed-stack.md), [summary](docs/spike/summary.md)). **v1 is written from scratch.** Use the spike to learn what works and what failed ([findings](docs/spike/findings.md)); do not copy its code, files or structure into v1. It is removed once v1 covers what it shows.
 
 ## Working with the owner
 

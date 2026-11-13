@@ -13,3 +13,12 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+[*.{kt,kts}]
+# ktlint (run through Spotless, ADR 0004): Android Studio style plus Compose Rules.
+ktlint_code_style = android_studio
+ktlint_function_naming_ignore_when_annotated_with = Composable
+max_line_length = 120
+# Trailing commas, as the Kotlin coding conventions recommend: cleaner diffs.
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true

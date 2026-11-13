@@ -41,7 +41,7 @@ The first release covers one continuous period, **from the journey to Taif to th
 
 ## Getting started
 
-**Requirements:** Git, Python 3.11+. Android Studio will be needed once the app is scaffolded.
+**Requirements:** Git, Python 3.11+. For the app: JDK 21 and the Android SDK with platform 37 (Android Studio includes both); see [android/README.md](android/README.md).
 
 ```sh
 git clone https://github.com/MohdFarag/seerah.git
@@ -60,13 +60,14 @@ Run the checks:
 ```sh
 python3 tools/validate_content.py   # validate content against the schema
 pre-commit run --all-files          # all linters and formatters
+(cd android && ./gradlew spotlessCheck check buildHealth)   # app: format, lint, tests, build rules
 ```
 
 ## Repository layout
 
 ```text
 .
-├── app/                 Android project (v1 app to come; :spike is the finished technical spike)
+├── android/             Android project: the v1 app (:app, build-logic/) and spike/ (finished technical spike)
 ├── content/
 │   ├── schema/          JSON Schema for phases, events, situations, texts, sources
 │   ├── index/           v1 phases and events (draft)
