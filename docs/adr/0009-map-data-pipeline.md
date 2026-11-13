@@ -72,7 +72,7 @@ How the map looks *outside* a detail area when zoomed in past the regional zoom 
 | OpenStreetMap waterways | Precise, sometimes named | ODbL as above; modern channels and dams; uneven coverage |
 | No valleys in v1 | Nothing to build | Leaves out a terrain feature the content model lists; the painted relief still shows the main valleys |
 
-**Choice:** derived from Copernicus DEM, unnamed, **if the trial build gives clean lines**; otherwise v1 ships without the valley layer and the relief carries the valleys. A named wadi that matters to a story (e.g. one a route follows) is a content item with its source; the base map's lines carry no names or historical claims. The style draws them as dry valleys, not as rivers.
+**Choice (owner, 2026-11-13):** derived from Copernicus DEM, unnamed, **if the trial build gives clean lines**; otherwise v1 ships without the valley layer and the relief carries the valleys. A named wadi that matters to a story (e.g. one a route follows) is a content item with its source; the base map's lines carry no names or historical claims. The style draws them as dry valleys, not as rivers.
 
 ### Lava fields (harrat)
 
@@ -82,7 +82,7 @@ How the map looks *outside* a detail area when zoomed in past the regional zoom 
 | A lava-field layer from geological maps | Clean outlines | No open dataset found that covers the peninsula; tracing a published map is georeferencing an image, which the content rules exclude |
 | Classified from imagery or roughness | Possible with open data | A model's output, which the content rules do not accept as a source |
 
-**Choice:** relief only in v1, with names and approximate areas as content.
+**Choice (owner, 2026-11-13):** relief only in v1, with names and approximate areas as content.
 
 ### Tools
 
@@ -168,8 +168,8 @@ How the map looks *outside* a detail area when zoomed in past the regional zoom 
 
 ## Questions for the owner
 
-1. **Valleys:** show unnamed valley lines derived from the elevation data in v1 if the trial gives clean lines, as proposed, or leave valleys out?
-2. **Lava fields:** relief only, with named areas as content, as proposed?
+1. **Valleys:** show unnamed valley lines derived from the elevation data in v1 if the trial gives clean lines, as proposed, or leave valleys out? **Answered (owner, 2026-11-13): show them.**
+2. **Lava fields:** relief only, with named areas as content, as proposed? **Answered (owner, 2026-11-13): yes.**
 3. **Modern terrain:** do you accept the corrections register (only removing islands, hiding or smoothing relief, never adding terrain; outlines only from licensed datasets or stated rules; each entry approved by you)? City towers are decided after the trial build.
 
 ## References
