@@ -1,6 +1,6 @@
 # 0007. Content formats, compatibility and signing
 
-**Status:** Proposed (2026-11-13), revised the same day after an EGM review ([report](../design/egm-review-0007/consolidated_review_report.md)). Needs the owner's approval. The owner has decided the three questions the review raised: the map style ships inside the app, only `approved` items ever ship, and the review's triage stands.
+**Status:** Accepted by the owner on 2026-11-13, after an EGM review and a revision ([report](../design/egm-review-0007/consolidated_review_report.md)). The owner decided the three questions the review raised: the map style ships inside the app, only `approved` items ever ship, and the review's triage stands.
 
 ## Context
 
