@@ -5,7 +5,7 @@
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "review": {
-      "description": "Owner review state. Only 'approved' may ship.",
+      "description": "Owner review state. Only 'approved' may ship; the build refuses anything else, including 'title-approved' (ADR 0007).",
       "enum": ["title-approved", "draft", "in-review", "approved"]
     },
     "displayDate": {

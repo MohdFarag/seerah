@@ -47,7 +47,7 @@ Then, in order:
 1. Scaffold `android/` with the build setup and checks from ADR 0004, and move the spike there. ✅ 2026-11-13 ([android/README.md](../android/README.md)).
 2. ADR 0005: the content model, exploration and story layers. ✅ Accepted 2026-11-13 ([ADR](adr/0005-content-model-exploration-and-story.md), [specification](design/exploration-and-story.md)).
 3. ADR 0006: open-source code (Apache-2.0) and closed content in a private repository. ✅ Accepted 2026-11-13 ([ADR](adr/0006-open-source-code-and-closed-content.md)). The private `seerah-content` repository exists and holds the content since 2026-11-13.
-4. ADR 0007: content package format, compatibility between app and content versions, and package signing.
+4. ADR 0007: content source and package formats, compatibility between app and content versions, and package signing. Proposed 2026-11-13 and revised after an EGM review ([ADR](adr/0007-content-formats-compatibility-and-signing.md), [review](design/egm-review-0007/consolidated_review_report.md)).
 5. ADR 0008: where content updates are hosted (the spike's raw GitHub link is not a delivery service).
 6. ADR 0009: the v1 map data pipeline for the Arabian Peninsula, with more detail where events happen (Makkah, Taif, Madinah, Badr and the routes), since full detail everywhere would be very large.
 7. ✅ Design: the owner reviewed the Penpot screens against the v1 scope (Taif to Badr, the Arabian Peninsula, panels over a map that stays on screen, months where sourced), on 2026-11-13.

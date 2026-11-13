@@ -14,6 +14,8 @@ content/
 
 ## Rules the schema enforces
 
+- Only items with `review: approved` ever ship; the content build refuses `draft`, `in-review` and `title-approved` ([ADR 0007](../docs/adr/0007-content-formats-compatibility-and-signing.md)). Only the owner sets `approved`.
+
 - A date carries its **precision** (`year`, `month`, `day`). An unknown part is never filled in.
 - A place carries its **accuracy** (`exact`, `general`, `unknown`). With `general`, the event links to the city or region, so the app must say the exact spot is unknown. `unknown` means no marker at all.
 - A route line exists only when `route.documented` is true. Distances say whether they come from a `source` or are an `estimate`.
