@@ -15,3 +15,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Technical spike app proving the stack; ADR 0002 accepted with performance targets.
 - v1 scope (Taif to Badr) and its index of 26 draft events in 5 phases.
 - `AGENTS.md` (instructions for contributors and AI agents), engineering standards and a documentation index.
+- ADR 0003 (v1 architecture and modules) and ADR 0004 (build and quality tooling), accepted.
+- The v1 Android project in `android/`: convention plugins, version catalog, a single-activity app that is always right to left, and CI that checks formatting, lint, tests, module rules, licences, dependency health and 16 KB page alignment. The spike moved to `android/spike/`.
+- Draft content model for exploration and story mode.

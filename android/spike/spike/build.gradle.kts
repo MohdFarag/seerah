@@ -63,11 +63,11 @@ android {
     // Map data, glyphs and fonts stay in map-data/ and are bundled as assets.
     sourceSets["main"].assets.srcDirs(
         "src/main/assets",
-        "../../map-data/historical/spike",
-        "../../map-data/style",
+        "../../../map-data/historical/spike",
+        "../../../map-data/style",
         // Built by tools/spike/build_base.sh and not committed. Without it the
         // app still runs, on a plain background.
-        "../../map-data/dist",
+        "../../../map-data/dist",
     )
 
     // The app copies these out to device storage, so storing them uncompressed
