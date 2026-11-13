@@ -22,7 +22,7 @@ Every event shows its **original texts first** (Quran, hadith, athar, and narrat
 
 | | |
 | --- | --- |
-| 🗺️ **Map first** | A detailed historical map of the Hijaz: Makkah, Taif, Madinah, Quba, Badr and the routes between |
+| 🗺️ **Map first** | A historical map of the Arabian Peninsula, most detailed where the events happen: Makkah, Taif, Madinah, Quba, Badr and the routes between |
 | ⏳ **Time-synced** | Browse by year; names, borders and landmarks match the selected time |
 | 📜 **Texts first** | Original wording shown directly, sourced, with a simple explanation on request |
 | 🧭 **Follow or explore** | Manual step-by-step follow-along, with free map movement at every step |

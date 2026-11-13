@@ -8,7 +8,7 @@ v1 is written from scratch on the stack in [ADR 0002](0002-proposed-stack.md): K
 
 What the architecture has to carry:
 
-- A map that changes with time (names, landmarks, routes), restricted to the Hijaz in v1, and that stays on screen while the user reads.
+- A map that changes with time (names, landmarks, routes), restricted to the Arabian Peninsula in v1 (widened from the Hijaz by the owner on 2026-11-13), and that stays on screen while the user reads.
 - An index, an event and situation reader with sourced texts, free exploration and an optional follow-along.
 - Content that is a replaceable, versioned package, and user data (progress, settings, resume point) that survives every content update.
 - Fully offline use; the network only for a content update the user starts.
@@ -179,7 +179,7 @@ flowchart TD
 - Only `core:map` depends on MapLibre.
 - `core:model` and `core:domain` are plain Kotlin with no Android dependency, so the time rules are tested on the JVM.
 - Content and user data never share storage. User data refers to content only by stable IDs, and copes with an ID that a content update removed.
-- Nothing that belongs to content is hard-coded: the Hijaz bounds, zoom levels, place names and time states come from the content package.
+- Nothing that belongs to content is hard-coded: the map bounds, zoom levels, place names and time states come from the content package.
 - These rules are checked by the build (ADR 0004), not left to review.
 
 ### Platform and identity
