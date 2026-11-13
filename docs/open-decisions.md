@@ -4,9 +4,11 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 
 | Topic | Decided when |
 | --- | --- |
-| Map zoom limit; story-mode details; how the map looks outside a detail area when zoomed past the regional zoom ([ADR 0009](adr/0009-map-data-pipeline.md)) | During implementation (owner's call) |
-| First launch: an initial content package inside the APK, or downloaded on first launch (full download before use vs start while downloading; size itself is not a constraint) | During the v1 build ([ADR 0007](adr/0007-content-formats-compatibility-and-signing.md)). A first-launch download is user-started, so the Data Saver rule for the automatic check ([ADR 0008](adr/0008-update-hosting-and-index.md)) must not block it |
-| Exact map bounds within the Arabian Peninsula, detail levels and zoom levels (recorded in `map/coverage.yaml`, [ADR 0009](adr/0009-map-data-pipeline.md)); list of landmark and border changes | During content and map preparation |
+| Map zoom limit; story-mode details | During implementation (owner's call) |
+| First launch: the initial content package and the map package inside the APK, or downloaded once during setup (full download before use vs start while downloading; size itself is not a constraint) | During the v1 build ([ADR 0007](adr/0007-content-formats-compatibility-and-signing.md)). A first-launch download is user-started, so the Data Saver rule for the automatic check ([ADR 0008](adr/0008-update-hosting-and-index.md)) must not block it |
+| Exact map bounds within the Arabian Peninsula and zoom levels, including the relief's zoom (11 or 12, after the trial build); recorded in `map-data/coverage.yaml` ([ADR 0009](adr/0009-map-data-pipeline.md)); list of landmark and border changes | During content and map preparation |
+| Historical terrain reconstruction (for example Badr): which sources and atlases to rely on, the method, and how it behaves with time, events and the story | When that work starts ([ADR 0009](adr/0009-map-data-pipeline.md) decision 2) |
+| Streaming map tiles online, as an option beside the offline map | After v1 |
 | Final v1 event list and depth; whether and how al-Isra is included after its dating is checked | As each phase's content is prepared |
 | Date documentation; pre-Hijra reference; Gregorian conversion | Content review with the owner |
 | Long-running events, approximate or unknown dates, disputed locations | When those cases come up in content |

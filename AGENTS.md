@@ -87,7 +87,7 @@ EGM artifact directory: docs/design
 ## Content integrity (non-negotiable)
 
 - **Never invent facts:** no date, month, day, coordinate, route, distance or narration without a source. Unknown stays unknown; approximation is labelled.
-- A model's guess is never a source. Atlas images are read for names and order only, never georeferenced.
+- A model's guess is never a source. Seerah atlases may be used as references; how they are used in historical reconstruction is decided when that work starts.
 - Original text first, with its source. Editorial text is `kind: "editorial"` and visually distinct.
 - One chosen narration per situation in v1.
 - No depiction of the Prophet ﷺ or the Companions.
