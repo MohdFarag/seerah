@@ -1,0 +1,10 @@
+# Sections of the Notion PRD that are work logs, not requirements, and stay out of
+# the docs/prd snapshot. One exact heading per line (without the leading #s).
+# Add a heading here only after the owner agrees it is not a requirement.
+متابعة التجربة التقنية — تقرير خارجي قيد التحقق
+تحديث التحقق من التجربة — بناء Android ومحاكيا الهاتف والتابلت
+تقييم محمد للعربية وشكل الخريطة
+نتيجة تجربة التشكيل المسبق — للمراجعة وليست اعتمادًا نهائيًا
+تنفيذ تصور Penpot — حالة العمل
+مراجعة UI/UX قبل وضع القصة — ٨ نوفمبر ٢٠٢٦
+أميري — تفضيل سابق رفض محمد مظهره لاحقًا

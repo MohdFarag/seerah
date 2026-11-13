@@ -21,5 +21,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Licensing (ADR 0006): code and documentation under Apache-2.0, content all rights reserved, the name and logo not licensed, and every file's licence stated in `REUSE.toml`.
 - The content moved to the private `seerah-content` repository; this repository keeps the schema, a synthetic example and the validator, which now takes the content folder as an argument.
 - A code of conduct (Contributor Covenant 2.1).
+- A `prd-sync` skill that re-snapshots the PRD from Notion the same way every time.
 - The EGM design-review plugin enabled for Claude Code sessions on this project, pinned to v0.1.1.
 - Repository hardening: every GitHub Action pinned to a commit SHA, per-job permissions and timeouts, workflow linting and security audit (actionlint, zizmor), a 7-day Dependabot cooldown, line-ending rules, a third-party notices file, and READMEs for `tools/` and `map-data/` that match their contents.
