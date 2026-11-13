@@ -5,7 +5,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Topic | Decided when |
 | --- | --- |
 | Map zoom limit; story-mode details | During implementation (owner's call) |
-| First launch: an initial content package inside the APK, or downloaded on first launch (full download before use vs start while downloading; size itself is not a constraint) | During the v1 build ([ADR 0007](adr/0007-content-formats-compatibility-and-signing.md)) |
+| First launch: an initial content package inside the APK, or downloaded on first launch (full download before use vs start while downloading; size itself is not a constraint) | During the v1 build ([ADR 0007](adr/0007-content-formats-compatibility-and-signing.md)). A first-launch download is user-started, so the Data Saver rule for the automatic check ([ADR 0008](adr/0008-update-hosting-and-index.md)) must not block it |
 | Exact map bounds within the Arabian Peninsula, detail levels and zoom levels; list of landmark and border changes | During content and map preparation |
 | Final v1 event list and depth; whether and how al-Isra is included after its dating is checked | As each phase's content is prepared |
 | Date documentation; pre-Hijra reference; Gregorian conversion | Content review with the owner |
@@ -14,7 +14,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
 | Accessibility details, failure states | Implementation spec |
 | Final application ID (permanent after the first Play Store upload; `app.seerah` for development) | Before the first upload |
-| Where content updates are hosted | ADR 0008 |
+| Buying the project domain; whether the packages move to Cloudflare R2; whether public builds carry one index address or an ordered list (e.g. the domain, then `seerah-updates.pages.dev` as a fallback) | Before the first public release ([ADR 0008](adr/0008-update-hosting-and-index.md)) |
 | Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
 | Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
 | Event categories | Not decided |

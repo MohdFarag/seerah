@@ -1,6 +1,6 @@
 # Engineering standards
 
-How the app, the tools and the content pipeline are built. These standards apply to every change, by people and by AI agents. The stack is fixed in [ADR 0002](adr/0002-proposed-stack.md); the architecture and module layout in [ADR 0003](adr/0003-v1-architecture-and-modules.md) and the build and quality tooling in [ADR 0004](adr/0004-build-and-quality-tooling.md) (both Proposed until the owner approves).
+How the app, the tools and the content pipeline are built. These standards apply to every change, by people and by AI agents. The stack is fixed in [ADR 0002](adr/0002-proposed-stack.md); the architecture and module layout in [ADR 0003](adr/0003-v1-architecture-and-modules.md) and the build and quality tooling in [ADR 0004](adr/0004-build-and-quality-tooling.md) (both Accepted).
 
 ## Principles
 
@@ -19,7 +19,7 @@ Baseline, refined by the v1 architecture ADR:
 - **Modules by feature,** plus shared `core` modules (design system, data, model, map, testing). Feature modules never depend on each other.
 - **Dependency injection** with one framework across the app.
 - **Single source of truth per data type.** Content (replaceable, versioned) and user data (progress, settings) live apart, so a content update never touches progress.
-- **Offline is the normal case.** The app never needs the network except to download a content update the user asked for.
+- **Offline is the normal case.** The app uses the network for two things only: a small automatic check for content updates (at most once a day, skipped when the user has restricted the app's data), and downloading an update, which only the user starts ([ADR 0008](adr/0008-update-hosting-and-index.md)).
 - **Map code stays behind an interface** in a map module, so screens don't talk to MapLibre directly. The map is created once and stays on screen; other screens are panels over it.
 
 ## Code
@@ -66,8 +66,8 @@ Targets are in [ADR 0002](adr/0002-proposed-stack.md#performance-targets); measu
 ## Security and privacy
 
 - No accounts, no personal data. Analytics only within the scope the PRD approves.
-- Network only over HTTPS, only for content updates; every package is verified (hash, version compatibility) before use.
-- No secrets in the repository. Signing keys stay outside git and are injected in CI.
+- Network only over HTTPS, only for content updates: the update check and the downloads the user starts. The update index and every package are verified (signature, hash, version compatibility) before use; requests carry no identifier.
+- No secrets in the repository. The app's upload key is a GitHub secret ([ADR 0004](adr/0004-build-and-quality-tooling.md)); content signing keys stay offline on the owner's machine, and packages and the update index are signed there ([ADR 0007](adr/0007-content-formats-compatibility-and-signing.md), [ADR 0008](adr/0008-update-hosting-and-index.md)).
 
 ## Documentation
 
