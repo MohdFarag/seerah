@@ -18,7 +18,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | [../AGENTS.md](../AGENTS.md) | Rules for every contributor and AI agent: quality bar, definition of done, content integrity. |
 | [engineering.md](engineering.md) | Architecture, code, UI, testing, performance and documentation standards. |
 | [adr/](adr/) | Architecture Decision Records. |
-| [maintaining.md](maintaining.md) | Repository settings, branch protection and releases. |
+| [maintaining.md](maintaining.md) | Repository settings (rulesets, Actions, security, labels) and releases. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Branches, commit messages, content rules, pull requests. |
 
 ## Design
@@ -45,3 +45,6 @@ Where every document lives and what it is for. If you add a document, list it he
 | [../content/README.md](../content/README.md) | Content layout, schema rules and review states. |
 | [../map-data/README.md](../map-data/README.md) | Map data sources, licences and the base-map pipeline. |
 | [../CHANGELOG.md](../CHANGELOG.md) | User-visible changes. |
+| [../SECURITY.md](../SECURITY.md) | How to report a vulnerability privately. |
+| [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) | Third-party fonts and data, with their licences and attribution. |
+| [../tools/README.md](../tools/README.md) | The validation and build scripts. |
