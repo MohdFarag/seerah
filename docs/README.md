@@ -25,6 +25,7 @@ Where every document lives and what it is for. If you add a document, list it he
 
 | Document | Purpose |
 | --- | --- |
+| [design/](design/) | Design specifications and drafts, including EGM drafts and review reports (see [AGENTS.md](../AGENTS.md#agent-tooling)). |
 | [design/exploration-and-story.md](design/exploration-and-story.md) | Specification of the content model accepted in ADR 0005: the exploration layer (facts on the map and in time) and the story layer (directed steps built from a fixed set of app moves). |
 
 ## Research and spike
