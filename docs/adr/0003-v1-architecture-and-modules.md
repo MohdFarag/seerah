@@ -1,6 +1,6 @@
 # 0003. v1 app architecture and modules
 
-**Status:** Proposed (2026-11-13), revised after a second review the same day. Needs the owner's approval before the app is scaffolded. The owner has already agreed to the `android/` folder, API 26 as the minimum, and `app.seerah` as the development application ID.
+**Status:** Accepted by the owner on 2026-11-13, after a second review. Includes the owner's agreement to the `android/` folder, API 26 as the minimum, and `app.seerah` as the development application ID.
 
 ## Context
 

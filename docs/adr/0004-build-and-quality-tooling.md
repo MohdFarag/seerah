@@ -1,6 +1,6 @@
 # 0004. Build and quality tooling
 
-**Status:** Proposed (2026-11-13), revised after a second review the same day. Needs the owner's approval before the app is scaffolded.
+**Status:** Accepted by the owner on 2026-11-13, after a second review.
 
 ## Context
 
