@@ -1,0 +1,23 @@
+Seerah content licence: all rights reserved
+
+Copyright (c) 2026 Mohamed Farag. All rights reserved.
+
+This licence covers the project's content: the selection, arrangement and
+editing of texts; explanations and editorial text; event, place, route, area
+and time data; story scripts; historical map layers and other map data made
+for the project; and designs. It applies to every file marked
+"LicenseRef-Seerah-Content" (in REUSE.toml or in a file header), wherever the
+content is stored or distributed, including the content packages the app
+downloads.
+
+No permission is granted to use, copy, modify, merge, publish, distribute,
+sublicense, or sell this content, in whole or in part, without prior written
+permission from the copyright holder. Being able to read it in a public
+repository or in the app grants none of these rights.
+
+Quranic text, hadith, and narrations from classical works are not claimed as
+the copyright holder's own; the selection, arrangement, explanations,
+editorial text, and data described above are covered by this licence.
+Third-party materials remain subject to their own licences and terms.
+
+THE CONTENT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.

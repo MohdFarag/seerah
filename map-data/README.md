@@ -1,6 +1,6 @@
 # map-data
 
-Map data, kept separate from the app code. Today everything here belongs to the finished technical spike; the v1 map data pipeline for the Arabian Peninsula is decided in ADR 0008 (see the [roadmap](../docs/roadmap.md)) and gets its own folders.
+Map data, kept separate from the app code. Historical map data (`historical/`, `updates/`) is content: all rights reserved under the [content licence](../LICENSES/LicenseRef-Seerah-Content.txt) ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)). Today everything here belongs to the finished technical spike; the v1 map data pipeline for the Arabian Peninsula is decided in ADR 0009 (see the [roadmap](../docs/roadmap.md)) and gets its own folders.
 
 ```text
 map-data/

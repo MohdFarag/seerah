@@ -53,7 +53,7 @@ A change is done only when all of these hold:
 
 ```text
 android/      Android project (Gradle): :app, build-logic/, and spike/ (the finished technical spike, a separate build: reference only)
-content/      Seerah content as JSON: schema/, index/ (v1 phases and events), events/
+content/      content schema (open) and, until it moves to the private seerah-content repository, content data (all rights reserved)
 map-data/     base-map pipeline inputs, historical layers, map style (large binaries not in git)
 tools/        validation and build scripts (Python, Bash)
 docs/         requirements, engineering standards, ADRs, design drafts, roadmap, research, spike results
@@ -70,6 +70,10 @@ cd android && ./gradlew check buildHealth assembleRelease  # lint, tests, module
 ```
 
 Needs JDK 21 and the Android SDK with platform 37 (see [android/README.md](android/README.md)). APKs for the owner are built by GitHub Actions (`Android` workflow, artifact `seerah-app`) and downloaded from the run's artifacts; don't send APK files in chat.
+
+## Licensing
+
+Code and documentation are Apache-2.0; content is all rights reserved and is written in the private `seerah-content` repository ([ADR 0006](docs/adr/0006-open-source-code-and-closed-content.md)). `REUSE.toml` states every file's licence: a new file type or folder that is content must be added there. Never copy content into the public repository, and never use the project's name or logo for anything else ([TRADEMARKS.md](TRADEMARKS.md)).
 
 ## Content integrity (non-negotiable)
 

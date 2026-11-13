@@ -1,6 +1,6 @@
 # Third-party notices
 
-The repository's own material is proprietary ([LICENSE](LICENSE)). The third-party material below keeps its own licence. This list covers what is **in the repository** or **downloaded by its build scripts**; the app's library dependencies are checked at build time by Licensee (allowed: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause; see [ADR 0004](docs/adr/0004-build-and-quality-tooling.md)) and will be listed in the app's open-source notices screen.
+The project's code and documentation are Apache-2.0 ([LICENSE](LICENSE)) and its content is all rights reserved ([content licence](LICENSES/LicenseRef-Seerah-Content.txt)); [REUSE.toml](REUSE.toml) says which applies to each file. The third-party material below keeps its own licence. This list covers what is **in the repository** or **downloaded by its build scripts**; the app's library dependencies are checked at build time by Licensee (allowed: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause; see [ADR 0004](docs/adr/0004-build-and-quality-tooling.md)) and will be listed in the app's open-source notices screen.
 
 ## In the repository
 
@@ -23,4 +23,4 @@ The repository's own material is proprietary ([LICENSE](LICENSE)). The third-par
 | --- | --- |
 | MapLibre Native Android | BSD-2-Clause |
 
-The Quran, hadith and narrations from classical works are not claimed as the project's own; see [LICENSE](LICENSE).
+The Quran, hadith and narrations from classical works are not claimed as the project's own; see the [content licence](LICENSES/LicenseRef-Seerah-Content.txt).

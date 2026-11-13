@@ -18,4 +18,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - ADR 0003 (v1 architecture and modules) and ADR 0004 (build and quality tooling), accepted.
 - The v1 Android project in `android/`: convention plugins, version catalog, a single-activity app that is always right to left, and CI that checks formatting, lint, tests, module rules, licences, dependency health and 16 KB page alignment. The spike moved to `android/spike/`.
 - The content model for exploration and story mode (ADR 0005); the map now covers the whole Arabian Peninsula, and time moves by month where a source gives it.
+- Licensing (ADR 0006): code and documentation under Apache-2.0, content all rights reserved, the name and logo not licensed, and every file's licence stated in `REUSE.toml`.
 - Repository hardening: every GitHub Action pinned to a commit SHA, per-job permissions and timeouts, workflow linting and security audit (actionlint, zizmor), a 7-day Dependabot cooldown, line-ending rules, a third-party notices file, and READMEs for `tools/` and `map-data/` that match their contents.

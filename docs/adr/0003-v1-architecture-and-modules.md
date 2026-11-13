@@ -70,7 +70,7 @@ What the architecture has to carry:
 | **User-initiated data transfer job** (JobScheduler, Android 14+) | Google Maps offline downloads: about 10% better download reliability after moving to it | Made for long downloads the user starts; outside app-standby quotas; shows system progress |
 | WorkManager with a foreground service | Common default | Works on all versions, but `dataSync` foreground services are time-limited from Android 15 |
 
-**Choice:** the user-initiated job on Android 14 and later, WorkManager with a foreground notification on Android 8–13, behind one interface in `core:update`. Both paths get device coverage: the Oppo A55 (Android 13) and the Galaxy A54 (Android 16). Range resume, integrity and signature checks, and one-step activation are the same on both paths (details in ADR 0006).
+**Choice:** the user-initiated job on Android 14 and later, WorkManager with a foreground notification on Android 8–13, behind one interface in `core:update`. Both paths get device coverage: the Oppo A55 (Android 13) and the Galaxy A54 (Android 16). Range resume, integrity and signature checks, and one-step activation are the same on both paths (details in ADR 0007).
 
 ### Modules
 
@@ -90,7 +90,7 @@ What the architecture has to carry:
 | Serialization (content, route keys, user data) | kotlinx.serialization | Moshi, Gson | Kotlin-first, compile-time, no reflection; Navigation 3 keys use it |
 | User data | DataStore with a kotlinx.serialization serializer | Room, Proto DataStore | Small, typed, transactional; no protobuf toolchain; kept apart from content |
 | Download client | OkHttp | Ktor client, `HttpURLConnection` | The Android standard for range requests and TLS |
-| Content storage | Decided in ADR 0006 (content package format) | | Hidden behind `core:content` |
+| Content storage | Decided in ADR 0007 (content package format) | | Hidden behind `core:content` |
 
 ## Decision
 
@@ -202,7 +202,7 @@ flowchart TD
 - MapLibre can be upgraded, or replaced by maplibre-compose, by changing one module.
 - Two download paths to maintain (API 34+ and older), in one module with shared verification.
 - Moving `app/` to `android/` touches the CI workflow, `.gitignore` and the docs; done in the scaffolding change.
-- Follow-up decisions: ADR 0004 (build and quality tooling); ADR 0005 (content model); ADR 0006 (content package format, compatibility and signing); ADR 0007 (where content updates are hosted); ADR 0008 (the v1 map data pipeline).
+- Follow-up decisions: ADR 0004 (build and quality tooling); ADR 0005 (content model); ADR 0007 (content package format, compatibility and signing); ADR 0008 (where content updates are hosted); ADR 0009 (the v1 map data pipeline).
 
 ## References
 

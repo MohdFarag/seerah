@@ -2,6 +2,8 @@
 
 The Seerah content, kept separate from the app so it can ship as an independent, versioned package.
 
+**Licensing ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)):** the schema (`schema/`) is open source with the code. The content data (`index/`, `events/`) is **all rights reserved** under the [content licence](../LICENSES/LicenseRef-Seerah-Content.txt), and moves to the private repository `seerah-content` once it exists; the schema and validator stay here.
+
 ```text
 content/
   schema/content.schema.json   entity definitions (phase, event, situation, text, source, place, display date)

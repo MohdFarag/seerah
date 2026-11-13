@@ -47,4 +47,6 @@ Where every document lives and what it is for. If you add a document, list it he
 | [../CHANGELOG.md](../CHANGELOG.md) | User-visible changes. |
 | [../SECURITY.md](../SECURITY.md) | How to report a vulnerability privately. |
 | [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) | Third-party fonts and data, with their licences and attribution. |
+| [../REUSE.toml](../REUSE.toml), [../LICENSES/](../LICENSES/) | The licence of every file: Apache-2.0 for code and docs, the content licence, OFL for fonts. |
+| [../TRADEMARKS.md](../TRADEMARKS.md) | The name and logo are not licensed; forks use their own. |
 | [../tools/README.md](../tools/README.md) | The validation and build scripts. |

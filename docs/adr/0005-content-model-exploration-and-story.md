@@ -36,7 +36,7 @@ The owner wants content written in a form aimed at the app: facts that live on t
 - The time rules and the follow-along rules live in `core:domain` and serve both modes.
 - A content build tool and validator are needed before content is written: references, time validity, documented routes, sources, and the step warnings.
 - Adding a move to the toolkit is an app change with its own tests, never a content change.
-- Follow-up decisions: ADR 0006 (content package format, compatibility between app and content versions, and package signing), ADR 0007 (where content updates are hosted), ADR 0008 (the v1 map data pipeline for the Arabian Peninsula).
+- Follow-up decisions: ADR 0007 (content package format, compatibility between app and content versions, and package signing), ADR 0008 (where content updates are hosted), ADR 0009 (the v1 map data pipeline for the Arabian Peninsula).
 
 ## References
 
