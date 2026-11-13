@@ -1,0 +1,30 @@
+{
+  "content_version": "0.0.0-example",
+  "phases": [
+    {
+      "id": "example-phase",
+      "order": 1,
+      "title": "مثال: مرحلة",
+      "note": "Synthetic example of the content format, used to test the validator. Not Seerah content.",
+      "events": [
+        {
+          "id": "example-first-event",
+          "phase_id": "example-phase",
+          "order": 1,
+          "title": "مثال: حدث أول",
+          "review": "draft",
+          "depth": "deep"
+        },
+        {
+          "id": "example-second-event",
+          "phase_id": "example-phase",
+          "order": 2,
+          "title": "مثال: حدث ثانٍ",
+          "review": "draft",
+          "depth": "brief",
+          "related_event_ids": ["example-first-event"]
+        }
+      ]
+    }
+  ]
+}

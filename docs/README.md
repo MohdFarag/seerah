@@ -47,6 +47,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | [../map-data/README.md](../map-data/README.md) | Map data sources, licences and the base-map pipeline. |
 | [../CHANGELOG.md](../CHANGELOG.md) | User-visible changes. |
 | [../SECURITY.md](../SECURITY.md) | How to report a vulnerability privately. |
+| [../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Contributor Covenant 2.1, and how to report a problem. |
 | [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) | Third-party fonts and data, with their licences and attribution. |
 | [../REUSE.toml](../REUSE.toml), [../LICENSES/](../LICENSES/) | The licence of every file: Apache-2.0 for code and docs, the content licence, OFL for fonts. |
 | [../TRADEMARKS.md](../TRADEMARKS.md) | The name and logo are not licensed; forks use their own. |

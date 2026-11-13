@@ -2,7 +2,7 @@
 
 Thanks for helping. The **code** is open source under [Apache-2.0](LICENSE): by contributing you agree that your contribution is licensed the same way (section 5 of the licence). The **content** is not open and is written in a private repository ([ADR 0006](docs/adr/0006-open-source-code-and-closed-content.md)); to report a content mistake, open a **Content correction** issue.
 
-Mohamed Farag owns the product decisions, the content and the reviews. Please open an issue before starting any significant work.
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Mohamed Farag owns the product decisions, the content and the reviews. Please open an issue before starting any significant work.
 
 ## Setup
 

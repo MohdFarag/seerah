@@ -53,7 +53,7 @@ A change is done only when all of these hold:
 
 ```text
 android/      Android project (Gradle): :app, build-logic/, and spike/ (the finished technical spike, a separate build: reference only)
-content/      content schema (open) and, until it moves to the private seerah-content repository, content data (all rights reserved)
+content/      content schema and a synthetic example (open); the content itself is in the private seerah-content repository
 map-data/     base-map pipeline inputs, historical layers, map style (large binaries not in git)
 tools/        validation and build scripts (Python, Bash)
 docs/         requirements, engineering standards, ADRs, design drafts, roadmap, research, spike results
@@ -64,7 +64,7 @@ docs/         requirements, engineering standards, ADRs, design drafts, roadmap,
 
 ```sh
 pre-commit run --all-files               # lint and format everything
-python3 tools/validate_content.py        # content against the schema and cross-checks
+python3 tools/validate_content.py [DIR]  # content format and cross-checks (DIR: a seerah-content checkout)
 cd android && ./gradlew spotlessApply     # format Kotlin and Gradle files
 cd android && ./gradlew check buildHealth assembleRelease  # lint, tests, module rules, licences, release build
 ```

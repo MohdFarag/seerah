@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """Validate Seerah content.
 
-Uses the JSON Schema if the `jsonschema` package is installed, and always runs
-the cross-reference and integrity checks the schema can't express.
+Usage: validate_content.py [CONTENT_DIR]
+
+CONTENT_DIR holds `index/phases.json` and `events/`. The content itself lives in the
+private `seerah-content` repository (ADR 0006); without an argument the synthetic
+example in `content/example/` is checked, so the validator is tested in this repository.
+
+Uses the JSON Schema (`content/schema/`) if the `jsonschema` package is installed, and
+always runs the cross-reference and integrity checks the schema can't express.
 Exit code 1 on any error.
 """
 
@@ -10,7 +16,9 @@ import json
 import pathlib
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent / "content"
+REPO = pathlib.Path(__file__).resolve().parent.parent
+SCHEMA = REPO / "content" / "schema" / "content.schema.json"
+DEFAULT_CONTENT = REPO / "content" / "example"
 errors: list[str] = []
 
 
@@ -27,7 +35,7 @@ def schema_check(doc, path):
         import jsonschema
     except ImportError:
         return False
-    schema = load(ROOT / "schema" / "content.schema.json")
+    schema = load(SCHEMA)
     v = jsonschema.Draft202012Validator(schema)
     for err in v.iter_errors(doc):
         loc = "/".join(map(str, err.absolute_path))
@@ -35,8 +43,8 @@ def schema_check(doc, path):
     return True
 
 
-def main() -> int:
-    index_path = ROOT / "index" / "phases.json"
+def main(root: pathlib.Path) -> int:
+    index_path = root / "index" / "phases.json"
     index = load(index_path)
     if index is None:
         return report(False)
@@ -62,8 +70,8 @@ def main() -> int:
             if r not in events:
                 errors.append(f"{eid}: related_event_ids -> unknown event {r!r}")
 
-    # Full event files live in content/events/<event-id>.json
-    for p in sorted((ROOT / "events").glob("*.json")):
+    # Full event files live in <content>/events/<event-id>.json
+    for p in sorted((root / "events").glob("*.json")):
         ev = load(p)
         if ev is None:
             continue
@@ -95,4 +103,7 @@ def report(used_schema: bool, n: int = 0) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    if len(sys.argv) > 2:
+        print(__doc__)
+        sys.exit(2)
+    sys.exit(main(pathlib.Path(sys.argv[1]) if len(sys.argv) == 2 else DEFAULT_CONTENT))
