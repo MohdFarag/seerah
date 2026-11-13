@@ -14,8 +14,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
 | Accessibility details, failure states | Implementation spec |
 | Final application ID (permanent after the first Play Store upload; `app.seerah` for development) | Before the first upload |
-| Where content updates are hosted; whether the update index is signed and expires | [ADR 0008](adr/0008-update-hosting-and-index.md) (Proposed) |
-| When the app checks for a content update (automatically when opened, or only when the user asks) | [ADR 0008](adr/0008-update-hosting-and-index.md), owner's question |
+| Buying the project domain; whether packages and the update index move to Cloudflare R2 | Before the first public release ([ADR 0008](adr/0008-update-hosting-and-index.md)) |
 | Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
 | Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
 | Event categories | Not decided |
@@ -27,5 +26,6 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 
 ## Decided
 
+- Update hosting until the first public release (the index on Cloudflare Pages, packages on GitHub Releases), a signed update index, and an automatic update check that never downloads: owner's decisions of 2026-11-13, in [ADR 0008](adr/0008-update-hosting-and-index.md) (Proposed, awaiting review).
 - Content formats, compatibility and package signing: [ADR 0007](adr/0007-content-formats-compatibility-and-signing.md), accepted 2026-11-13.
 - App framework, map engine, update mechanism and performance targets: [ADR 0002](adr/0002-proposed-stack.md), accepted 2026-11-13. Test devices: Oppo A55, Galaxy A54, Huawei MatePad 11.5 ([roadmap](roadmap.md)). Minimum Android version: API 26 (owner, 2026-11-13).
