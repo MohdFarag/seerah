@@ -14,8 +14,9 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
 | Accessibility details, failure states | Implementation spec |
 | Final application ID (permanent after the first Play Store upload; `app.seerah` for development) | Before the first upload |
-| Content package format, app/content compatibility, package signing | ADR 0006 |
-| Where content updates are hosted | ADR 0007 |
+| Content package format, app/content compatibility, package signing | ADR 0007 |
+| Where content updates are hosted | ADR 0008 |
+| Contact for code of conduct reports | Before a code of conduct is added (ADR 0006) |
 | Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
 | Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
 | Event categories | Not decided |

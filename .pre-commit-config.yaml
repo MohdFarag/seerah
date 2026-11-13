@@ -28,6 +28,11 @@ repos:
     hooks:
       - id: markdownlint-cli2
         exclude: ^docs/prd/PRD-v0\.2\.ar\.md$   # verbatim Notion snapshot
+  # Every file has a stated licence (REUSE.toml, ADR 0006).
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.3.0
+    hooks:
+      - id: reuse
   # GitHub Actions workflows: syntax and shell checks, then security audit.
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12

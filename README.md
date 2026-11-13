@@ -9,7 +9,8 @@
 ![Status](https://img.shields.io/badge/status-in%20development-blue)
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84)
 ![Language](https://img.shields.io/badge/language-العربية-blue)
-![License](https://img.shields.io/badge/license-proprietary-lightgrey)
+![Code license](https://img.shields.io/badge/code-Apache--2.0-blue)
+![Content](https://img.shields.io/badge/content-all%20rights%20reserved-lightgrey)
 
 </div>
 
@@ -93,4 +94,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) (also the instruc
 
 ## License
 
-Proprietary, all rights reserved. See [LICENSE](LICENSE). Third-party fonts and data keep their own licences: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- **Code and documentation:** [Apache-2.0](LICENSE). Contributions are accepted under the same licence.
+- **Content** (Seerah data, texts as selected and edited, explanations, story scripts, historical map data, designs): **all rights reserved**, under the [content licence](LICENSES/LicenseRef-Seerah-Content.txt). Being able to read it here grants no right to reuse it.
+- **Name and logo:** not licensed for others' use; a fork needs its own name and icon ([TRADEMARKS.md](TRADEMARKS.md)).
+- **Third-party** fonts and data keep their own licences ([THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+
+[REUSE.toml](REUSE.toml) states the licence of every file; `reuse lint` checks it. See [ADR 0006](docs/adr/0006-open-source-code-and-closed-content.md).

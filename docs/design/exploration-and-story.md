@@ -31,7 +31,7 @@ The owner's list, with two additions (routes and areas):
 
 | Type | What it is | Has a place | Has a time | Examples (placeholders) |
 | --- | --- | --- | --- | --- |
-| **Terrain** | The base map: land, sea, relief, valleys, lava fields. Built by the map pipeline (ADR 0008), not written per year | yes | no | — |
+| **Terrain** | The base map: land, sea, relief, valleys, lava fields. Built by the map pipeline (ADR 0009), not written per year | yes | no | — |
 | **Place** | Something with a location that the story refers to: a city, a mountain, a well, a house, a mosque, a cave | point or small area, with accuracy | when it exists; names and states that change over time | Makkah, Mount Thawr, Quba |
 | **Event** | Something that happened. Can contain smaller events and situations | one or more places, an area or a route | date with precision | a pledge, a journey, a battle |
 | **Route** *(added)* | A documented path: a journey's stations in order, or a march | the stations (places) and the line between them, if documented | the event it belongs to | the Hijra route |
