@@ -34,7 +34,7 @@ Exit: the owner approves the stack. Done 2026-11-13: [ADR 0002](adr/0002-propose
 
 ## 2. v1: from Taif to Badr
 
-Scope set by the owner (2026-11-11): one continuous period, from the journey to Taif (with a short lead-in on the Year of Sorrow) to Badr and its outcome. 26 draft events in 5 phases ([index](../content/index/phases.json)). The map covers the Hijaz only, with no world view.
+Scope set by the owner (2026-11-11): one continuous period, from the journey to Taif (with a short lead-in on the Year of Sorrow) to Badr and its outcome. 26 draft events in 5 phases ([index](../content/index/phases.json)). The map covers the whole Arabian Peninsula, most detailed where the events happen, with no world view (owner, 2026-11-13). Time moves by year, and by month where a source gives it.
 
 The app and its content are built together; there is no separate content-sample stage (owner, 2026-11-13). Each event's situations, places, narrations and sources are worked out when that event is prepared, and the owner reviews each event before it ships.
 
@@ -47,7 +47,7 @@ Then, in order:
 1. Scaffold `android/` with the build setup and checks from ADR 0004, and move the spike there. ✅ 2026-11-13 ([android/README.md](../android/README.md)).
 2. ADR 0005: the content model (exploration and story layers; draft in [design/exploration-and-story.md](design/exploration-and-story.md)), authoring and package format, compatibility between app and content versions, and package signing.
 3. ADR 0006: where content updates are hosted (the spike's raw GitHub link is not a delivery service).
-4. ADR 0007: the v1 map data pipeline for the Hijaz, including Taif and Badr.
-5. Design: check the Penpot screens against the v1 scope (Taif to Badr, Hijaz only, panels over a map that stays on screen).
+4. ADR 0007: the v1 map data pipeline for the Arabian Peninsula, with more detail where events happen (Makkah, Taif, Madinah, Badr and the routes), since full detail everywhere would be very large.
+5. Design: check the Penpot screens against the v1 scope (Taif to Badr, the Arabian Peninsula, panels over a map that stays on screen, months where sourced).
 
 ## 3. Closed beta → public release

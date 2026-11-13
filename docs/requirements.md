@@ -18,7 +18,7 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 | Platform | Android phones **and** tablets |
 | Distribution | Free. A small closed beta first, then public |
 | Time span | From the journey to Taif, with a short lead-in on the Year of Sorrow, to Badr and its outcome (Ramadan 2 AH). 26 draft events in 5 phases: [content/index/phases.json](../content/index/phases.json) |
-| Map | Fully **2D**, historical style. Detail focused on the **Hijaz** (Makkah, Taif, Madinah, Quba, Badr and the routes between), with wider bounds inside Arabia where needed. Panning and zooming out are limited to that area; **no world view** in v1 |
+| Map | Fully **2D**, historical style. The map covers the **whole Arabian Peninsula** (owner, 2026-11-13, widening the 11 November Hijaz-only decision), with the most detail where the events happen (Makkah, Taif, Madinah, Quba, Badr and the routes between). Panning and zooming out are limited to the peninsula; **no world view** in v1 |
 | Changes over time | Place names, borders of states, kingdoms and major ruled regions, and key landmarks (e.g. the Prophet's Mosque appears when it was built) |
 | Access | Map, phase and event index. **Free exploration is the main mode**; guided follow-along ("story mode") is started by the user. **No search** |
 | Content | Quran, hadith, athar, and narrations as carried in Seerah books, each with its source and a simple explanation |
@@ -55,7 +55,7 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 
 ## Map and time
 
-- **Time unit:** the year, plus a direct jump to a date. Choosing months directly comes later.
+- **Time unit:** the year, and the month where a source gives it (owner, 2026-11-13). Never a month without a source. Plus a direct jump to a date.
 - **Markers:** only the selected year's events show; markers don't pile up. Older events stay reachable from the index, and opening one moves the map to its time.
 - **Year view:** shows the state at **end of year**, and says so. All of that year's event markers stay visible.
 - **Opening an event:** sets map time to the event's documented precision. Never invent a month or day.

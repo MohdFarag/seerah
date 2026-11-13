@@ -1,6 +1,8 @@
 # Exploration and story: the content model
 
-**Status:** Draft for discussion with the owner (2026-11-13). Once agreed, it becomes ADR 0005 (content authoring and package format). Nothing here is a fact about the Seerah: names in examples are placeholders, and every real fact still needs a source.
+**Status:** Draft for discussion with the owner (2026-11-13). Once agreed, it becomes ADR 0005 (content authoring and package format). Nothing here is a fact about the Seerah: names in examples are placeholders or come from the PRD's source list, and every real fact still needs a source.
+
+Decided by the owner on 2026-11-13: months where a source gives them; the map covers the whole Arabian Peninsula; content is written as files in the repository, with a preview build. Revised the same day after the owner's questions, for his confirmation: visibility, event kinds, and the one-change-per-step rule.
 
 ## The owner's idea
 
@@ -59,31 +61,59 @@ A place has one identity and a history. Yathrib and al-Madinah are one place wit
 | `date` | The single display date with its precision (year, month or day) and an approximation flag; a dispute note if there is one |
 | `order` | Position among events with the same date, because many events share a year |
 | `where` | One place, several places (for example the positions of two sides), an area, or a route |
-| `visibility` | `map` (a marker in free exploration), `parent` (shown only inside its parent event, as the requirements ask for situations), or `story` (only in story mode) |
+| `shown` | `always` or `in-context`; see *Visibility* below |
 | `prominence` | 1–3: how early its marker appears when zooming in, like city and street names on Google Maps |
 | `situations` | The situations inside the event, each with its texts |
 | `related` | Links to other events, typed: `cause-of`, `result-of`, `continues` |
 | `sources` | Per claim: one source for the date, another for the place, if they differ |
 
-**Event kinds (draft, needs the owner's study).** Start with one primary kind per event, chosen because it changes what the user sees (an icon, a filter), plus free tags:
+### Visibility
 
-| Kind | Examples of the kind |
+The first draft had three levels: on the map, only inside the parent event, and story only. On review, "story only" conflicts with the PRD: introductions and related situations must stay available in free exploration, not only in story mode (PRD §6). It would also mean a sourced fact that free exploration can never reach. So the levels are revised, and the same two apply to events and places:
+
+| Level | In free exploration | In story mode | Examples of the kind |
+| --- | --- | --- | --- |
+| `always` | On the map whenever its time applies, from the zoom its `prominence` allows | As the story directs | a major event; a city; a mountain on the route |
+| `in-context` | On the map only while its parent event (or the event it belongs to) is open; always listed and readable inside it | Shown whenever a step points to it | the stations of a journey; the positions of two sides in a battle; a well that matters to one event |
+
+Two things are **not** levels, because the facts decide them:
+
+- **No marker:** an event or place whose location is unknown never gets a marker. It stays in the index and inside its parent (PRD rule on unknown places).
+- **Off the map:** an event outside the map's area gets its own presentation, as the PRD says for al-Isra, without widening the map.
+
+What the owner wanted from "story only" (keeping small details off the map in free exploration, and bringing them in during the story) is what `in-context` does. What remains story-only is direction itself: camera moves, title cards and reviewed linking sentences, which are not facts.
+
+**Event kinds (recommended, for the owner's confirmation).** One primary kind per event, chosen by **what the event was about**, not by how it is drawn: a journey made to call people to Islam is a call, and its route shows the movement. The kind sets the icon and the index filter; free tags can add more.
+
+| Kind | Covers |
 | --- | --- |
-| Call to Islam (دعوة) | presenting the message to tribes |
-| Pledge or covenant (بيعة وعهد) | the Aqabah pledges, a written covenant |
-| Journey or migration (رحلة وهجرة) | the Hijra, the Companions' migration |
-| Founding or building (تأسيس وبناء) | building a mosque |
-| Legislation (تشريع) | the call to prayer, fasting, the change of qiblah |
-| Expedition (غزوة وسرية) | an expedition the Prophet ﷺ led, or one he sent |
-| Battle (معركة) | if kept apart from expeditions |
+| Call to Islam (دعوة) | presenting the message, inviting tribes, sending a teacher |
+| Opposition (أذى ومواجهة) | pressure and plots against the Muslims |
+| Pledge and covenant (بيعة وعهد) | pledges, written covenants between groups |
+| Migration and journey (هجرة ورحلة) | migrating, and the journeys of the Hijra |
+| Founding (تأسيس) | building a mosque, founding the community (the brotherhood) |
+| Legislation (تشريع) | a ruling or practice that began: prayer call, fasting, qiblah, permission to fight |
+| Expeditions (غزوات وسرايا) | expeditions led by the Prophet ﷺ or sent by him, including battles; an attribute says which |
 
-Revelation of a verse is better treated as a **link** (an event has verses attached) than as a kind, because verses come with many kinds of events. This is a recommendation for the owner to decide.
+Tested against the 26 draft v1 events: every one fits a kind.
+
+| Kind | Draft v1 events (by number in the index) |
+| --- | --- |
+| Call to Islam | 1 Taif, 2 the tribes at the seasons, 3 the Khazraj at Hajj, 5 Mus'ab in Yathrib |
+| Opposition | 8 the Quraysh plot and the permission to migrate |
+| Pledge and covenant | 4 first Aqabah, 6 second Aqabah, 17 the Madinah charter |
+| Migration and journey | 7 the Companions migrate, 9 to 14 the Hijra journey |
+| Founding | 15 the mosque, 16 the brotherhood |
+| Legislation | 18 the call to prayer, 19 permission to fight, 21 the qiblah, 22 fasting |
+| Expeditions | 20 early expeditions, 23 to 26 Badr |
+
+**Verses are links, not a kind.** Revelation comes with events of every kind, so making it a kind would force a false choice (is Badr a battle or a revelation?). Instead an event or situation links to its verses, and the reader can list "verses revealed about this event". The PRD's own source list already pairs events with verses this way: the cave with 9:40, the qiblah with 2:144, Badr with 8:42 and 3:123.
 
 ### Time
 
 - **Years are counted from the Hijra:** 1 AH onward, and before it 1 BH, 2 BH… with no year zero. Display can also give the year of prophethood when the source dates it that way.
 - **Precision is part of the date:** year, month or day. An unknown part is never filled in.
-- **The v1 period is short:** from the journey to Taif to Badr is about five Hijri years. Most v1 events fall in two or three of them (1 AH alone holds the Hijra, Quba, the mosque and the brotherhood). A time bar that moves only by year will feel coarse here. Options: keep the year as the unit and order events inside it (`order`); add months where they are sourced; or move through the five phases. This is the owner's call (see the questions below).
+- **Months where sourced (owner, 2026-11-13):** the v1 period is only about five Hijri years, and 1 AH alone holds the Hijra, Quba, the mosque and the brotherhood, so years alone are too coarse. Time moves by year, and by month where a source gives the month. An event dated only to its year stays at year level; it is never placed in a guessed month. Events with the same date keep their `order`.
 
 ### How the exploration layer is written
 
@@ -149,11 +179,21 @@ A step says "close shot on Quba", not "zoom 14.2 at these coordinates". The app 
 Rules of thumb for writing scenes, from film grammar and map storytelling practice:
 
 1. **Open wide:** start a chapter with a wide shot of the region and its year, then go closer.
-2. **Change one thing at a time:** move in time or in place, not both in the same step, so the viewer keeps their bearings.
+2. **Change one thing at a time:** move in time or in place, not both in the same step, so the viewer keeps their bearings. It is a guideline, not a hard rule (see below).
 3. **Place before text:** show where something happened before showing what was said there.
 4. **Motion for journeys:** a journey is drawn, not jumped across.
 5. **Short panels:** one idea per step; an excerpt with a link to the full text rather than a long block.
 6. **Never hide uncertainty:** certainty notes come from the facts and are always shown.
+
+### When a step may change more than one thing
+
+The build **warns** (it does not fail) when a step changes both time and place. Three cases justify it:
+
+1. **An opening through a title card.** A chapter or scene opens on a card that names the place and the date, then reveals the map: like a film caption, the card itself re-orients the viewer. Example of the kind: opening the Madinah chapter after the Makkah one.
+2. **Things happening at the same time.** Several movements shown together because their being simultaneous is the point. Example of the kind: the days before Badr, when different groups were on the move toward the same place.
+3. **Following a route.** The place changes continuously by design; that is one move, not several.
+
+Anything else that changes time and place together is split into two steps, or the warning is explicitly accepted in review.
 
 ### Example (structure only)
 
@@ -180,7 +220,7 @@ steps:
 
 - **One map picture for both modes.** The map draws a *map scene*: the year, what is framed, what is highlighted or dimmed, and which routes, movements and areas are drawn. Free exploration builds that scene from what the user touches; story mode builds it from the current step. The map has one engine, and a story is exploration with direction applied.
 - **The time rules live in one place** (`core:domain`): given the facts and a year, which places exist, with which names, and which events show. Exploration and story both use them.
-- **The build checks the story against the facts.** Every reference must exist; nothing may appear before it exists (a mosque before it was built); a route can be drawn only if it is documented; a story-only event can only appear through a story step; every text has a source.
+- **The build checks the story against the facts.** Every reference must exist; nothing may appear before it exists (a mosque before it was built); a route can be drawn only if it is documented; an `in-context` item appears on the map only when its parent is open or a step points to it; a step that changes both time and place without a title card gets a warning; every text has a source.
 - **Preview while writing.** A debug build of the app can load content from the writer's computer and reload it, so a scene can be watched while it is written. Directing without seeing the result is guesswork.
 
 ## Comparable approaches
@@ -190,11 +230,13 @@ steps:
 - **StoryMapJS and ArcGIS StoryMaps:** slides tied to map locations; used by newsrooms and museums.
 - **Game cutscenes:** level data (the world) kept apart from scripts (what the camera and characters do), written with a limited set of commands.
 
-## Questions for the owner
+## Decisions and open points
 
-1. **Time in v1:** the period covers about five years. Keep moving by year (with events ordered inside), add months where sourced, or move through phases?
-2. **"The world map":** the 11 November decision limits v1 to the Hijaz, with wider bounds inside Arabia where needed and no world view. Is that what "رسم الخريطة بتاعت العالم" means here?
-3. **Visibility:** are three levels enough (on the map; only inside the parent event; story only)?
-4. **Event kinds:** start from the draft list above? And treat revelation of verses as a link rather than a kind?
-5. **One change per step:** keep it as a firm rule, or as a guideline the story may break?
-6. **Where to write:** text files in the repository (versioned, reviewable, checked by the build), or Notion databases that a script exports? Recommended: files in the repository, with the preview build for watching results.
+| Point | Status |
+| --- | --- |
+| Time | Decided: by year, and by month where sourced |
+| Map extent | Decided: the whole Arabian Peninsula, most detailed where the events happen; no world view |
+| Where content is written | Decided: files in the repository, checked by the build, with a preview build |
+| Visibility | Revised to `always` and `in-context` (no "story only" for facts); for the owner's confirmation |
+| Event kinds | Seven kinds, tested against the 26 events; verses as links; for the owner's confirmation |
+| One change per step | A guideline the build warns about, with three accepted cases; for the owner's confirmation |

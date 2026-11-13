@@ -4,7 +4,7 @@ Instructions for any AI agent (Claude Code, Codex, Copilot, Cursor, Gemini and o
 
 ## The project in one paragraph
 
-**سيرة رسول الله ﷺ** is a free, Arabic-only (RTL), offline-first Android app for phones and tablets. It tells the Prophet's ﷺ biography on a 2D historical map, synced to time, with the original texts (Quran, hadith, athar, Seerah narrations) shown first and always sourced. **v1 covers one continuous period: from the journey to Taif to the Battle of Badr**, on a map of the Hijaz. The owner, Mohamed, owns the product, the content and every approval.
+**سيرة رسول الله ﷺ** is a free, Arabic-only (RTL), offline-first Android app for phones and tablets. It tells the Prophet's ﷺ biography on a 2D historical map, synced to time, with the original texts (Quran, hadith, athar, Seerah narrations) shown first and always sourced. **v1 covers one continuous period: from the journey to Taif to the Battle of Badr**, on a map of the Arabian Peninsula with the most detail where the events happen. The owner, Mohamed, owns the product, the content and every approval.
 
 ## Read first
 
