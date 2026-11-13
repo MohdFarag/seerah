@@ -5,7 +5,8 @@
 **Explore the Prophet's ﷺ biography through place, time and the original texts.**
 
 [![CI](https://github.com/MohdFarag/seerah/actions/workflows/ci.yml/badge.svg)](https://github.com/MohdFarag/seerah/actions/workflows/ci.yml)
-![Status](https://img.shields.io/badge/status-pre--implementation-orange)
+[![Android](https://github.com/MohdFarag/seerah/actions/workflows/android.yml/badge.svg)](https://github.com/MohdFarag/seerah/actions/workflows/android.yml)
+![Status](https://img.shields.io/badge/status-in%20development-blue)
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84)
 ![Language](https://img.shields.io/badge/language-العربية-blue)
 ![License](https://img.shields.io/badge/license-proprietary-lightgrey)
@@ -33,7 +34,7 @@ Every event shows its **original texts first** (Quran, hadith, athar, and narrat
 
 ## Screenshots
 
-> The app hasn't been built yet. Screenshots and a demo will go here once the first build exists.
+> The app's first screens are not built yet. Screenshots and a demo will go here when they are.
 
 ## Status
 
@@ -81,7 +82,7 @@ pre-commit run --all-files          # all linters and formatters
 │   ├── open-decisions.md
 │   ├── roadmap.md
 │   └── maintaining.md   branch protection, releases, repo settings
-├── tools/               validation and packaging scripts
+├── tools/               validation and build scripts (see tools/README.md)
 ├── AGENTS.md            instructions for contributors and AI agents
 └── .github/             CI, issue and PR templates
 ```
@@ -92,4 +93,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) (also the instruc
 
 ## License
 
-Proprietary, all rights reserved. See [LICENSE](LICENSE).
+Proprietary, all rights reserved. See [LICENSE](LICENSE). Third-party fonts and data keep their own licences: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

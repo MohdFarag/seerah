@@ -1,6 +1,23 @@
+# Text files are stored with LF line endings; Windows batch files need CRLF.
 * text=auto eol=lf
-*.pmtiles binary
+*.bat text eol=crlf
+
+# Binary files: never diffed or normalised.
+*.apk binary
+*.jar binary
 *.mbtiles binary
+*.otf binary
+*.pbf binary
+*.pmtiles binary
 *.png binary
 *.ttf binary
-*.otf binary
+*.webp binary
+*.zip binary
+
+# Generated or copied files: collapsed in pull request diffs and left out of language stats.
+docs/prd/PRD-v0.2.ar.md linguist-generated=true
+map-data/style/glyphs/** linguist-generated=true
+android/gradlew linguist-generated=true
+android/gradlew.bat linguist-generated=true
+android/spike/gradlew linguist-generated=true
+android/spike/gradlew.bat linguist-generated=true

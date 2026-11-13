@@ -14,19 +14,30 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=lf]
+        exclude: \.bat$ # CRLF by design (.gitattributes)
       - id: no-commit-to-branch
         args: [--branch, main]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.3
+    rev: v0.17.5
     hooks:
       - id: ruff-check
         args: [--fix]
       - id: ruff-format
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.24.0
+    rev: v0.24.1
     hooks:
       - id: markdownlint-cli2
         exclude: ^docs/prd/PRD-v0\.2\.ar\.md$   # verbatim Notion snapshot
+  # GitHub Actions workflows: syntax and shell checks, then security audit.
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.32.0
+    hooks:
+      - id: zizmor
+        args: [--offline] # no GitHub token needed; deterministic locally and in CI
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.5.0
     hooks:
