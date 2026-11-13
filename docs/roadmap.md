@@ -45,9 +45,10 @@ The app is written from scratch to the [engineering standards](engineering.md); 
 Then, in order:
 
 1. Scaffold `android/` with the build setup and checks from ADR 0004, and move the spike there. ✅ 2026-11-13 ([android/README.md](../android/README.md)).
-2. ADR 0005: the content model (exploration and story layers; draft in [design/exploration-and-story.md](design/exploration-and-story.md)), authoring and package format, compatibility between app and content versions, and package signing.
-3. ADR 0006: where content updates are hosted (the spike's raw GitHub link is not a delivery service).
-4. ADR 0007: the v1 map data pipeline for the Arabian Peninsula, with more detail where events happen (Makkah, Taif, Madinah, Badr and the routes), since full detail everywhere would be very large.
-5. Design: check the Penpot screens against the v1 scope (Taif to Badr, the Arabian Peninsula, panels over a map that stays on screen, months where sourced).
+2. ADR 0005: the content model, exploration and story layers. ✅ Accepted 2026-11-13 ([ADR](adr/0005-content-model-exploration-and-story.md), [specification](design/exploration-and-story.md)).
+3. ADR 0006: content package format, compatibility between app and content versions, and package signing.
+4. ADR 0007: where content updates are hosted (the spike's raw GitHub link is not a delivery service).
+5. ADR 0008: the v1 map data pipeline for the Arabian Peninsula, with more detail where events happen (Makkah, Taif, Madinah, Badr and the routes), since full detail everywhere would be very large.
+6. Design: check the Penpot screens against the v1 scope (Taif to Badr, the Arabian Peninsula, panels over a map that stays on screen, months where sourced).
 
 ## 3. Closed beta → public release
