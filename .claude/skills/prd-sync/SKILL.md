@@ -25,7 +25,7 @@ The PRD lives in Notion; `docs/prd/` holds a read-only snapshot so agents and re
 
 4. **Check the version.** If the PRD's version line (`الإصدار: …`) moved past 0.2, write the snapshot to a new file named for the version (e.g. `PRD-v0.3.ar.md`), and update `docs/prd/README.md`, the links in `docs/requirements.md` and anything else that points at the old file.
 
-5. **Review the diff** with `git diff docs/prd/`. Summarise for the owner, in Arabic, what changed in substance: decisions added, changed or reversed. Leave out formatting churn.
+5. **Review the diff** with `git diff docs/prd/`. Summarise for the owner, in English, what changed in substance: decisions added, changed or reversed. Leave out formatting churn.
 
 6. **Find what now disagrees.** Sources rank: the owner's latest decision, then the PRD, then accepted ADRs, then everything else in `docs/`. For each substantive change, search `docs/requirements.md`, `docs/open-decisions.md`, `docs/roadmap.md`, `content/README.md`, `docs/design/`, the ADRs and `AGENTS.md` for statements it contradicts. Fix the lower-ranked doc in the same change, except an accepted ADR, which you report and don't edit without the owner. An open decision the PRD has now settled moves out of `open-decisions.md`; one it reopened moves back in.
 
