@@ -60,7 +60,7 @@ cp .env.example .env                # local config (never commit .env)
 Run the checks:
 
 ```sh
-python3 tools/validate_content.py   # validate content against the schema
+python3 tools/validate_content.py   # check the content format (add a path to check seerah-content)
 pre-commit run --all-files          # all linters and formatters
 (cd android && ./gradlew spotlessCheck check buildHealth)   # app: format, lint, tests, build rules
 ```
@@ -72,8 +72,7 @@ pre-commit run --all-files          # all linters and formatters
 ├── android/             Android project: the v1 app (:app, build-logic/) and spike/ (finished technical spike)
 ├── content/
 │   ├── schema/          JSON Schema for phases, events, situations, texts, sources
-│   ├── index/           v1 phases and events (draft)
-│   └── events/          full event content
+│   └── example/         synthetic example of the format (the content itself is in the private seerah-content repository)
 ├── map-data/            base map, historical layers, map style (large binaries not in git)
 ├── docs/                see docs/README.md for the full index
 │   ├── prd/             PRD snapshot (Notion is the source of truth)

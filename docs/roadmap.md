@@ -34,7 +34,7 @@ Exit: the owner approves the stack. Done 2026-11-13: [ADR 0002](adr/0002-propose
 
 ## 2. v1: from Taif to Badr
 
-Scope set by the owner (2026-11-11): one continuous period, from the journey to Taif (with a short lead-in on the Year of Sorrow) to Badr and its outcome. 26 draft events in 5 phases ([index](../content/index/phases.json)). The map covers the whole Arabian Peninsula, most detailed where the events happen, with no world view (owner, 2026-11-13). Time moves by year, and by month where a source gives it.
+Scope set by the owner (2026-11-11): one continuous period, from the journey to Taif (with a short lead-in on the Year of Sorrow) to Badr and its outcome. 26 draft events in 5 phases (index in the private `seerah-content` repository). The map covers the whole Arabian Peninsula, most detailed where the events happen, with no world view (owner, 2026-11-13). Time moves by year, and by month where a source gives it.
 
 The app and its content are built together; there is no separate content-sample stage (owner, 2026-11-13). Each event's situations, places, narrations and sources are worked out when that event is prepared, and the owner reviews each event before it ships.
 
@@ -46,7 +46,7 @@ Then, in order:
 
 1. Scaffold `android/` with the build setup and checks from ADR 0004, and move the spike there. ✅ 2026-11-13 ([android/README.md](../android/README.md)).
 2. ADR 0005: the content model, exploration and story layers. ✅ Accepted 2026-11-13 ([ADR](adr/0005-content-model-exploration-and-story.md), [specification](design/exploration-and-story.md)).
-3. ADR 0006: open-source code (Apache-2.0) and closed content in a private repository. ✅ Accepted 2026-11-13 ([ADR](adr/0006-open-source-code-and-closed-content.md)). Next: the owner creates the private `seerah-content` repository, then the content data moves there.
+3. ADR 0006: open-source code (Apache-2.0) and closed content in a private repository. ✅ Accepted 2026-11-13 ([ADR](adr/0006-open-source-code-and-closed-content.md)). The private `seerah-content` repository exists and holds the content since 2026-11-13.
 4. ADR 0007: content package format, compatibility between app and content versions, and package signing.
 5. ADR 0008: where content updates are hosted (the spike's raw GitHub link is not a delivery service).
 6. ADR 0009: the v1 map data pipeline for the Arabian Peninsula, with more detail where events happen (Makkah, Taif, Madinah, Badr and the routes), since full detail everywhere would be very large.

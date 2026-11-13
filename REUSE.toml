@@ -9,9 +9,9 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Mohamed Farag"
 SPDX-License-Identifier = "Apache-2.0"
 
-# Content: Seerah data, story scripts and historical map data.
+# Content kept here for the spike (the rest is in the private seerah-content repository).
 [[annotations]]
-path = ["content/index/**", "content/events/**", "map-data/historical/**", "map-data/updates/**"]
+path = ["map-data/historical/**", "map-data/updates/**"]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Mohamed Farag"
 SPDX-License-Identifier = "LicenseRef-Seerah-Content"

@@ -17,7 +17,7 @@ English summary of [PRD v0.2](prd/PRD-v0.2.ar.md). If they differ, the PRD wins.
 | --- | --- |
 | Platform | Android phones **and** tablets |
 | Distribution | Free. A small closed beta first, then public |
-| Time span | From the journey to Taif, with a short lead-in on the Year of Sorrow, to Badr and its outcome (Ramadan 2 AH). 26 draft events in 5 phases: [content/index/phases.json](../content/index/phases.json) |
+| Time span | From the journey to Taif, with a short lead-in on the Year of Sorrow, to Badr and its outcome (Ramadan 2 AH). 26 draft events in 5 phases (index in the private `seerah-content` repository) |
 | Map | Fully **2D**, historical style. The map covers the **whole Arabian Peninsula** (owner, 2026-11-13, widening the 11 November Hijaz-only decision), with the most detail where the events happen (Makkah, Taif, Madinah, Quba, Badr and the routes between). Panning and zooming out are limited to the peninsula; **no world view** in v1 |
 | Changes over time | Place names, borders of states, kingdoms and major ruled regions, and key landmarks (e.g. the Prophet's Mosque appears when it was built) |
 | Access | Map, phase and event index. **Free exploration is the main mode**; guided follow-along ("story mode") is started by the user. **No search** |

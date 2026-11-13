@@ -1,22 +1,16 @@
 # content
 
-The Seerah content, kept separate from the app so it can ship as an independent, versioned package.
+The **format** of the Seerah content: the JSON Schema the app and the content build rely on, and a synthetic example. Open source with the code.
 
-**Licensing ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)):** the schema (`schema/`) is open source with the code. The content data (`index/`, `events/`) is **all rights reserved** under the [content licence](../LICENSES/LicenseRef-Seerah-Content.txt), and moves to the private repository `seerah-content` once it exists; the schema and validator stay here.
+The **content itself** (the v1 index of 26 draft events, event files, and everything the content model adds) is all rights reserved and lives in the private repository `seerah-content` ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)). It was moved there on 2026-11-13.
 
 ```text
 content/
-  schema/content.schema.json   entity definitions (phase, event, situation, text, source, place, display date)
-  index/phases.json            v1: 5 phases, 26 draft events, Taif to Badr (owner, 2026-11-11)
-  index/full-seerah-titles.json  the earlier whole-Seerah title list, kept for later releases (not validated, not shipped)
-  events/<event-id>.json       full event content (added during content preparation)
+  schema/content.schema.json  entity definitions (phase, event, situation, text, source, place, display date)
+  example/                    a synthetic example in the same layout as seerah-content (not Seerah content); tests the validator
 ```
 
-## Status of the index
-
-The v1 index follows the owner's decision of 2026-11-11: the story opens with the journey to Taif, after a short lead-in on the state of the call after the Year of Sorrow, and ends with Badr and its outcome. The 26 events and their depth are a **working draft**: every event is `review: "draft"`. Narrations, exact dates and coordinates are not approved. Detail per event (situations, places, narrations, sources) is worked out when that event's content is prepared, not before.
-
-The whole-Seerah title list from PRD v0.2 is kept in `full-seerah-titles.json` for later releases. Its Phase 3 dates are a preliminary compilation, not production data.
+`python3 tools/validate_content.py` checks the example; `python3 tools/validate_content.py ../seerah-content` checks the real content. A change to the format is made here first, then applied in `seerah-content`.
 
 ## Rules the schema enforces
 

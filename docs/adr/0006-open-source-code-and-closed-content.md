@@ -40,7 +40,7 @@ The repository is public and was entirely proprietary. The owner wants the **cod
 
 1. **Code and documentation: Apache-2.0.** `LICENSE` holds the Apache text so GitHub detects it; `NOTICE` names the project and points to the other licences. Contributions are accepted under Apache-2.0 section 5; no separate contributor agreement for now.
 2. **Content: all rights reserved,** under `LICENSES/LicenseRef-Seerah-Content.txt`, wherever it is stored or distributed, including content packages.
-3. **Content is authored in a private repository, `seerah-content`.** Until it exists, the content still in this repository (`content/index/`, `content/events/`, `map-data/historical/`, `map-data/updates/`) is under the content licence.
+3. **Content is authored in a private repository, `seerah-content`** (created and filled on 2026-11-13). The content that stays here for the spike (`map-data/historical/`, `map-data/updates/`) is under the content licence until the spike is removed.
 4. **Every file's licence is stated** in `REUSE.toml` following the [REUSE specification](https://reuse.software); `reuse lint` runs in pre-commit and CI.
 5. **The name and logo are not licensed** ([TRADEMARKS.md](../../TRADEMARKS.md)): a fork must use its own name and icon. Apache-2.0 grants no trademark rights (section 6).
 6. Third-party material keeps its own licence ([THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)).
