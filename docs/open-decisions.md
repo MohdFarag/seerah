@@ -14,7 +14,6 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
 | Accessibility details, failure states | Implementation spec |
 | Final application ID (permanent after the first Play Store upload; `app.seerah` for development) | Before the first upload |
-| Content package format, app/content compatibility, package signing | [ADR 0007](adr/0007-content-formats-compatibility-and-signing.md) (Proposed) |
 | Where content updates are hosted | ADR 0008 |
 | Analytics tool and data; feedback fields and how feedback is delivered | Before any data collection is turned on |
 | Closed-beta size, distribution, length; success criteria for going public | Before the beta is evaluated |
@@ -27,4 +26,5 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 
 ## Decided
 
+- Content formats, compatibility and package signing: [ADR 0007](adr/0007-content-formats-compatibility-and-signing.md), accepted 2026-11-13.
 - App framework, map engine, update mechanism and performance targets: [ADR 0002](adr/0002-proposed-stack.md), accepted 2026-11-13. Test devices: Oppo A55, Galaxy A54, Huawei MatePad 11.5 ([roadmap](roadmap.md)). Minimum Android version: API 26 (owner, 2026-11-13).
