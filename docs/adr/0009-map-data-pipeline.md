@@ -1,6 +1,6 @@
 # 0009. Map data pipeline for v1
 
-**Status:** Accepted by the owner on 2026-11-14. Proposed on 2026-11-13, then revised after two EGM design reviews ([first](../design/egm-review-0009/intermediate_zoom_out_report.md), [second](../design/egm-review-0009-r2/consolidated_review_report.md)) and the owner's decisions of 2026-11-13 and 2026-11-14 (marked "owner" below, and recorded in [pull request 14](https://github.com/MohdFarag/seerah/pull/14)).
+**Status:** Accepted by the owner on 2026-11-14. Amended by the owner on 2026-11-14: Natural Earth fills the view beyond the tiled extent, because the camera bounds limit only the view's centre, and the coverage check is split between the data extent and the base layer (decisions 3, 6 and 7; [trial specification](../design/map-trial-build.md)). Proposed on 2026-11-13, then revised after two EGM design reviews ([first](../design/egm-review-0009/intermediate_zoom_out_report.md), [second](../design/egm-review-0009-r2/consolidated_review_report.md)) and the owner's decisions of 2026-11-13 and 2026-11-14 (marked "owner" below, and recorded in [pull request 14](https://github.com/MohdFarag/seerah/pull/14)).
 
 ## Context
 
@@ -77,7 +77,7 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
 | OpenStreetMap coastline | Detailed | ODbL: a PMTiles file we distribute is likely a database under the OSMF guidelines, which would require releasing that layer under the ODbL; shows every modern port |
 | GSHHG | A global coastline | Coarser than the mask; LGPL, written for software rather than data |
 
-**Choice:** the Water Body Mask's ocean class, generalised for each zoom; Natural Earth at the widest zooms only if the trial shows it looks better there. The mask's lake and river classes are not drawn; inland water appears only where content adds it with a source.
+**Choice:** the Water Body Mask's ocean class, generalised for each zoom; Natural Earth at the widest zooms only if the trial shows it looks better there. Beyond the tiled extent, wherever the camera's view reaches past it, Natural Earth fills the view (amended by the owner, 2026-11-14). The mask's lake and river classes are not drawn; inland water appears only where content adds it with a source.
 
 ### Valleys (wadis)
 
@@ -134,7 +134,7 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
    | --- | --- | --- |
    | Relief and valleys | Copernicus GLO-30, with approved edits | Copernicus DEM licence |
    | Land and coastline | Copernicus GLO-30 Water Body Mask (ocean class), smoothed, with "remove land" edits | Copernicus DEM licence |
-   | Land and coastline, widest zooms, only if the trial picks it | Natural Earth | Public domain |
+   | Land and coastline beyond the tiled extent, at every zoom where the view reaches past it; inside it, the widest zooms only if the trial picks it | Natural Earth | Public domain |
 
 4. **Relief.**
    - **The regional relief** (`relief`) covers the extent in style C up to one regional maximum zoom (11 or 12, chosen after the trial). It is rendered at that zoom and averaged down for the wider zooms, as the spike did; rendering each zoom separately is a trial comparison.
@@ -147,13 +147,13 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
 
      The tile split, edge softening and fade schedule go in the implementation specification.
 5. **No missing tiles.** Every file covers its whole extent at each of its zooms; empty areas are written as explicit transparent tiles, which PMTiles stores once. No design depends on how the engine treats a missing tile.
-6. **One terrain dataset feeds every layer:** the relief, the valleys and the coast use the same land mask (the Water Body Mask's ocean class after "remove land" edits) and the same edited elevation. Natural Earth, if picked, is the one exception, at the widest zooms only.
+6. **One terrain dataset feeds every layer:** the relief, the valleys and the coast use the same land mask (the Water Body Mask's ocean class after "remove land" edits) and the same edited elevation. Natural Earth is the one exception: it fills the view beyond the tiled extent, and inside it only at the widest zooms if the trial picks it.
 
    | Source | Step | Output |
    | --- | --- | --- |
    | GLO-30 elevation | approved edits; land mask; style C | `relief.pmtiles` and, under option (b), `relief-detail.pmtiles` |
    | GLO-30 Water Body Mask | "remove land" edits; smooth; turn into polygons; generalise for each zoom | `base.pmtiles`: land, coast |
-   | Natural Earth (if picked) | one tileset per scale, joined | `base.pmtiles`, widest zooms |
+   | Natural Earth | one tileset per scale, clipped to outside the tiled extent (and, if picked, inside it at the widest zooms), joined | `base.pmtiles` |
    | Edited elevation | flow routing; stream order | `base.pmtiles`: valley (optional) |
    | `map/coverage.yaml`; source citations from `content/`; approved reconstruction edits | validate; generate the list of reconstructed areas | `map.json` |
 
@@ -164,7 +164,7 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
    - the regional maximum zoom;
    - under option (b), the detail maximum zoom.
 
-   The values are the owner's open decisions; this file records them once decided. The build fails when the extent does not contain the camera bounds with the margin the specification defines for each zoom.
+   The values are the owner's open decisions; this file records them once decided. The build fails when the data extent (relief and land from the Water Body Mask) does not contain the camera bounds plus the fixed data margin the specification defines, or when `base.pmtiles`, with Natural Earth beyond the data, does not cover the camera bounds plus half the largest supported screen at every zoom (amended by the owner, 2026-11-14).
 8. **One build tool** in `tools/map/` (public, Apache-2.0). It reads the private repository (`map/` and `content/`) at one commit, as the content validator reads `content/`.
    - **Where it runs:** in the pinned container, on the owner's machine for real packages. In CI it runs on the synthetic example in `map-data/example/`, which includes a test edit at a neutral location and is never shipped.
    - **Checkouts:** it refuses uncommitted changes in either checkout: the public code or the private data.

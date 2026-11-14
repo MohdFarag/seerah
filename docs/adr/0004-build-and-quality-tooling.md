@@ -34,6 +34,7 @@ The owner's bar is quality first: clean code, a sound structure, real tests and 
 - Latest stable versions at scaffolding time; no alpha or beta library without a note in an ADR.
 - JDK 21 toolchain; Gradle configuration cache and build cache on.
 - Build types: `debug` and `release` (R8, shrunk), plus the benchmark variant once `:benchmarks` exists. No product flavors (OpenGL only, per ADR 0002).
+  - *Note (owner, 2026-11-14):* the `benchmark` build type is brought forward for the map trial ([specification](../design/map-trial-build.md)). It is release-like (`initWith(release)`, R8, not debuggable), debug-signed, has its own application ID (`app.seerah.benchmark`) and is never published. When `:benchmarks` arrives, it targets this build type or replaces it with the Baseline Profile plugin's own types.
 - Google Play gets an **app bundle** (AAB) with Play App Signing; the owner's test builds are APKs from CI artifacts. The upload key lives in GitHub secrets, never in git. Until the beta, test release builds are signed with the debug key, as in the spike.
 
 ### Checks
