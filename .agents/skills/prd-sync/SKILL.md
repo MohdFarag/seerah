@@ -9,17 +9,17 @@ The PRD lives in Notion; `docs/prd/` holds a read-only snapshot so agents and re
 
 ## Steps
 
-1. **Fetch the page** with the Notion connector's fetch tool, id `40e88743a2df81ffb7ede29b75cc79b0`. The page is large, so the tool result is normally saved to a file; note that path. If it comes back inline, write it to a file in your scratchpad.
+1. **Fetch the page** with the Notion connector's fetch tool, id `40e88743a2df81ffb7ede29b75cc79b0`. The page is large, so the tool result is normally saved to a file; note that path. If it comes back inline, write it to a file in a temporary folder outside the repository.
 
 2. **Extract the snapshot.** The script keeps the unified PRD (from the title down to `# سجل المسودة السابقة والمناقشات`), drops the discussion log, which is history and never a requirement, converts Notion markup to Markdown, and leaves out the work-log sections listed in `references/excluded-sections.txt`:
 
    ```sh
-   python3 -I .claude/skills/prd-sync/scripts/extract_prd.py <fetched-file> docs/prd/PRD-v0.2.ar.md \
-     --exclude-file .claude/skills/prd-sync/references/excluded-sections.txt \
+   python3 -I .agents/skills/prd-sync/scripts/extract_prd.py <fetched-file> docs/prd/PRD-v0.2.ar.md \
+     --exclude-file .agents/skills/prd-sync/references/excluded-sections.txt \
      --compare docs/prd/PRD-v0.2.ar.md
    ```
 
-   Run it once with `--compare` and an output path in your scratchpad first, so you see the new and removed headings before overwriting anything.
+   Run it once with `--compare` and an output path in a temporary folder first, so you see the new and removed headings before overwriting anything.
 
 3. **Decide about new headings.** A new heading may be a requirement or a work log. Keep requirements in the snapshot. If one looks like a log (a dated progress report, a review round, a status update), ask the owner before adding it to `excluded-sections.txt`, because leaving out a requirement by mistake is worse than keeping a log. If the script stops because the page structure changed, stop and tell the owner.
 
