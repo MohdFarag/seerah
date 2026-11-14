@@ -29,6 +29,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 
 ## Decided
 
+- Map data pipeline: [ADR 0009](adr/0009-map-data-pipeline.md), accepted 2026-11-14. Terrain-only base map in style C from pinned Copernicus data, one map package, terrain edits baked into the relief and disclosed outside the map, built from the private `seerah-content` repository.
 - Update hosting and the update index: [ADR 0008](adr/0008-update-hosting-and-index.md), accepted 2026-11-13. Free hosting until the first public release (index at `seerah-updates.pages.dev`, packages on GitHub Releases), and an automatic check that never downloads.
 - Content formats, compatibility and package signing: [ADR 0007](adr/0007-content-formats-compatibility-and-signing.md), accepted 2026-11-13.
 - App framework, map engine, update mechanism and performance targets: [ADR 0002](adr/0002-proposed-stack.md), accepted 2026-11-13. Test devices: Oppo A55, Galaxy A54, Huawei MatePad 11.5 ([roadmap](roadmap.md)). Minimum Android version: API 26 (owner, 2026-11-13).

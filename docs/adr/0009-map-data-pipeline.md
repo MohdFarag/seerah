@@ -1,6 +1,6 @@
 # 0009. Map data pipeline for v1
 
-**Status:** Proposed on 2026-11-13. Revised after two EGM design reviews ([first](../design/egm-review-0009/intermediate_zoom_out_report.md), [second](../design/egm-review-0009-r2/consolidated_review_report.md)) and the owner's decisions of 2026-11-13 and 2026-11-14 (marked "owner" below, and recorded in [pull request 14](https://github.com/MohdFarag/seerah/pull/14)). Awaiting the owner's acceptance.
+**Status:** Accepted by the owner on 2026-11-14. Proposed on 2026-11-13, then revised after two EGM design reviews ([first](../design/egm-review-0009/intermediate_zoom_out_report.md), [second](../design/egm-review-0009-r2/consolidated_review_report.md)) and the owner's decisions of 2026-11-13 and 2026-11-14 (marked "owner" below, and recorded in [pull request 14](https://github.com/MohdFarag/seerah/pull/14)).
 
 ## Context
 
