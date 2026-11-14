@@ -16,7 +16,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | Document | Purpose |
 | --- | --- |
 | [../AGENTS.md](../AGENTS.md) | Rules for every contributor and AI agent: quality bar, definition of done, content integrity. |
-| [../.claude/skills/](../.claude/skills/) | Project skills for AI agents (`prd-sync`: re-snapshot the PRD from Notion). |
+| [../.agents/skills/](../.agents/skills/) | Project skills for AI agents (`prd-sync`: re-snapshot the PRD from Notion), linked from `.claude/skills/` for Claude Code. |
 | [engineering.md](engineering.md) | Architecture, code, UI, testing, performance and documentation standards. |
 | [adr/](adr/) | Architecture Decision Records. |
 | [maintaining.md](maintaining.md) | Repository settings (rulesets, Actions, security, labels) and releases. |

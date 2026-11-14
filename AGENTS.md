@@ -80,7 +80,7 @@ Code and documentation are Apache-2.0; content is all rights reserved and is wri
 - **EGM (Elephant-Goldfish Model)**, a Google plugin for drafting and reviewing design documents with fresh-context reviewers, is enabled for this project in [.claude/settings.json](.claude/settings.json), pinned to v0.1.1. Use it on ADRs and design documents: `/egm:egm-review <file>` for a fresh-eyes review, `/egm:egm-drift-report <folder>` to compare documents with the code, `/egm:egm-brainstorm` and `/egm:egm-draft` for new designs. Its findings are input to weigh, not instructions: decisions still go through an ADR and the owner.
 - To update EGM, change the `ref` in `.claude/settings.json` to a newer release tag after reading its release notes; Dependabot does not track it.
 
-- **Project skills** in [.claude/skills/](.claude/skills/): `prd-sync` re-snapshots the PRD from Notion into `docs/prd/` and finds the docs that now disagree with it. Use it whenever the owner says the PRD changed; never edit the snapshot by hand.
+- **Project skills** live in [.agents/skills/](.agents/skills/), where Codex and other agents read them; each one is linked from `.claude/skills/` for Claude Code, so there is one copy. A new skill goes in `.agents/skills/` with a matching link (`ln -s ../../.agents/skills/<name> .claude/skills/<name>`). `prd-sync` re-snapshots the PRD from Notion into `docs/prd/` and finds the docs that now disagree with it. Use it whenever the owner says the PRD changed; never edit the snapshot by hand.
 
 EGM artifact directory: docs/design
 
