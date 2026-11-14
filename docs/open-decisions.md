@@ -9,7 +9,6 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | Exact map bounds within the Arabian Peninsula and zoom levels: the regional relief zoom (11 or 12) and, if needed, the detail zoom at reconstructed sites (15 or 16), after the trial build; recorded in `map/coverage.yaml` in the private repository ([ADR 0009](adr/0009-map-data-pipeline.md)); list of landmark and border changes | During content and map preparation |
 | Historical terrain reconstruction (for example Badr): which sources and atlases to rely on, the method, and the format of reconstruction edits (baked into the base relief; cleanup of modern features is decided with the map pipeline, [ADR 0009](adr/0009-map-data-pipeline.md) decision 2) | When that work starts |
 | How the app explains reconstructed terrain (settings, map information, credits); nothing is labelled on the map itself | Before a map package with reconstructions is listed in `stable` ([ADR 0009](adr/0009-map-data-pipeline.md) decision 11) |
-| New name for the private repository once it holds `map/` and `content/` (for example `seerah-data`) | Owner's choice; it does not block the map build tool |
 | Streaming map tiles online, as an option beside the offline map | After v1 |
 | Final v1 event list and depth; whether and how al-Isra is included after its dating is checked | As each phase's content is prepared |
 | Date documentation; pre-Hijra reference; Gregorian conversion | Content review with the owner |

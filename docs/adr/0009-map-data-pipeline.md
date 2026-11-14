@@ -102,7 +102,7 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
 | Two private repositories (`seerah-map`, `seerah-content`) | Separate permissions and histories | Links across repositories can fall out of step; two checkouts to keep in step |
 | The public `map-data/` | Open | Publishes the reconstructions and the map configuration |
 
-**Choice (owner, 2026-11-14):** one private repository. `seerah-content` is renamed (for example to `seerah-data`) and holds `map/` and `content/`. The public repository keeps what ADR 0006 keeps for content: the build tools, the schemas, and in `map-data/` the documented tile schema and a small synthetic example.
+**Choice (owner, 2026-11-14):** one private repository, `seerah-content`, holding `map/` and `content/`. It keeps its name: ADR 0006 already counts historical map data as content. The public repository keeps what ADR 0006 keeps for content: the build tools, the schemas, and in `map-data/` the documented tile schema and a small synthetic example.
 
 ### Tools
 
@@ -208,7 +208,7 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
 
 - [ADR 0003](0003-v1-architecture-and-modules.md): the map bounds and zoom levels come from the map package (`map.json`), not the content package. Both packages are read at run time, whether bundled or downloaded, so nothing is hard-coded.
 - [ADR 0004](0004-build-and-quality-tooling.md): the app's notices screen takes the map's credits from `map.json` instead of a fixed list.
-- [ADR 0006](0006-open-source-code-and-closed-content.md): the private repository holds the map's private data in `map/` beside `content/`, and is renamed to fit.
+- [ADR 0006](0006-open-source-code-and-closed-content.md): the private repository `seerah-content` also holds the map's private data, in `map/` beside `content/`.
 - [ADR 0007](0007-content-formats-compatibility-and-signing.md):
   - a map package's `data/` holds `map.json` besides the PMTiles files;
   - the manifest also records the public tool commit and the container digest;
@@ -233,7 +233,6 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
 
 ## Consequences
 
-- **Renaming the private repository** is the owner's action on GitHub. It does not block the build tool, which reads a checkout by path (owner, 2026-11-14). The same change updates every reference to `seerah-content`: AGENTS.md, the READMEs, `REUSE.toml` and the validator's help text.
 - New work, each with tests:
   - the build tool;
   - the shared manifest module;
