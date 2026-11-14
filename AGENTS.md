@@ -54,7 +54,7 @@ A change is done only when all of these hold:
 ```text
 android/      Android project (Gradle): :app, build-logic/, and spike/ (the finished technical spike, a separate build: reference only)
 content/      content schema and a synthetic example (open); the content itself is in the private seerah-content repository
-map-data/     base-map pipeline inputs, historical layers, map style (large binaries not in git)
+map-data/     the spike's map files; for v1, the public tile schema and a synthetic example (the map's private data is in the private repository, ADR 0009)
 tools/        validation and build scripts (Python, Bash)
 docs/         requirements, engineering standards, ADRs, design drafts, roadmap, research, spike results
 .github/      CI, APK builds, issue and PR templates
@@ -86,8 +86,8 @@ EGM artifact directory: docs/design
 
 ## Content integrity (non-negotiable)
 
-- **Never invent facts:** no date, month, day, coordinate, route, distance or narration without a source. Unknown stays unknown; approximation is labelled.
-- A model's guess is never a source. Atlas images are read for names and order only, never georeferenced.
+- **Never invent facts:** no date, month, day, coordinate, route, distance or narration without a source. Unknown stays unknown; approximation is labelled. Reconstructed terrain in the base map looks like measured terrain and is disclosed outside the map ([ADR 0009](docs/adr/0009-map-data-pipeline.md)).
+- A model's guess is never a source. Seerah atlases may be used as references; how they are used in historical reconstruction is decided when that work starts.
 - Original text first, with its source. Editorial text is `kind: "editorial"` and visually distinct.
 - One chosen narration per situation in v1.
 - No depiction of the Prophet ﷺ or the Companions.
