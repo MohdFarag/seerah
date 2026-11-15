@@ -20,11 +20,25 @@ Not yet run.
 
 ## Check 5: GDAL writes each tile atomically
 
-Not yet run.
+Run on 2026-11-16, with GDAL 3.13.3 from `seerah-map:dev`, on a synthetic 512 × 512 RGBA VRT (two by two zoom-12 tiles). `strace` was installed only in a throwaway container, never in the image:
+
+```sh
+docker run --rm --cap-add SYS_PTRACE -v "$PWD:/src:ro" seerah-map:dev bash -c \
+  "apt-get update && apt-get install -y strace && \
+   strace -f -e trace=rename,renameat,renameat2,openat -o /tmp/trace.txt \
+   gdal raster tile --webviewer none -f PNG -j 2 <vrt> /tmp/t"
+```
+
+Result: no. Each tile is opened for writing under its final name (`openat("/tmp/t/12/2048/1536.png", O_WRONLY|O_CREAT|O_TRUNC)`), so an interrupted run can leave a half-written tile. With PNG the only renames are nine zoom-12 calls whose source and target are the same path (`rename("…/1536.png", "…/1536.png")`), so there is no temporary name. With `-f WEBP --co QUALITY=80` there are no renames at all. The tile stage therefore deletes a `tiles/` folder that has no `tiles.done` and tiles from scratch, and it does not use `--resume`.
+
+Also seen: when the data's edge sits exactly on a tile boundary, `gdal raster tile` writes one extra, fully transparent tile past the east and south edges at zoom 12 (here `12/2050/*` and `12/*/1538`). They are harmless and are not in `grid.expected_tiles`, so the completeness check ignores them.
 
 ## Check 6: Average resampling keeps the ink colour under semi-transparent pixels
 
-Not yet run.
+Run on 2026-11-16, with GDAL 3.13.3, on a synthetic 512 × 512 RGBA VRT: constant ink RGB 150, 118, 72 and alpha rising from 0 to 153 across the width. Tiled with `--resampling average --overview-resampling average` at zooms 0 to 12.
+
+- **PNG** (`-f PNG`), zoom-11 edge tile `11/1024/768`: 65,024 pixels have alpha above 0 (alpha range 0 to 153). Largest RGB difference from the ink there: **0**. Averaging keeps the ink exactly.
+- **WebP** (`-f WEBP --co QUALITY=80`), same tile, for information: largest RGB difference **18**. This is WebP's lossy compression, not the resampling.
 
 ## Check 7: Water Body Mask class values
 
