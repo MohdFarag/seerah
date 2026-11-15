@@ -15,7 +15,7 @@ _CELL_PX = 500
 _PRESENT = (20, 58)
 _ABSENT = (20, 59)
 _FLAT_M = 500.0
-_HILL_M = 800.0
+_HILL_M = 20.0
 _HILL_SIGMA_DEG = 0.02
 _EXTENT = Bounds(58.95, 20.45, 59.05, 20.55)
 _BLOCK_ZOOM = 12
@@ -23,6 +23,10 @@ _FADE_DEG = 0.05
 _LAND_CLASS = 0
 _OCEAN_CLASS = 1
 _SEAM_DEG = 0.01
+_RIM_PX = 8
+_INNER_PX = 40
+_ROWS_PX = 60
+_EARTH_RADIUS_M = 6378137.0
 
 
 def _write_cell(path: Path, lat: int, lon: int, data: np.ndarray, dtype: int) -> None:
@@ -97,7 +101,7 @@ def _pixel_lonlat(window) -> tuple[np.ndarray, np.ndarray]:
     west, south, east, north = window.bounds_3857()
     xs = west + (np.arange(window.cols) + 0.5) * (east - west) / window.cols
     ys = north - (np.arange(window.rows) + 0.5) * (north - south) / window.rows
-    radius = 6378137.0
+    radius = _EARTH_RADIUS_M
     lons = np.degrees(xs / radius)
     lats = np.degrees(2 * np.arctan(np.exp(ys / radius)) - math.pi / 2)
     return np.meshgrid(lons, lats)
@@ -194,18 +198,33 @@ def test_missing_block_file_fails(tmp_path):
 
 
 def test_no_dark_rim_at_extent_edge(tmp_path):
-    profile, lock, cache, work = _setup(tmp_path, elevation=_hill_at_west_edge())
-    blockstage.run_block_stage(profile, [], "painted", lock, cache, work, 1, lambda _line: None)
+    """A hill cut by the extent's west edge shows no rim darker than the hill's own shading.
+
+    The fade is off, so only the fill of invalid pixels keeps the cut from reading as a cliff.
+    Blocks render in this process so a test can swap out the fill.
+    """
+    profile, lock, cache, work = _setup(tmp_path, elevation=_hill_at_west_edge(), fade_deg=0)
+    vrts = blockstage.source_vrts(lock, cache, profile.data_extent, work)
+    block_list = blocks(profile.data_extent, profile.block_zoom)
+    for block in block_list:
+        blockstage.render_block(block, profile, [], "painted", vrts, work)
+    blockstage.write_mosaics(block_list, work)
 
     alpha_band = 4
     mosaic = gdal.Open(str(work.path / "style.vrt"))
     alpha = mosaic.GetRasterBand(alpha_band).ReadAsArray()
-    window_west = mosaic.GetGeoTransform()[0]
+    west, pixel_width = mosaic.GetGeoTransform()[:2]
     lons = np.degrees(
-        (window_west + (np.arange(mosaic.RasterXSize) + 0.5) * mosaic.GetGeoTransform()[1])
-        / 6378137.0
+        (west + (np.arange(mosaic.RasterXSize) + 0.5) * pixel_width) / _EARTH_RADIUS_M
     )
     first_inside = int(np.argmax(lons >= _EXTENT.west))
     assert first_inside > 0
-    assert alpha.max() > 0
-    assert (alpha[:, : first_inside + 1] == 0).all()
+    north = mosaic.GetGeoTransform()[3]
+    ys = north - (np.arange(mosaic.RasterYSize) + 0.5) * pixel_width
+    lats = np.degrees(2 * np.arctan(np.exp(ys / _EARTH_RADIUS_M)) - math.pi / 2)
+    centre_row = int(np.argmin(np.abs(lats - (_EXTENT.south + _EXTENT.north) / 2)))
+    rows = slice(centre_row - _ROWS_PX, centre_row + _ROWS_PX)
+    rim = alpha[rows, first_inside : first_inside + _RIM_PX]
+    just_inside = alpha[rows, first_inside + _RIM_PX : first_inside + _INNER_PX]
+    assert alpha[rows, first_inside:].max() > 0
+    assert rim.max() <= just_inside.max()
