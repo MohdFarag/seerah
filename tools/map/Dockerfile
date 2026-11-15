@@ -12,7 +12,17 @@ ADD --checksum=sha256:fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254
     https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl \
     /tmp/pip.whl/pip-26.2.2-py3-none-any.whl
 
-# Hash-locked Python dependencies (pip-compile --generate-hashes from requirements.in).
+# Hash-locked Python dependencies. requirements.txt is generated from requirements.in
+# by uv 0.13.6 (released 2026-10-27) in a throwaway container; uv is not in this image.
+# To regenerate, run from the repository root:
+#
+#   docker run --rm --user "$(id -u):$(id -g)" --security-opt label=disable \
+#     -e UV_CACHE_DIR=/tmp/uv --tmpfs /tmp \
+#     -e UV_CUSTOM_COMPILE_COMMAND='see the command in tools/map/Dockerfile' \
+#     --mount type=image,src=ghcr.io/astral-sh/uv:0.13.6,dst=/uvimg \
+#     -v "$PWD/tools/map:/m" -w /m ghcr.io/osgeo/gdal:ubuntu-small-3.13.3 \
+#     /uvimg/uv pip compile --python-platform x86_64-unknown-linux-gnu \
+#       --generate-hashes requirements.in -o requirements.txt
 COPY requirements.txt /tmp/requirements.txt
 RUN PYTHONPATH=/tmp/pip.whl/pip-26.2.2-py3-none-any.whl python3 -m pip install \
         --break-system-packages --require-hashes --no-cache-dir -r /tmp/requirements.txt \
