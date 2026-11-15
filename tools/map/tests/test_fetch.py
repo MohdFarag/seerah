@@ -1,3 +1,4 @@
+import dataclasses
 import hashlib
 from pathlib import Path
 
@@ -161,3 +162,42 @@ def test_no_lock_written_into_data(tmp_path, out, http_server):
     (tmp_path / "data").mkdir()
     run(tmp_path, http_server)
     assert list((tmp_path / "data").iterdir()) == []
+
+
+def _pin_cell_dem(lock_path, **changes):
+    """Rewrite the lock so the first cell's DEM ref has ``changes``; return that ref."""
+    lock = config.load_lock(lock_path)
+    first = lock.cells[0]
+    ref = dataclasses.replace(first.dem, **changes)
+    cells = (dataclasses.replace(first, dem=ref), *lock.cells[1:])
+    config.dump_lock(dataclasses.replace(lock, cells=cells), lock_path)
+    return ref
+
+
+def test_corrupt_download_never_enters_cache(tmp_path, out, http_server):
+    first = run(tmp_path, http_server)
+    good = first.lock.cells[0].dem
+    (tmp_path / "cache" / good.path).unlink()
+    wrong = hashlib.sha256(b"something else").hexdigest()
+    _pin_cell_dem(out / "t.lock", sha256=wrong)
+
+    with pytest.raises(fetch.FetchError) as info:
+        run(tmp_path, http_server, out / "t.lock")
+
+    assert wrong in str(info.value)
+    assert good.sha256 in str(info.value)
+    assert not (tmp_path / "cache" / good.path).exists()
+    assert not list((tmp_path / "cache").rglob("*.part"))
+
+
+def test_short_download_never_enters_cache(tmp_path, out, http_server):
+    first = run(tmp_path, http_server)
+    good = first.lock.cells[0].dem
+    (tmp_path / "cache" / good.path).unlink()
+    _pin_cell_dem(out / "t.lock", size=good.size + 100)
+
+    with pytest.raises(fetch.FetchError, match=f"expected {good.size + 100} bytes"):
+        run(tmp_path, http_server, out / "t.lock")
+
+    assert not (tmp_path / "cache" / good.path).exists()
+    assert not list((tmp_path / "cache").rglob("*.part"))

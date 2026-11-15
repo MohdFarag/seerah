@@ -13,6 +13,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from http.client import HTTPException
 from pathlib import Path
 
 from . import config
@@ -105,21 +106,45 @@ def _sha256_file(path: Path) -> tuple[int, str]:
     return size, digest.hexdigest()
 
 
-def _download(url: str, target: Path) -> None:
-    """Download ``url`` to ``target`` through a ``.part`` file.
+def _mismatch(rel_path: str, pinned: FileRef, size: int, sha: str) -> FetchError:
+    """Build the error for a file whose size or SHA-256 differs from the lock."""
+    return FetchError(
+        f"{rel_path} does not match the lock: expected {pinned.size} bytes and sha256 "
+        f"{pinned.sha256}, found {size} bytes and sha256 {sha}; "
+        "delete the cached file and run fetch again"
+    )
 
-    A failure deletes the ``.part`` file and raises FetchError.
+
+def _download(url: str, target: Path, rel_path: str, pinned: FileRef | None) -> None:
+    """Download ``url`` to ``target``, checking it before it enters the cache.
+
+    The body is written to a ``.part`` file and hashed as it arrives. Only a
+    body whose length equals ``Content-Length`` (when sent) and whose size and
+    SHA-256 equal ``pinned`` (when given) is renamed to ``target``; otherwise
+    the ``.part`` file is deleted and FetchError is raised.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
     part = target.with_name(target.name + ".part")
+    digest = hashlib.sha256()
+    size = 0
     try:
         with urllib.request.urlopen(url, timeout=_TIMEOUT_S) as response, part.open("wb") as out:
+            expected = response.headers.get("Content-Length")
             while chunk := response.read(_CHUNK_BYTES):
                 out.write(chunk)
+                digest.update(chunk)
+                size += len(chunk)
+        if expected is not None and int(expected) != size:
+            raise FetchError(f"{url} is truncated: expected {expected} bytes, got {size}")
+        if pinned is not None and (size, digest.hexdigest()) != (pinned.size, pinned.sha256):
+            raise _mismatch(rel_path, pinned, size, digest.hexdigest())
         os.replace(part, target)
-    except (OSError, urllib.error.URLError) as error:
+    except (OSError, HTTPException, ValueError) as error:
         part.unlink(missing_ok=True)
         raise FetchError(f"could not download {url}: {error}") from error
+    except FetchError:
+        part.unlink(missing_ok=True)
+        raise
 
 
 def _read_url(url: str) -> bytes:
@@ -127,7 +152,7 @@ def _read_url(url: str) -> bytes:
     try:
         with urllib.request.urlopen(url, timeout=_TIMEOUT_S) as response:
             return response.read()
-    except (OSError, urllib.error.URLError) as error:
+    except (OSError, HTTPException) as error:
         raise FetchError(f"could not download {url}: {error}") from error
 
 
@@ -158,14 +183,11 @@ def _obtain(
     if target.is_file():
         counts.verified += 1
     else:
-        _download(url, target)
+        _download(url, target, rel_path, pinned)
         counts.downloaded += 1
     size, sha = _sha256_file(target)
-    if pinned is not None and sha != pinned.sha256:
-        raise FetchError(
-            f"{rel_path} does not match the lock: expected sha256 {pinned.sha256}, "
-            f"found {sha}; delete the cached file and run fetch again"
-        )
+    if pinned is not None and (size, sha) != (pinned.size, pinned.sha256):
+        raise _mismatch(rel_path, pinned, size, sha)
     return FileRef(url=url, size=size, sha256=sha, path=rel_path)
 
 
