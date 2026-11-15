@@ -1,5 +1,7 @@
 import dataclasses
 import hashlib
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -190,7 +192,7 @@ def test_corrupt_download_never_enters_cache(tmp_path, out, http_server):
     assert not list((tmp_path / "cache").rglob("*.part"))
 
 
-def test_short_download_never_enters_cache(tmp_path, out, http_server):
+def test_size_mismatch_never_enters_cache(tmp_path, out, http_server):
     first = run(tmp_path, http_server)
     good = first.lock.cells[0].dem
     (tmp_path / "cache" / good.path).unlink()
@@ -201,3 +203,31 @@ def test_short_download_never_enters_cache(tmp_path, out, http_server):
 
     assert not (tmp_path / "cache" / good.path).exists()
     assert not list((tmp_path / "cache").rglob("*.part"))
+
+
+class _TruncatingHandler(BaseHTTPRequestHandler):
+    """Promises 100 bytes, sends 5 and closes the connection."""
+
+    def do_GET(self) -> None:  # noqa: N802 (name fixed by http.server)
+        self.send_response(200)
+        self.send_header("Content-Length", "100")
+        self.end_headers()
+        self.wfile.write(b"12345")
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+        """Keep test output quiet."""
+
+
+def test_truncated_download_never_enters_cache(tmp_path):
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _TruncatingHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    target = tmp_path / "cache" / "f.tif"
+    try:
+        with pytest.raises(fetch.FetchError, match="truncated"):
+            fetch._download(f"http://127.0.0.1:{server.server_address[1]}/f", target, "f.tif", None)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+    assert list((tmp_path / "cache").iterdir()) == []
