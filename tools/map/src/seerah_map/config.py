@@ -248,16 +248,22 @@ def load_lock(path: Path) -> Lock:
     for key in ("created", "tile_list_sha256", "cells", "natural_earth"):
         if key not in data:
             raise _fail(path, key, "the key to be present", "nothing")
+    for key in ("cells", "natural_earth"):
+        if type(data[key]) is not list:
+            raise _fail(path, key, "a list", data[key])
     cells = []
     for i, raw in enumerate(data["cells"]):
         key = f"cells[{i}]"
         if not isinstance(raw, dict) or not {"lat", "lon", "absent"} <= set(raw):
             raise _fail(path, key, "a mapping with lat, lon and absent", raw)
+        for field, expected in (("lat", int), ("lon", int), ("absent", bool)):
+            if type(raw[field]) is not expected:
+                raise _fail(path, f"{key}.{field}", f"a {expected.__name__}", raw[field])
         cells.append(
             Cell(
-                lat=int(raw["lat"]),
-                lon=int(raw["lon"]),
-                absent=bool(raw["absent"]),
+                lat=raw["lat"],
+                lon=raw["lon"],
+                absent=raw["absent"],
                 dem=_optional_ref(raw.get("dem"), path, f"{key}.dem"),
                 wbm=_optional_ref(raw.get("wbm"), path, f"{key}.wbm"),
             )

@@ -215,7 +215,12 @@
           "then": {
             "required": [
               "width_m"
-            ]
+            ],
+            "properties": {
+              "amount_m": {
+                "exclusiveMinimum": 0
+              }
+            }
           }
         }
       ]

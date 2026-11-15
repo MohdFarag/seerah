@@ -36,7 +36,7 @@ def _edits_with(tmp_path, schema="trial-0", **edit_changes):
 
 
 def test_duplicate_key_rejected(tmp_path):
-    with pytest.raises(ConfigError, match="a"):
+    with pytest.raises(ConfigError, match="duplicate key"):
         strict_yaml.load(_write(tmp_path, "a: 1\na: 2\n"))
 
 
@@ -78,6 +78,8 @@ def test_edits_rules(tmp_path):
         config.load_edits(_edits_with(tmp_path, feather_m=0))
     with pytest.raises(ConfigError):
         config.load_edits(_edits_with(tmp_path, width_m=None))
+    with pytest.raises(ConfigError):
+        config.load_edits(_edits_with(tmp_path, amount_m=-3))
 
 
 def test_lock_round_trip(tmp_path):
@@ -91,3 +93,20 @@ def test_lock_round_trip(tmp_path):
     path = tmp_path / "lock.yaml"
     config.dump_lock(lock, path)
     assert config.load_lock(path) == lock
+
+
+@pytest.mark.parametrize(
+    ("cells", "key"),
+    [
+        ("[{lat: 24, lon: 39, absent: 'false'}]", "cells[0].absent"),
+        ("[{lat: 24.7, lon: 39, absent: false}]", "cells[0].lat"),
+        ("null", "cells"),
+    ],
+)
+def test_lock_rejects_bad_types(tmp_path, cells, key):
+    path = _write(
+        tmp_path,
+        f"created: x\ntile_list_sha256: y\ncells: {cells}\nnatural_earth: []\n",
+    )
+    with pytest.raises(ConfigError, match=key.replace("[", r"\[").replace("]", r"\]")):
+        config.load_lock(path)
