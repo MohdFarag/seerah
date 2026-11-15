@@ -1,0 +1,12 @@
+schema: trial-0
+purpose: trial
+edits:
+  - id: e1
+    geometry:
+      type: LineString
+      coordinates: [[39.0, 24.0], [39.1, 24.1]]
+    operation: carve
+    amount_m: 5
+    width_m: 30
+    feather_m: 10
+    review: approved

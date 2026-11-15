@@ -9,6 +9,7 @@ def _srs3857():
     """Return an EPSG:3857 spatial reference."""
     from osgeo import osr
 
+    osr.UseExceptions()
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(3857)
     return srs
@@ -32,6 +33,7 @@ def test_morecantile_and_osr_in_one_process():
     import morecantile
     from osgeo import osr
 
+    osr.UseExceptions()
     tile = morecantile.tms.get("WebMercatorQuad").tile(39.6, 24.5, 12)
     t = osr.CoordinateTransformation(
         osr.SpatialReference(wkt=osr.SRS_WKT_WGS84_LAT_LONG), _srs3857()
