@@ -111,12 +111,16 @@ def border_px(style: StyleSettings, edits: list[Edit], block: Block) -> int:
         + math.ceil(_BLUR_SIGMAS * MASK_SIGMA_PX)
         + 1
     )
-    reach_m = max((_edit_reach_m(e) for e in edits), default=0.0)
+    reach_m = max((edit_reach_m(e) for e in edits), default=0.0)
     ground_per_px = pixel_m() * math.cos(math.radians(_poleward_latitude(block)))
     return filters_px + math.ceil(reach_m / ground_per_px)
 
 
-def _edit_reach_m(edit: Edit) -> float:
+def edit_reach_m(edit: Edit) -> float:
+    """How far an edit changes the terrain beyond its geometry (metres on the ground).
+
+    The feather width, plus half of a carve's width.
+    """
     half_width = edit.width_m / 2 if edit.operation == "carve" and edit.width_m else 0.0
     return edit.feather_m + half_width
 
