@@ -36,7 +36,7 @@ def _edits_with(tmp_path, schema="trial-0", **edit_changes):
 
 
 def test_duplicate_key_rejected(tmp_path):
-    with pytest.raises(ConfigError, match="duplicate key"):
+    with pytest.raises(ConfigError, match=r'duplicate key "a"'):
         strict_yaml.load(_write(tmp_path, "a: 1\na: 2\n"))
 
 
