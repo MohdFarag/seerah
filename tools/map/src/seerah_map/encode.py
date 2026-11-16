@@ -5,6 +5,7 @@ the darkness in the alpha channel. ``value`` makes the RGB tile that carries
 darkness as a Terrarium-style height, so the client can decode it. Both take
 darkness in [0, 1] (float32, dimensionless) and return uint8 arrays. Bytes are
 truncated, never rounded, so the encoders match what GDAL's byte maths does.
+Darkness outside [0, 1] is clipped to it first, so a value never wraps around.
 """
 
 import numpy as np
@@ -12,6 +13,11 @@ import numpy as np
 _BYTE_MAX = 255
 TERRARIUM_OFFSET = 32768
 TERRARIUM_RED_BASE = TERRARIUM_OFFSET // 256
+
+
+def _clipped(d: np.ndarray) -> np.ndarray:
+    """Darkness as float64, clipped to [0, 1]."""
+    return np.clip(d.astype(np.float64), 0.0, 1.0)
 
 
 def painted(d: np.ndarray, ink_rgb: tuple[int, int, int], max_alpha: float) -> np.ndarray:
@@ -29,7 +35,7 @@ def painted(d: np.ndarray, ink_rgb: tuple[int, int, int], max_alpha: float) -> n
     h, w = d.shape
     out = np.empty((4, h, w), dtype=np.uint8)
     out[:3] = np.asarray(ink_rgb, dtype=np.uint8)[:, None, None]
-    out[3] = (d.astype(np.float64) * max_alpha * _BYTE_MAX).astype(np.uint8)
+    out[3] = (_clipped(d) * max_alpha * _BYTE_MAX).astype(np.uint8)
     return out
 
 
@@ -50,5 +56,5 @@ def value(d: np.ndarray) -> np.ndarray:
     h, w = d.shape
     out = np.zeros((3, h, w), dtype=np.uint8)
     out[0] = TERRARIUM_RED_BASE
-    out[1] = (d.astype(np.float64) * _BYTE_MAX).astype(np.uint8)
+    out[1] = (_clipped(d) * _BYTE_MAX).astype(np.uint8)
     return out

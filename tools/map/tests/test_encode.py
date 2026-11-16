@@ -51,3 +51,9 @@ def test_value_only_green_varies():
     assert (out[0] == TERRARIUM_RED_BASE).all()
     assert (out[2] == 0).all()
     assert len(np.unique(out[1])) > 1
+
+
+def test_out_of_range_darkness_is_clipped():
+    d = np.array([[-0.5, 1.5]], dtype=np.float32)
+    assert painted(d, _INK, 1.0)[3].tolist() == [[0, 255]]
+    assert value(d)[1].tolist() == [[0, 255]]
