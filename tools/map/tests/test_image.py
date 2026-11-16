@@ -48,7 +48,13 @@ def test_single_thread_environment():
 
 
 def test_writable_mount_points():
-    for p in ("/cache", "/work", "/out"):
+    """Check the image's own mount points are world-writable with the sticky bit.
+
+    A path with a host folder or volume mounted over it shows the mount's
+    mode, not the image's, so it is skipped (CI mounts its cache on /cache).
+    """
+    unmounted = [p for p in ("/cache", "/work", "/out") if not os.path.ismount(p)]
+    for p in unmounted:
         assert oct(pathlib.Path(p).stat().st_mode)[-4:] == "1777"
 
 
