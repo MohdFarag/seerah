@@ -17,7 +17,7 @@ from osgeo import gdal
 from .blockstage import PAINTED
 from .config import Profile
 from .grid import blocks, expected_tiles
-from .workarea import WorkArea
+from .workarea import WorkArea, atomic_write
 
 _WEBP_EXT = "webp"
 _PNG_EXT = "png"
@@ -162,6 +162,7 @@ def run_tile_stage(
             raise CompletenessError(
                 f"{len(bad)} of {len(expected)} tiles are missing or broken, first: {bad[:5]}"
             )
-        work.tiles_done.write_text("")
+        with atomic_write(work.tiles_done) as tmp:
+            tmp.write_text("")
     log(f"tile stage done ({len(expected)} tiles)")
     return len(expected)

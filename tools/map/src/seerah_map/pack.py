@@ -120,7 +120,8 @@ def pack(work: WorkArea, out_dir: Path, meta: dict) -> Path:
         )
         if result.returncode != 0:
             raise PackError(f"disk_to_pmtiles failed: {result.stderr.strip()}")
-    (out_dir / METADATA_NAME).write_text(text)
+    with atomic_write(out_dir / METADATA_NAME) as tmp:
+        tmp.write_text(text)
     return archive
 
 
