@@ -1,0 +1,16 @@
+# Synthetic CI example: a small window off Masirah Island, Oman, away from any
+# Seerah event or named historical place (decision D1, approved by the owner
+# on 2026-11-16). It spans cell N20 E058 and its absent all-sea neighbour
+# N20 E059. The window is its own data extent, so there is no margin or fade.
+purpose: trial
+camera_bounds:
+  west: 58.80
+  south: 20.50
+  east: 59.05
+  north: 20.75
+margin_deg: 0
+fade_deg: 0
+max_zoom: 12
+block_zoom: 11
+webp_quality: 80
+peninsula_outline: peninsula.geojson
