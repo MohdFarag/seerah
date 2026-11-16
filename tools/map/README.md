@@ -99,3 +99,5 @@ The [`map` workflow](../../.github/workflows/map.yml) runs on changes to `tools/
 The image name, `ghcr.io/mohdfarag/seerah-map`, is the one constant `IMAGE_REPO` in `run.py`.
 
 A GHCR package is private by default, so both jobs log in to GHCR. Until the owner makes the package public, pulling the image locally needs `docker login ghcr.io` first.
+
+Dependabot proposes updates to the base image and the Python packages, except numpy: it comes from the base image's Ubuntu package (GDAL's bindings are built against it), so its pin in `requirements.in` is changed by hand to match whenever the base image is updated.
