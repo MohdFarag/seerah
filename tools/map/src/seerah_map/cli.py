@@ -81,12 +81,19 @@ def worker_count(
 
     Returns:
         The count (at least 1) and the reason, for the ``workers:`` line.
+
+    Raises:
+        _UsageError: if ``memory_max`` is neither a byte count nor ``max``.
     """
     if workers is not None:
         return workers, "set by --workers"
     if memory_max is None or memory_max.strip() == _NO_CAP:
         return 1, "no memory cap; using 1 worker"
-    cap_mib = int(memory_max) // _MIB
+    try:
+        cap_bytes = int(memory_max)
+    except ValueError:
+        raise _UsageError(f"cannot read the memory cap {memory_max!r}; pass --workers") from None
+    cap_mib = cap_bytes // _MIB
     count = max(1, cap_mib // per_worker_mib)
     return count, f"memory cap {cap_mib} MiB / {per_worker_mib} MiB per worker"
 

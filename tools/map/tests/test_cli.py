@@ -40,6 +40,11 @@ def test_worker_count_without_cap():
     assert cli.worker_count("max", _PER_WORKER_MIB, 3)[0] == 3
 
 
+def test_worker_count_rejects_a_malformed_cap():
+    with pytest.raises(cli._UsageError, match="memory cap"):
+        cli.worker_count("lots", _PER_WORKER_MIB, None)
+
+
 def _roots(tmp_path: Path) -> list[str]:
     return [f"--{name}={tmp_path / name}" for name in ("data", "cache", "work", "out")]
 
