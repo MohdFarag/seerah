@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import run  # noqa: E402
 
 USER = (1000, 1000)
+DOCKER_PATH = "/usr/bin/docker"
 ENV = {
     "SEERAH_TOOL_COMMIT": "a" * 40,
     "SEERAH_DATA_COMMIT": "b" * 40,
@@ -129,11 +130,86 @@ class CleanCheckTest(unittest.TestCase):
             data = _make_repo(Path(tmp, "content"), dirty=True)
             with (
                 mock.patch.object(run, "PUBLIC_ROOT", public),
+                mock.patch("shutil.which", return_value=DOCKER_PATH),
+                mock.patch.object(run, "resolve_image") as resolve,
                 self.assertRaises(SystemExit) as ctx,
             ):
                 run.main(["--data", str(data), "--image", "x", "--", "fetch"])
             self.assertIn(str(data), str(ctx.exception))
             self.assertIn("commit or stash", str(ctx.exception))
+            resolve.assert_not_called()
+
+
+class LauncherErrorTest(unittest.TestCase):
+    def test_missing_docker_binary(self):
+        with (
+            mock.patch("shutil.which", return_value=None),
+            mock.patch("subprocess.run") as stub,
+            self.assertRaises(SystemExit) as ctx,
+        ):
+            run.main(["--", "fetch"])
+        self.assertIn("docker not found", str(ctx.exception))
+        self.assertIn("podman-docker", str(ctx.exception))
+        stub.assert_not_called()
+
+    def test_failed_pull_names_image_and_suggests_image_flag(self):
+        failed = subprocess.CompletedProcess([], 1)
+        with (
+            mock.patch("subprocess.run", return_value=failed),
+            self.assertRaises(SystemExit) as ctx,
+        ):
+            run.resolve_image(None)
+        self.assertIn(run.IMAGE_REPO, str(ctx.exception))
+        self.assertIn("--image", str(ctx.exception))
+
+    def test_repo_digest_without_separator_falls_back_to_local(self):
+        inspected = [{"Id": "sha256:" + "f" * 64, "RepoDigests": ["r/x"]}]
+        done = subprocess.CompletedProcess([], 0, stdout=json.dumps(inspected), stderr="")
+        with mock.patch("subprocess.run", return_value=done):
+            self.assertEqual(run.resolve_image("r/x:1")[1], "local:sha256:" + "f" * 64)
+
+    def test_missing_data_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp, "nowhere")
+            with (
+                mock.patch("shutil.which", return_value=DOCKER_PATH),
+                mock.patch("subprocess.run") as stub,
+                self.assertRaises(SystemExit) as ctx,
+            ):
+                run.main(["--data", str(missing), "--", "fetch"])
+            self.assertIn(str(missing), str(ctx.exception))
+            self.assertIn("--private / --data", str(ctx.exception))
+            stub.assert_not_called()
+
+    def test_private_default_gives_data_root(self):
+        opts = run._parser().parse_args([])
+        expected = (run.PUBLIC_ROOT / "../seerah-content/map").resolve()
+        self.assertEqual(run.data_root(opts), expected)
+
+    def test_missing_out_folder_is_created_before_docker_runs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            public = _make_repo(Path(tmp, "public"), dirty=False)
+            data = _make_repo(Path(tmp, "content"), dirty=False)
+            out = Path(tmp, "a", "b", "dist")
+            seen = []
+
+            def fake_docker(args, **_):
+                seen.append(out.is_dir())
+                return subprocess.CompletedProcess(args, 0)
+
+            with (
+                mock.patch.object(run, "PUBLIC_ROOT", public),
+                mock.patch("shutil.which", return_value=DOCKER_PATH),
+                mock.patch.object(run, "resolve_image", return_value=("x", "local:1")),
+                mock.patch.object(run, "check_clean", return_value="a" * 40),
+                mock.patch.object(run, "_git", return_value=str(data)),
+                mock.patch("subprocess.run", side_effect=fake_docker),
+            ):
+                code = run.main(
+                    ["--data", str(data), "--out", str(out), "--image", "x", "--", "build"]
+                )
+            self.assertEqual(code, 0)
+            self.assertEqual(seen, [True])
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -29,6 +30,8 @@ CACHE_VOLUME = "seerah-map-cache"
 WORK_VOLUME = "seerah-map-work"
 PYTHONPATH_IN_IMAGE = "/src/tools/map/src"
 FETCH_COMMAND = "fetch"
+DOCKER = "docker"
+DIGEST_SEPARATOR = "@"
 
 
 def image_tag(dockerfile: Path, requirements: Path) -> str:
@@ -58,13 +61,13 @@ def check_clean(repo: Path) -> str:
         repo: root of a git checkout.
     """
     if _git(repo, "status", "--porcelain"):
-        raise SystemExit(f"{repo} has uncommitted changes: commit or stash them first")
+        raise SystemExit(f"{repo} has uncommitted or untracked changes: commit or stash them first")
     return _git(repo, "rev-parse", "HEAD")
 
 
 def _inspect(image: str) -> dict:
     done = subprocess.run(
-        ["docker", "image", "inspect", image], capture_output=True, text=True, check=False
+        [DOCKER, "image", "inspect", image], capture_output=True, text=True, check=False
     )
     if done.returncode != 0:
         raise SystemExit(f"image {image} not found: {done.stderr.strip()}")
@@ -84,11 +87,16 @@ def resolve_image(ref: str | None) -> tuple[str, str]:
     if ref is None:
         tag = image_tag(TOOL_DIR / "Dockerfile", TOOL_DIR / "requirements.txt")
         ref = f"{IMAGE_REPO}:{tag}"
-        subprocess.run(["docker", "pull", ref], check=True)
+        pulled = subprocess.run([DOCKER, "pull", ref], check=False)
+        if pulled.returncode != 0:
+            raise SystemExit(
+                f"could not pull {ref}: check the network and registry access,"
+                " or build the image locally and pass it with --image"
+            )
     info = _inspect(ref)
     repo_digests = info.get("RepoDigests") or []
-    if repo_digests:
-        return ref, repo_digests[0].split("@", 1)[1]
+    if repo_digests and DIGEST_SEPARATOR in repo_digests[0]:
+        return ref, repo_digests[0].split(DIGEST_SEPARATOR, 1)[1]
     return ref, f"local:{info['Id']}"
 
 
@@ -117,7 +125,7 @@ def docker_args(
         env: environment variables to pass in (the provenance values).
     """
     args = [
-        "docker",
+        DOCKER,
         "run",
         "--rm",
         "--security-opt",
@@ -181,6 +189,17 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def data_root(opts: argparse.Namespace) -> Path:
+    """Return the absolute data root: ``--data``, or ``<--private>/map``.
+
+    Relative paths are resolved against this repository's root.
+
+    Args:
+        opts: parsed launcher options.
+    """
+    return (PUBLIC_ROOT / (opts.data or opts.private / "map")).resolve()
+
+
 def main(argv: list[str]) -> int:
     """Run the toolchain command after ``--`` in the image; return its exit code.
 
@@ -200,7 +219,12 @@ def main(argv: list[str]) -> int:
     if not cmd:
         raise SystemExit("give a command after --, for example: -- fetch --profile trial/full")
 
-    data = (PUBLIC_ROOT / (opts.data or opts.private / "map")).resolve()
+    if shutil.which(DOCKER) is None:
+        raise SystemExit("docker not found: install docker or podman-docker")
+
+    data = data_root(opts)
+    if not data.is_dir():
+        raise SystemExit(f"data folder {data} does not exist: check --private / --data")
     out = (PUBLIC_ROOT / opts.out).resolve()
     tool_commit = check_clean(PUBLIC_ROOT)
     data_commit = check_clean(Path(_git(data, "rev-parse", "--show-toplevel")))
@@ -221,6 +245,7 @@ def main(argv: list[str]) -> int:
         (os.getuid(), os.getgid()),
         env,
     )
+    out.mkdir(parents=True, exist_ok=True)
     return subprocess.run(args, check=False).returncode
 
 
