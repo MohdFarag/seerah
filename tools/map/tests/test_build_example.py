@@ -29,7 +29,9 @@ BASE_ZOOM = 12
 SINGLE_BLOCK_ZOOM = 7
 ABSENT_CELL_WEST = 59.0
 ALPHA_BAND = 4
-TWO_BLOCKS = StopAt(r"^block \S+ done \(", 2)
+FINISHING_BLOCKS = 2
+BLOCK_DONE = StopAt(r"^block \S+ done \(", FINISHING_BLOCKS)
+BLOCK_GATE = Path(__file__).resolve().parent / "block_gate"
 TILE_STAGE = StopAt(r"^tile stage started$")
 _FAILING_TILER = "#!/bin/sh\nexit 1\n"
 
@@ -178,10 +180,23 @@ def test_double_build_identical(run_cli, tmp_path):
     assert hashes[0] == hashes[1]
 
 
+def _gated_env(finishing: list[str]) -> dict[str, str]:
+    """The environment that lets only ``finishing`` blocks render (``block_gate/``)."""
+    path = os.pathsep.join(filter(None, [str(BLOCK_GATE), os.environ.get("PYTHONPATH")]))
+    return {"PYTHONPATH": path, "SEERAH_TEST_FINISHING_BLOCKS": ",".join(finishing)}
+
+
 def test_resume_after_kill_in_block_stage(run_cli, tmp_path, reference):
     data = _data(tmp_path / "data")
-    killed = _build(run_cli, tmp_path, data, stop_at=TWO_BLOCKS)
+    profile = config.load_profile(data / "example" / "example.yaml")
+    all_blocks = sorted(b.id for b in blocks(profile.data_extent, profile.block_zoom))
+    finishing = all_blocks[:FINISHING_BLOCKS]
+    assert len(all_blocks) > FINISHING_BLOCKS
+    killed = _build(run_cli, tmp_path, data, stop_at=BLOCK_DONE, env=_gated_env(finishing))
     assert killed.killed, killed.output
+    assert "tile stage started" not in killed.output
+    (area,) = (p for p in (tmp_path / "work").iterdir() if p.is_dir())
+    assert sorted(p.stem for p in (area / "style").glob("*.tif")) == finishing
     _assert_same_tiles(_built(run_cli, tmp_path, data), reference)
 
 
