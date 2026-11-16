@@ -14,6 +14,18 @@ updates:
     schedule: { interval: monthly }
     cooldown: { default-days: 7 }
     commit-message: { prefix: build }
+  # The map tool's toolchain image (tools/map/Dockerfile) and its hash-locked Python
+  # packages (tools/map/requirements.txt). numpy must match the base image (requirements.in).
+  - package-ecosystem: docker
+    directory: /tools/map
+    schedule: { interval: monthly }
+    cooldown: { default-days: 7 }
+    commit-message: { prefix: build }
+  - package-ecosystem: pip
+    directory: /tools/map
+    schedule: { interval: monthly }
+    cooldown: { default-days: 7 }
+    commit-message: { prefix: build }
   # The v1 app's version catalog (android/gradle/libs.versions.toml). The spike is not updated.
   - package-ecosystem: gradle
     directory: /android

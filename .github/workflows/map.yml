@@ -1,0 +1,112 @@
+name: map
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/map/**", "map-data/example/**", ".github/workflows/map.yml"]
+  pull_request:
+    paths: ["tools/map/**", "map-data/example/**", ".github/workflows/map.yml"]
+permissions: {}
+concurrency:
+  group: map-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  # Builds the toolchain image when its tag (a hash of the Dockerfile and requirements.txt)
+  # is not in the registry yet, and pushes it only from `main`.
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Image namespace matches the repository owner
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          expected="ghcr.io/${OWNER,,}/seerah-map"
+          actual=$(python3 -c 'import sys; sys.path.insert(0, "tools/map"); import run; print(run.IMAGE_REPO)')
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::IMAGE_REPO in tools/map/run.py is $actual, expected $expected"
+            exit 1
+          fi
+
+      - name: Image tag
+        id: tag
+        run: echo "tag=$(python3 tools/map/run.py --print-tag)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push if missing
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          PUSH: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+        run: |
+          if docker manifest inspect "$TAG" > /dev/null 2>&1; then
+            echo "$TAG is already in the registry"
+            exit 0
+          fi
+          docker build -t "$TAG" tools/map
+          if [ "$PUSH" = "true" ]; then
+            docker push "$TAG"
+          else
+            echo "Not on main: $TAG was built but not pushed"
+          fi
+
+  # Runs every test (the slow end-to-end builds included) inside the image, then the
+  # launcher's tests on the host.
+  test:
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The package is private until the owner makes it public.
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get the image
+        env:
+          TAG: ${{ needs.image.outputs.tag }}
+        run: docker pull "$TAG" || docker build -t "$TAG" tools/map
+
+      # The example's downloads, pinned by its lock.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/cache
+          key: map-example-${{ hashFiles('map-data/example/example.lock') }}
+
+      - name: Tool tests (in the image)
+        env:
+          TAG: ${{ needs.image.outputs.tag }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/cache"
+          docker run --rm --security-opt label=disable --memory 6g \
+            -v "$PWD:/src:ro" -v "$PWD/map-data:/data:ro" -v "$RUNNER_TEMP/cache:/cache" \
+            -w /src/tools/map -e PYTHONPATH=/src/tools/map/src -e "SEERAH_TOOL_COMMIT=$SHA" \
+            "$TAG" python3 -m pytest
+
+      - name: Launcher tests (on the host)
+        run: python3 -m unittest discover -s tools/map/host_tests

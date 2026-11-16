@@ -24,3 +24,4 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - A `prd-sync` skill that re-snapshots the PRD from Notion the same way every time.
 - The EGM design-review plugin enabled for Claude Code sessions on this project, pinned to v0.1.1.
 - Repository hardening: every GitHub Action pinned to a commit SHA, per-job permissions and timeouts, workflow linting and security audit (actionlint, zizmor), a 7-day Dependabot cooldown, line-ending rules, a third-party notices file, and READMEs for `tools/` and `map-data/` that match their contents.
+- The map trial's build tool (`tools/map`): a pinned toolchain image, a host launcher, `fetch`, `build` and `clean` commands that render the relief into a PMTiles archive with a run report, a synthetic example in `map-data/example/`, a `map` CI workflow, and Dependabot updates for its image and Python packages.

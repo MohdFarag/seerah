@@ -1,0 +1,19 @@
+# Synthetic edit for the CI example: it is not a historical reconstruction.
+# A 600 m wide strip raised by 20 m, crossing the block edge at 58.887° E
+# (block zoom 11). The owner approved it for the example on 2026-11-16.
+schema: trial-0
+purpose: trial
+edits:
+  - id: synthetic-raise
+    geometry:
+      type: Polygon
+      coordinates:
+        - - [58.86, 20.6173]
+          - [58.92, 20.6173]
+          - [58.92, 20.6227]
+          - [58.86, 20.6227]
+          - [58.86, 20.6173]
+    operation: raise
+    amount_m: 20
+    feather_m: 300
+    review: approved

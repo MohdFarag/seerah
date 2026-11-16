@@ -1,0 +1,10 @@
+# numpy: the version the base image's Ubuntu package ships (GDAL's bindings are built against it).
+numpy==2.3.5
+# Newest releases at least 14 days old on 2026-11-15 (PyPI upload dates in comments).
+# Transitive pins in requirements.txt are the recorded exception to the 14-day rule.
+scipy==1.18.1  # 2026-08-21
+pmtiles==3.8.1  # 2026-09-16
+morecantile==7.1.0  # 2026-09-16
+ruamel.yaml==0.19.1  # 2026-01-02
+jsonschema==4.26.0  # fixed by the owner
+pytest==9.2.0  # 2026-10-27

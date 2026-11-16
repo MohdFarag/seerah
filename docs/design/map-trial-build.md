@@ -1,7 +1,7 @@
 # Map trial build
 
 - **Author:** MohdFaragDev
-- **Status:** Proposed; revised after an [EGM review](egm-review-map-trial/consolidated_review_report.md) and the owner's answers of 2026-11-14 ([resolution](egm-review-map-trial/goldfish_review_report.md)).
+- **Status:** Approved by the owner on 2026-11-14. Revised after an [EGM review](egm-review-map-trial/consolidated_review_report.md) and the owner's answers of 2026-11-14 ([resolution](egm-review-map-trial/goldfish_review_report.md)).
 - **Date:** 2026-11-14
 
 ---

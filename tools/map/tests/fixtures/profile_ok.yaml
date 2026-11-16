@@ -1,0 +1,11 @@
+purpose: trial
+camera_bounds:
+  west: 34
+  south: 12
+  east: 60
+  north: 32
+margin_deg: 1
+fade_deg: 0.5
+max_zoom: 12
+block_zoom: 8
+peninsula_outline: outline.geojson

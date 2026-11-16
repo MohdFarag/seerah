@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Map trial profile",
+  "description": "Per-field ranges only. Cross-field rules (west < east, N/E quadrant, fade_deg <= margin_deg, block_zoom <= max_zoom) are checked in seerah_map.config.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "purpose",
+    "camera_bounds",
+    "margin_deg",
+    "fade_deg",
+    "max_zoom",
+    "block_zoom",
+    "peninsula_outline"
+  ],
+  "properties": {
+    "purpose": {
+      "const": "trial"
+    },
+    "camera_bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "west",
+        "south",
+        "east",
+        "north"
+      ],
+      "properties": {
+        "west": {
+          "type": "number"
+        },
+        "south": {
+          "type": "number"
+        },
+        "east": {
+          "type": "number"
+        },
+        "north": {
+          "type": "number"
+        }
+      }
+    },
+    "margin_deg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "fade_deg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "max_zoom": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 14
+    },
+    "block_zoom": {
+      "type": "integer",
+      "minimum": 6
+    },
+    "webp_quality": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blur_px": {
+          "type": "number",
+          "minimum": 0
+        },
+        "band_blur_px": {
+          "type": "number",
+          "minimum": 0
+        },
+        "exaggeration": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "azimuth_deg": {
+          "type": "number"
+        },
+        "altitude_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 90
+        },
+        "contrast": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "bands": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ink_rgb": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "max_alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "peninsula_outline": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
