@@ -34,6 +34,13 @@ TILE_STAGE = StopAt(r"^tile stage started$")
 _FAILING_TILER = "#!/bin/sh\nexit 1\n"
 
 
+@pytest.fixture(autouse=True)
+def _needs_cache() -> None:
+    """Skip outside the container, where the ``/cache`` volume is not writable."""
+    if not os.access(CACHE, os.W_OK):
+        pytest.skip(f"{CACHE} is not writable; run these tests in the image with the cache volume")
+
+
 def _data(root: Path, block_zoom: int | None = None) -> Path:
     """Copy the example into ``root/example``, optionally with another block zoom."""
     shutil.copytree(EXAMPLE, root / "example")
