@@ -1,5 +1,5 @@
 # numpy: the version the base image's Ubuntu package ships (GDAL's bindings are built against it).
-numpy==2.3.5
+numpy==2.5.4
 # Newest releases at least 14 days old on 2026-11-15 (PyPI upload dates in comments).
 # Transitive pins in requirements.txt are the recorded exception to the 14-day rule.
 scipy==1.18.1  # 2026-08-21
