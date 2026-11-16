@@ -14,7 +14,8 @@ ADD --checksum=sha256:fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254
 
 # Hash-locked Python dependencies. requirements.txt is generated from requirements.in
 # by uv 0.13.6 (released 2026-10-27) in a throwaway container; uv is not in this image.
-# To regenerate, run from the repository root:
+# To regenerate, run from the repository root with a Docker whose `docker run`
+# supports `--mount type=image`:
 #
 #   docker run --rm --user "$(id -u):$(id -g)" --security-opt label=disable \
 #     -e UV_CACHE_DIR=/tmp/uv --tmpfs /tmp \
