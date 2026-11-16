@@ -97,3 +97,5 @@ The [`map` workflow](../../.github/workflows/map.yml) runs on changes to `tools/
 - **`test`:** pulls the image (or builds it, on a pull request that changes it), restores the example's downloads from a cache keyed on `example.lock`, runs every test in the image with `--memory 6g`, then runs the launcher's tests on the host.
 
 The image name, `ghcr.io/mohdfarag/seerah-map`, is the one constant `IMAGE_REPO` in `run.py`.
+
+A GHCR package is private by default, so both jobs log in to GHCR. Until the owner makes the package public, pulling the image locally needs `docker login ghcr.io` first.
