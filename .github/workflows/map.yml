@@ -42,10 +42,11 @@ jobs:
         run: echo "tag=$(python3 tools/map/run.py --print-tag)" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
-        env:
-          ACTOR: ${{ github.actor }}
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push if missing
         env:
@@ -62,10 +63,6 @@ jobs:
           else
             echo "Not on main: $TAG was built but not pushed"
           fi
-
-      - name: Log out of GHCR
-        if: always()
-        run: docker logout ghcr.io
 
   # Runs every test (the slow end-to-end builds included) inside the image, then the
   # launcher's tests on the host.
