@@ -11,13 +11,15 @@ bytes.
 import json
 import math
 import os
-import re
+import struct
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 from osgeo import ogr
+from pmtiles.reader import MmapSource, Reader
+from pmtiles.tile import MagicNumberNotFound
 
 from .config import Bounds, Profile
 from .workarea import WorkArea, atomic_write
@@ -32,7 +34,6 @@ _PACK_CODE = (
     "import sys; from pmtiles.convert import disk_to_pmtiles;"
     " disk_to_pmtiles(sys.argv[1], sys.argv[2], 'auto')"
 )
-_STORED_LINE = re.compile(r"^addressed tiles count:\s*(\d+)\s*$", re.MULTILINE)
 
 
 class PackError(Exception):
@@ -139,16 +140,17 @@ def stored_tiles(pmtiles_path: Path) -> int:
         pmtiles_path: the archive.
 
     Returns:
-        The ``addressed tiles count`` of ``pmtiles show``. The header JSON
-        (``--header-json``) does not carry it.
+        The header's ``addressed_tiles_count``, read with the ``pmtiles``
+        package.
 
     Raises:
-        PackError: if the count cannot be read.
+        PackError: if the header cannot be read.
     """
-    match = _STORED_LINE.search(_pmtiles("show", pmtiles_path))
-    if match is None:
-        raise PackError(f"no addressed tiles count in {pmtiles_path}")
-    return int(match.group(1))
+    try:
+        with pmtiles_path.open("rb") as archive:
+            return int(Reader(MmapSource(archive)).header()["addressed_tiles_count"])
+    except (OSError, KeyError, ValueError, struct.error, MagicNumberNotFound) as error:
+        raise PackError(f"cannot read the tile count of {pmtiles_path}: {error}") from error
 
 
 def verify(pmtiles_path: Path, profile: Profile) -> None:

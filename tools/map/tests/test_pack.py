@@ -140,3 +140,10 @@ def test_size_by_zoom_split(tmp_path):
         {"zoom": 0, "inside_bytes": 0, "outside_bytes": 5},
         {"zoom": _OUTSIDE_ZOOM, "inside_bytes": _INSIDE_BYTES, "outside_bytes": _OUTSIDE_BYTES},
     ]
+
+
+def test_stored_tiles_rejects_a_file_that_is_not_an_archive(tmp_path):
+    bogus = tmp_path / "bogus.pmtiles"
+    bogus.write_bytes(b"not an archive")
+    with pytest.raises(pack.PackError, match="tile count"):
+        pack.stored_tiles(bogus)
