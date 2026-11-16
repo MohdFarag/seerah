@@ -26,6 +26,11 @@ updates:
     schedule: { interval: monthly }
     cooldown: { default-days: 7 }
     commit-message: { prefix: build }
+    # numpy comes from the base image's Ubuntu package, which pip cannot replace and
+    # GDAL's bindings are built against. Its pin moves by hand when the docker entry
+    # above updates the base image.
+    ignore:
+      - dependency-name: numpy
   # The v1 app's version catalog (android/gradle/libs.versions.toml). The spike is not updated.
   - package-ecosystem: gradle
     directory: /android
