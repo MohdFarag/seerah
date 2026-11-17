@@ -6,6 +6,17 @@ import org.json.JSONObject
 
 private const val STYLE_VERSION = 8
 private const val SOURCE_ID = "relief"
+private const val BACKGROUND_LAYER_ID = "background"
+private const val RELIEF_LAYER_ID = "relief"
+private const val RASTER_LAYER_TYPE = "raster"
+private const val COLOR_RELIEF_LAYER_TYPE = "color-relief"
+private const val BACKGROUND_LAYER_TYPE = "background"
+private const val RASTER_SOURCE_TYPE = "raster"
+private const val RASTER_DEM_SOURCE_TYPE = "raster-dem"
+private const val CHANNEL_MASK = 0xFF
+private const val ALPHA_SHIFT = 24
+private const val RED_SHIFT = 16
+private const val GREEN_SHIFT = 8
 private const val RELIEF_TILE_SIZE = 256
 private const val MAX_CHANNEL = 255.0
 private const val ALPHA_DECIMALS = "%.3f"
@@ -43,15 +54,19 @@ private fun reliefLayer(spec: MapStyleSpec): JSONObject {
     val fade = fadeExpression(spec.reliefFade)
     val (type, paint) =
         when (val relief = spec.relief) {
-            is ReliefSource.Painted -> "raster" to JSONObject().put("raster-opacity", fade)
+            is ReliefSource.Painted -> RASTER_LAYER_TYPE to JSONObject().put("raster-opacity", fade)
 
             is ReliefSource.Value ->
-                "color-relief" to
+                COLOR_RELIEF_LAYER_TYPE to
                     JSONObject()
                         .put("color-relief-color", rampExpression(relief.ramp))
                         .put("color-relief-opacity", fade)
         }
-    return JSONObject().put("id", SOURCE_ID).put("type", type).put("source", SOURCE_ID).put("paint", paint)
+    return JSONObject()
+        .put("id", RELIEF_LAYER_ID)
+        .put("type", type)
+        .put("source", SOURCE_ID)
+        .put("paint", paint)
 }
 
 private fun fadeExpression(fade: ZoomRange): JSONArray = JSONArray()
@@ -68,13 +83,21 @@ private fun rampExpression(ramp: List<RampStep>): JSONArray {
     require(ramp.zipWithNext().all { (low, high) -> low.value < high.value }) {
         "Value ramp steps must be in strictly ascending order: ${ramp.map { it.value }}"
     }
-    val expression = JSONArray().put("interpolate").put(JSONArray().put("linear")).put(JSONArray().put("elevation"))
+    val expression =
+        JSONArray().put("interpolate").put(JSONArray().put("linear")).put(JSONArray().put("elevation"))
     ramp.forEach { expression.put(it.value).put(rgba(it.colour)) }
     return expression
 }
 
 /** Formats an ARGB [colour] as a CSS `rgba(...)` string, alpha to three decimals without trailing zeros. */
 private fun rgba(colour: Int): String {
-    val alpha = String.format(Locale.ROOT, ALPHA_DECIMALS, (colour ushr 24) / MAX_CHANNEL).trimEnd('0').trimEnd('.')
-    return "rgba(${colour shr 16 and 0xFF}, ${colour shr 8 and 0xFF}, ${colour and 0xFF}, $alpha)"
+    val alpha = String.format(Locale.ROOT, ALPHA_DECIMALS, channel(colour, ALPHA_SHIFT) / MAX_CHANNEL)
+        .trimEnd('0')
+        .trimEnd('.')
+    val red = channel(colour, RED_SHIFT)
+    val green = channel(colour, GREEN_SHIFT)
+    val blue = channel(colour, 0)
+    return "rgba($red, $green, $blue, $alpha)"
 }
+
+private fun channel(colour: Int, shift: Int): Int = colour ushr shift and CHANNEL_MASK

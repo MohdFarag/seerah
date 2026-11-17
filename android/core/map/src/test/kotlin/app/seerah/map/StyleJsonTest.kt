@@ -12,19 +12,22 @@ import org.junit.runner.RunWith
 class StyleJsonTest {
     private val files = MapFiles(File("/data/t/relief.pmtiles"))
 
-    private val fade = """["interpolate",["linear"],["zoom"],11.5,1,13.5,0]"""
+    private val fadeRange = ZoomRange(start = 11.5, end = 13.5)
 
-    private fun spec(relief: ReliefSource = ReliefSource.Painted(maxZoom = 12)) = MapStyleSpec(
-        relief = relief,
-        reliefFade = ZoomRange(start = 11.5, end = 13.5),
-        colours =
-            MapColours(
-                sea = 0xFF9FC3D8.toInt(),
-                land = 0xFFF1E6C8.toInt(),
-                coast = 0xFF5B7F95.toInt(),
-                ink = 0xFF967648.toInt(),
-            ),
-    )
+    private fun fadeOf(range: ZoomRange) = """["interpolate",["linear"],["zoom"],${range.start},1,${range.end},0]"""
+
+    private fun spec(relief: ReliefSource = ReliefSource.Painted(maxZoom = 12), reliefFade: ZoomRange = fadeRange) =
+        MapStyleSpec(
+            relief = relief,
+            reliefFade = reliefFade,
+            colours =
+                MapColours(
+                    sea = 0xFF9FC3D8.toInt(),
+                    land = 0xFFF1E6C8.toInt(),
+                    coast = 0xFF5B7F95.toInt(),
+                    ink = 0xFF967648.toInt(),
+                ),
+        )
 
     private fun valueSpec(ramp: List<RampStep> = PAIRED_RAMP) = spec(ReliefSource.Value(maxZoom = 12, ramp = ramp))
 
@@ -52,11 +55,15 @@ class StyleJsonTest {
         )
         assertEquals("background", style.layer("background").getString("type"))
         assertEquals("raster", style.layer("relief").getString("type"))
+        assertEquals(RELIEF_SOURCE_ID, style.layer("relief").getString("source"))
     }
 
     @Test
     fun paintedStyle_fadesOverReliefFade() {
-        assertEquals(fade, style(spec()).paint("relief", "raster-opacity"))
+        assertEquals(fadeOf(fadeRange), style(spec()).paint("relief", "raster-opacity"))
+
+        val later = ZoomRange(start = 13.5, end = 15.5)
+        assertEquals(fadeOf(later), style(spec(reliefFade = later)).paint("relief", "raster-opacity"))
     }
 
     @Test
@@ -79,7 +86,11 @@ class StyleJsonTest {
         assertEquals("raster-dem", source.getString("type"))
         assertEquals("terrarium", source.getString("encoding"))
         assertEquals("color-relief", style.layer("relief").getString("type"))
-        assertEquals(fade, style.paint("relief", "color-relief-opacity"))
+        assertEquals(RELIEF_SOURCE_ID, style.layer("relief").getString("source"))
+        assertEquals(fadeOf(fadeRange), style.paint("relief", "color-relief-opacity"))
+        assertEquals("pmtiles://file:///data/t/relief.pmtiles", source.getString("url"))
+        assertEquals(256, source.getInt("tileSize"))
+        assertEquals(12, source.getInt("maxzoom"))
     }
 
     @Test
@@ -103,6 +114,11 @@ class StyleJsonTest {
     }
 
     @Test
+    fun valueStyle_rejectsAnEmptyRamp() {
+        assertFailsWith<IllegalArgumentException> { styleJson(files, valueSpec(emptyList())) }
+    }
+
+    @Test
     fun background_isLandColour() {
         assertEquals(
             "rgba(241, 230, 200, 1)",
@@ -111,6 +127,8 @@ class StyleJsonTest {
     }
 
     private companion object {
+        const val RELIEF_SOURCE_ID = "relief"
+
         val PAIRED_RAMP =
             listOf(
                 RampStep(42.0, 0x00967648),
