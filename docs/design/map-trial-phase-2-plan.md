@@ -34,7 +34,7 @@
    - `org.maplibre.gl:android-sdk-opengl:13.7.1` is on Maven Central (`repo1.maven.org`, HTTP 200 for the POM).
    - `gh release list -R maplibre/maplibre-native`: `android-v13.7.1` released 2026-10-15; `android-v13.5.4` (2026-11-09) is the "Latest" tag but an older line and under 14 days old; the `-globe` builds are pre-releases.
    - The `color-relief` layer came in `android-v13.0.0` (release notes, PR #3965). `["elevation"]` is a known expression input in 13.7.1 (`src/mln/style/expression/parsing_context.cpp`, `compound_expression.cpp`; the Android `ColorReliefLayer` KDoc).
-   - **`step` in `color-relief-color`:** `src/mln/renderer/layers/render_color_relief_layer.cpp` at `android-v13.7.1` reads stops exactly only from an `interpolate` expression. Any other expression, `step` included, is sampled at 256 points from −500 to 9,000, about 37 m apart. Option (c)'s values are 0–255 (Terrarium red 128), so a `step` ramp would come out with soft, shifted band edges, not a rejection. See Deviations.
+   - **`step` in `color-relief-color`:** `src/mln/renderer/layers/render_color_relief_layer.cpp` at `android-v13.7.1` reads stops exactly only from an `interpolate` expression. Any other expression, `step` included, is sampled at 256 points from −500 to 9,000, about 37 m apart. Option (c)'s values are 0–255 (Terrarium red 128), so a `step` ramp would come out with soft, shifted band edges, not a rejection. The amended spec therefore writes the ramp as `interpolate linear` with paired stops (owner, 2026-11-17).
 4. **`validatePlugins`** for the included build: `cd android && ./gradlew :build-logic:convention:validatePlugins` runs and passes (also `-p build-logic :convention:validatePlugins`).
 5. **The release manifest's components today** (merged manifest of `:app:processReleaseMainManifest`): `app.seerah.MainActivity`, `androidx.startup.InitializationProvider`, `androidx.profileinstaller.ProfileInstallReceiver`.
 6. **Resolved versions in `:app` today:** `kotlinx-coroutines-android` 1.9.0 and `lifecycle-runtime-compose` 2.11.0 (`:app:dependencies --configuration releaseRuntimeClasspath`).
@@ -58,7 +58,8 @@
 ### Where this phase differs from the spec's style and measurement rules
 
 - **No base layer yet (D1):** the style draws a land-coloured background under the relief; the sea is hidden until phase 3 brings `base.pmtiles`.
-- **Option (a)'s fade (13.5–15.5)** is a trial variable, marked so in KDoc.
+- **Option (a)'s and option (c)'s fade (13.5–15.5)** is a trial variable, marked so in KDoc (option (c)'s is set by the amended spec).
+- **Option (c)'s ramp:** `interpolate linear` with paired stops one stored value apart, 42 → 0, 43 → 0.2, 127 → 0.2, 128 → 0.4, 212 → 0.4, 213 → 0.6 ink alpha, so each threshold (42.5, 127.5, 212.5) is a hard edge ([spec, The app](map-trial-build.md#the-app)).
 - **The cold run** (the first of the three) is reported separately as well as in the totals.
 - **Median:** of an even count, the mean of the two middle values. A run without a published reading shows "no reading".
 - **Readings per run:** before each run the activity resets `FrameStats` and starts a new reading list; readings outside a run are shown but not kept.
@@ -89,8 +90,7 @@ Approving the plan approves D1–D3 and the deviations below. The device steps (
 - **MapLibre version: 13.7.1** (fact 3). The implementer checks the rule again on the implementation date (Task 6, Step 1).
 - **The artifact** is `org.maplibre.gl:android-sdk-opengl` (OpenGL, [ADR 0002](../adr/0002-proposed-stack.md)), the coordinate the spike used.
 - **`MapFiles` has no `base` in phase 2** (D1), and the per-zoom view is left out (D2).
-- **Option (c)'s ramp is checked for soft edges, not only for rejection.** Fact 3 shows `step` is not rejected but sampled every 37 m, so trial step 1, check 3 looks at the band edges on the device. Phase 2 writes `step`, as the spec says; if the edges are soft, the `interpolate linear` fallback (stops 0.5 apart, read exactly) replaces it and `valueStyle_hasRampThresholds` changes with it. The owner may prefer to start with `interpolate`; that is a spec change.
-- **Option (c)'s fade:** the spec gives the value view no fade. It uses option (a)'s 13.5–15.5 through `color-relief-opacity`, so both close-up options are compared at the same zooms; a trial variable like (a)'s.
+- **Depends on branch `fix/map-value-encoding`:** that branch amends the spec's option (c) ramp (paired `interpolate` stops instead of `step`), its fade (13.5–15.5, through `color-relief-opacity`) and trial step 1, check 3. This plan follows the amended spec, so that branch merges first.
 - **`check` and the benchmark unit tests:** spec line 978 assumes `./gradlew check` runs the `testBenchmark` tests. Under AGP 9.5.1 it does not by default (fact 1); Task 3 enables them for `benchmark` only.
 - **Release guard, second layer:** a build-logic rule in `DependencyRules.kt` (Task 3) closes the dependency leak the manifest check cannot see. The aapt2 manifest check stays as spec G7 and file 31 define it.
 - **Added tests beyond spec file 31:** host tests for the release guard, and Robolectric tests for `TrialFiles`, `Views` and `PathResults`. `StyleJsonTest` runs under Robolectric for fidelity to Android's `org.json`, which is a stub in plain JVM unit tests.
@@ -312,7 +312,7 @@ A passing build and the existing tests are the check; build logic has no unit te
   - `version` 8; one source `relief` (`raster`, or `raster-dem` with `encoding: terrarium`), `url` `pmtiles://file://<absolute path>`, `tileSize` 256, `maxzoom` from `ReliefSource.maxZoom`;
   - layers in order: `background` (type `background`, land colour, D1) and `relief` (`raster` with `raster-opacity`, or `color-relief` with `color-relief-color` and `color-relief-opacity`);
   - opacity: `["interpolate", ["linear"], ["zoom"], start, 1, end, 0]` from `reliefFade`;
-  - ramp: `["step", ["elevation"], c0, v1, c1, v2, c2, v3, c3]` from the `RampStep`s (the first step's value is the base, not written);
+  - ramp: `["interpolate", ["linear"], ["elevation"], v1, c1, v2, c2, …]`, one stop per `RampStep`, in order;
   - colours: `rgba(r, g, b, a)` from ARGB, alpha = A ÷ 255 rounded to 3 decimals, trailing zeros removed (`1`, `0`, `0.2`).
 
 - [ ] **Step 1: Dependencies.** In `android/core/map/build.gradle.kts`: `testImplementation` `junit4`, `kotlin-test`, `robolectric`, `androidx-test-ext-junit` (catalog entries exist).
@@ -323,9 +323,10 @@ A passing build and the existing tests are the check; build logic has no unit te
   @Test fun paintedStyle_fadesOverReliefFade()             // raster-opacity == ["interpolate",["linear"],["zoom"],11.5,1,13.5,0]
   @Test fun reliefSource_usesPmtilesFileUrl_tileSize256_andMaxZoom()  // url "pmtiles://file:///data/t/relief.pmtiles"; tileSize 256; maxzoom 12 (then 11)
   @Test fun valueStyle_usesTerrariumRasterDem_andColorRelief()        // source "raster-dem", encoding "terrarium"; layer "color-relief"; color-relief-opacity as the fade
-  @Test fun valueStyle_hasRampThresholds()
-      // color-relief-color == ["step",["elevation"],"rgba(150, 118, 72, 0)",42.5,"rgba(150, 118, 72, 0.2)",
-      //                        127.5,"rgba(150, 118, 72, 0.4)",212.5,"rgba(150, 118, 72, 0.6)"]
+  @Test fun valueStyle_hasPairedRampStops()
+      // color-relief-color == ["interpolate",["linear"],["elevation"],
+      //   42,"rgba(150, 118, 72, 0)",43,"rgba(150, 118, 72, 0.2)",127,"rgba(150, 118, 72, 0.2)",
+      //   128,"rgba(150, 118, 72, 0.4)",212,"rgba(150, 118, 72, 0.4)",213,"rgba(150, 118, 72, 0.6)"]
   @Test fun background_isLandColour()                      // background-color "rgba(241, 230, 200, 1)"
   ```
 
@@ -421,7 +422,7 @@ MapLibre's native view cannot run under Robolectric, so this task has no unit te
   @Test fun zoom12View_fadesAt11_5To13_5()        // ZOOM_12.styleSpec(): Painted(12), ZoomRange(11.5, 13.5)
   @Test fun zoom11View_isPainted11_sameFade()     // Painted(11), ZoomRange(11.5, 13.5)
   @Test fun optionA_fadesAt13_5To15_5()           // Painted(12), ZoomRange(13.5, 15.5)
-  @Test fun optionC_isValue12_withFourRampSteps() // ZoomRange(13.5, 15.5); values 0.0, 42.5, 127.5, 212.5; alphas 0, 0.2, 0.4, 0.6 of ink 150,118,72
+  @Test fun optionC_isValue12_withPairedRampSteps() // ZoomRange(13.5, 15.5); values 42, 43, 127, 128, 212, 213; alphas 0, 0.2, 0.2, 0.4, 0.4, 0.6 of ink 150,118,72
   @Test fun viewsFor_matchesVariant()
   ```
 
@@ -578,7 +579,7 @@ An agent cannot do Steps 1–5; it prepares the checklist in `docs/map-trial/ste
 - [ ] **Step 2: Owner gate: trial step 1, check 1.** `adb push` of the example output (or a trial window) into `/sdcard/Android/data/app.seerah.benchmark/files/trial/` works on all three. If it fails on any device, the in-app folder import fallback gets its own task before trial step 2.
 - [ ] **Step 3: Owner gate: trial step 1, checks 2, 3 and 4.**
   - Check 2: the zoom 11 view stops drawing new relief detail past its `maxzoom` (fallback: `pmtiles extract --maxzoom=11`).
-  - Check 3: option (c) draws three bands with sharp edges at the thresholds (fact 3; fallback: `interpolate linear`, and `valueStyle_hasRampThresholds` changes with it).
+  - Check 3: option (c)'s band edges are sharp: zoomed in past 14, each edge between bands is a crisp line, not a gradient, with three bands at the thresholds (fact 3). If they are soft, report to the owner before trial step 2.
   - Check 4: the overlay's rate moves while panning and stays still at rest, and does not exceed the screen's refresh rate.
 - [ ] **Step 4: Owner gate: trial step 1, check 11.** Each device's screen width in dp (`adb shell wm size` and `wm density`).
 - [ ] **Step 5: Owner gate: the overlay and camera path.** The overlay shows device, view, fingerprint, rate, lowest, memory and open time; "Run path" runs three times; "Copy results" gives the text. Phone and tablet, in landscape on the tablet.
