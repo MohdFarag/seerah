@@ -15,6 +15,7 @@ class CameraPathTest {
         view = "zoom12",
         fingerprint8 = "ab12cd34",
         openTimeMs = 850,
+        openTimeFromWarmProcess = false,
         pssMb = 310,
     )
 
@@ -68,6 +69,15 @@ class CameraPathTest {
 
         assertEquals("Map trial | Pixel 7 | zoom12 | ab12cd34", lines[0])
         assertEquals("Open time: 850 ms | Memory (PSS): 310 MB", lines[1])
+    }
+
+    @Test
+    fun text_marksOpenTimeMeasuredEarlierInTheProcess() {
+        val warm = header.copy(openTimeFromWarmProcess = true)
+
+        val lines = results(listOf(60.0), listOf(60.0), listOf(60.0)).asText(warm).lines()
+
+        assertEquals("Open time: 850 ms (from warm process) | Memory (PSS): 310 MB", lines[1])
     }
 
     @Test

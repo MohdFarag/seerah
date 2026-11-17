@@ -57,7 +57,11 @@ data class PathResults(val runs: List<RunResult>) {
     /** Renders the results under [header] as the English text the overlay shows. */
     fun asText(header: TrialHeader): String = buildList {
         add("Map trial | ${header.device} | ${header.view} | ${header.fingerprint8}")
-        add("Open time: ${header.openTimeMs.orNoReading("ms")} | Memory (PSS): ${header.pssMb.orNoReading("MB")}")
+        add(
+            "Open time: ${header.openTimeMs.orNoReading(
+                "ms",
+            )}${header.warmSuffix} | Memory (PSS): ${header.pssMb.orNoReading("MB")}",
+        )
         runs.forEachIndexed { index, run ->
             val label = if (index == 0) "Run 1 (cold)" else "Run ${index + 1}"
             add("$label: ${rates(run.typicalFps, run.lowestFps)}")
@@ -73,6 +77,8 @@ data class PathResults(val runs: List<RunResult>) {
  * @property view the trial view id.
  * @property fingerprint8 the first eight characters of the variant's fingerprint.
  * @property openTimeMs the time to open the map, or null if not measured.
+ * @property openTimeFromWarmProcess true when [openTimeMs] was measured at an earlier open in
+ *   this process, so it does not describe this open (force-stop the app before each open-time run).
  * @property pssMb the proportional set size after the run, or null if not measured.
  */
 data class TrialHeader(
@@ -80,8 +86,14 @@ data class TrialHeader(
     val view: String,
     val fingerprint8: String,
     val openTimeMs: Long?,
+    val openTimeFromWarmProcess: Boolean,
     val pssMb: Int?,
-)
+) {
+    /** The note shown after the open time when it came from an earlier open in this process. */
+    val warmSuffix: String get() = if (openTimeFromWarmProcess && openTimeMs != null) WARM_PROCESS_NOTE else ""
+}
+
+private const val WARM_PROCESS_NOTE = " (from warm process)"
 
 private fun median(values: List<Double>): Double? {
     if (values.isEmpty()) return null

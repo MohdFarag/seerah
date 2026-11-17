@@ -27,6 +27,7 @@ private val OVERLAY_PADDING = 8.dp
  * @property lowestFps the lowest published rate since the last reset, or null before the first.
  * @property pssMb the memory (PSS) read with the latest reading, in MB.
  * @property openTimeMs the process's open time, or null until the first fully rendered map.
+ * @property openTimeFromWarmProcess true when [openTimeMs] was measured before this screen opened.
  * @property runs the camera path's finished runs, cold run first.
  */
 data class OverlayState(
@@ -37,10 +38,11 @@ data class OverlayState(
     val lowestFps: Double?,
     val pssMb: Int?,
     val openTimeMs: Long?,
+    val openTimeFromWarmProcess: Boolean,
     val runs: List<RunResult>,
 ) {
     /** The header [PathResults.asText] starts its report with. */
-    val header: TrialHeader get() = TrialHeader(device, view, fingerprint8, openTimeMs, pssMb)
+    val header: TrialHeader get() = TrialHeader(device, view, fingerprint8, openTimeMs, openTimeFromWarmProcess, pssMb)
 }
 
 /** The measurement overlay: the live readings, then the camera path's results once a run ends. */
@@ -61,7 +63,7 @@ fun Overlay(state: OverlayState, modifier: Modifier = Modifier) {
         Text(report, color = Color.White, style = style)
         if (state.runs.isEmpty()) {
             Text(
-                "Open time: ${state.openTimeMs.msText()} | Memory (PSS): ${state.pssMb.mbText()}",
+                "Open time: ${state.openTimeMs.msText()}${state.header.warmSuffix} | Memory (PSS): ${state.pssMb.mbText()}",
                 color = Color.White,
                 style = style,
             )

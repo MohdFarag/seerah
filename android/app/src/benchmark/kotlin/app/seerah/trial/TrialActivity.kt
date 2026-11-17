@@ -81,10 +81,19 @@ class TrialActivity : ComponentActivity() {
     }
 }
 
-/** Open time, measured once per process at the first fully rendered map, as the spec defines it. */
+/**
+ * Open time, measured once per process at the first fully rendered map, as the spec defines it.
+ * Any later map screen in the same process is marked as from a warm process: its open time is
+ * either the earlier value or counts the time the process sat idle.
+ */
 private object OpenTime {
     var millis: Long? = null
         private set
+
+    private var screens = 0
+
+    /** Counts a map screen opening; true when an earlier one already opened in this process. */
+    fun openedBefore(): Boolean = screens++ > 0
 
     fun recordOnce() {
         if (millis == null) millis = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime()
@@ -191,6 +200,7 @@ private fun TrialMap(selection: TrialSelection, onViews: () -> Unit, modifier: M
                 lowestFps = null,
                 pssMb = null,
                 openTimeMs = OpenTime.millis,
+                openTimeFromWarmProcess = OpenTime.openedBefore(),
                 runs = emptyList(),
             ),
         )

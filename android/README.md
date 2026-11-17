@@ -63,7 +63,7 @@ The benchmark APK carries the map trial screen, launched from its own launcher i
 
 Two rules for the runs:
 
-- **Runs that measure open time** (checklist item 11) must launch with the `app.seerah.trial.VIEW` intent extra set to `<folder>/<view id>` (for example `adb shell am start -n app.seerah.benchmark/app.seerah.trial.TrialActivity --es app.seerah.trial.VIEW <folder>/zoom12`), or with a valid last-used view already stored. Otherwise the view picker appears first and its waiting time is counted as open time.
+- **Runs that measure open time** (checklist item 11) must launch with the `app.seerah.trial.VIEW` intent extra set to `<folder>/<view id>` (for example `adb shell am start -S -W -n app.seerah.benchmark/app.seerah.trial.TrialActivity --es app.seerah.trial.VIEW <folder>/zoom12`), or with a valid last-used view already stored. Otherwise the view picker appears first and its waiting time is counted as open time. Force-stop the app before each open-time run (`-S` does this): open time is measured once per process, so a map opened in a process that was already running shows the earlier value or counts the time the process sat idle; the overlay marks such a reading "(from warm process)".
 - **Do not rotate the device during a camera-path run.** Rotation recreates the screen and loses that run's results.
 
 ## Convention plugins
