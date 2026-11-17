@@ -7,7 +7,7 @@ that proves a release build carries no development-only path.
 
 The check reads the compiled manifest with `aapt2 dump xmltree` and fails when it names an
 `app.seerah.trial` component. It also fails when it checked nothing: no aapt2, aapt2 exiting
-non-zero, or a dump with no manifest in it.
+non-zero, a dump with no manifest in it, or a component it cannot name.
 
 Usage: check_no_trial_code.py APK
 Exit code 0 when the manifest was read and is clean, 1 otherwise.
@@ -23,6 +23,7 @@ from pathlib import Path
 TRIAL_PACKAGE = "app.seerah.trial"
 COMPONENT_ELEMENT = re.compile(r"^\s*E: (?:activity|activity-alias|service|receiver|provider) ")
 NAME_ATTRIBUTE = re.compile(r':name\(0x[0-9a-f]+\)="([^"]*)"')
+ANY_ELEMENT = re.compile(r"^\s*E: ")
 MANIFEST_ELEMENT = re.compile(r"^\s*E: manifest ", re.MULTILINE)
 SDK_VARIABLES = ("ANDROID_HOME", "ANDROID_SDK_ROOT")
 
@@ -46,16 +47,24 @@ def version_key(directory: Path) -> tuple[int, ...]:
 
 
 def components(dump: str) -> list[str]:
-    """Names of the manifest's activities, services, receivers and providers, in order."""
+    """Names of the manifest's activities, services, receivers and providers, in order.
+
+    A component's name must be among its own attributes, which aapt2 prints before the next
+    element; raises ValueError for a component without one, so an unreadable manifest fails.
+    """
     names = []
-    lines = iter(dump.splitlines())
-    for line in lines:
-        if COMPONENT_ELEMENT.match(line):
-            for attribute in lines:
-                match = NAME_ATTRIBUTE.search(attribute)
-                if match:
-                    names.append(match.group(1))
-                    break
+    unnamed = None
+    for line in dump.splitlines():
+        if ANY_ELEMENT.match(line):
+            if unnamed is not None:
+                raise ValueError(f"component without a name: {unnamed.strip()}")
+            if COMPONENT_ELEMENT.match(line):
+                unnamed = line
+        elif unnamed is not None and (match := NAME_ATTRIBUTE.search(line)):
+            names.append(match.group(1))
+            unnamed = None
+    if unnamed is not None:
+        raise ValueError(f"component without a name: {unnamed.strip()}")
     return names
 
 
@@ -86,7 +95,12 @@ def main(args: list[str]) -> int:
     except RuntimeError as error:
         print(f"error: {error}")
         return 1
-    trial = [name for name in components(dump) if name.startswith(TRIAL_PACKAGE)]
+    try:
+        names = components(dump)
+    except ValueError as error:
+        print(f"error: {error}")
+        return 1
+    trial = [name for name in names if name.startswith(TRIAL_PACKAGE)]
     for name in trial:
         print(f"error: {args[0]} declares the trial component {name}")
     if not trial:

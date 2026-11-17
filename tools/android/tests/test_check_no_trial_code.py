@@ -1,5 +1,7 @@
 """Tests for check_no_trial_code.py, with a fake aapt2 standing in for the real one."""
 
+import contextlib
+import io
 import os
 import stat
 import sys
@@ -55,10 +57,27 @@ class GuardTest(unittest.TestCase):
 
     def test_trial_component_fails(self):
         self.install_printing(fixture("trial_manifest.txt"))
-        with mock.patch("sys.stdout") as out:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
             self.assertEqual(self.run_guard(), 1)
-        printed = "".join(call.args[0] for call in out.write.call_args_list)
-        self.assertIn("app.seerah.trial.TrialActivity", printed)
+        self.assertIn("app.seerah.trial.TrialActivity", out.getvalue())
+
+    def test_component_without_name_fails_and_next_component_is_still_checked(self):
+        dump = (
+            "N: android=http://schemas.android.com/apk/res/android\n"
+            "  E: manifest (line=2)\n"
+            "    E: application (line=5)\n"
+            "      E: activity (line=6)\n"
+            "        A: http://schemas.android.com/apk/res/android:exported(0x01010010)=true\n"
+            "      E: activity (line=8)\n"
+            "        A: http://schemas.android.com/apk/res/android:name(0x01010003)="
+            '"app.seerah.trial.TrialActivity" (Raw: "app.seerah.trial.TrialActivity")\n'
+        )
+        with self.assertRaises(ValueError):
+            guard.components(dump)
+        self.install_printing(dump)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.run_guard(), 1)
 
     def test_fails_when_dump_empty(self):
         self.install_printing("")
