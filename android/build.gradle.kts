@@ -31,6 +31,8 @@ dependencyAnalysis {
     structure {
         // Hilt-generated code (Hilt_*, the Dagger component) refers to these types, which hilt-android
         // brings in. Treat them as part of hilt-android rather than declaring Hilt's internals in each module.
+        // This also hides direct ViewModel, fragment and annotation use in Hilt modules: an accepted trade-off,
+        // to revisit when the first ViewModel module lands.
         bundle("hilt") {
             primary("com.google.dagger:hilt-android")
             includeDependency("com.google.dagger:dagger")
