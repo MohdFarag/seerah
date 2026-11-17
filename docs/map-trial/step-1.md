@@ -69,7 +69,10 @@ Not yet run.
 
 ## Check 10: Licensee accepts MapLibre Native and its dependencies
 
-Not yet run.
+Run on 2026-11-17 with MapLibre Native Android 13.7.1 (`org.maplibre.gl:android-sdk-opengl`, the newest non-pre-release 13.x at least two weeks old), through `./gradlew check` on `:core:map`. Licensee passed with the existing allow list and no new exception. The MapLibre artifacts and their licences as Licensee read them:
+
+- `org.maplibre.gl:android-sdk-opengl` 13.7.1 and `org.maplibre.gl:maplibre-android-gestures` 0.0.4: BSD-2-Clause.
+- `org.maplibre.gl:android-sdk-geojson` 6.0.1, `org.maplibre.gl:android-sdk-turf` 6.0.1, `com.squareup.okhttp3:okhttp` 4.12.0 and `com.jakewharton.timber:timber` 5.0.1: Apache-2.0.
 
 ## Check 11: The three devices' screen widths in dp
 
