@@ -32,6 +32,8 @@ Run from `android/`:
 ./gradlew assembleRelease      # R8-shrunk release APK (debug-signed until the beta)
 python3 ../tools/android/check_page_alignment.py app/build/outputs/apk/release/app-release.apk
 python3 ../tools/android/check_no_trial_code.py app/build/outputs/apk/release/app-release.apk
+python3 -m unittest discover -s ../tools/android/tests   # the release guard's own tests
+./gradlew assembleBenchmark    # the benchmark APK, for measuring on devices
 ```
 
 ## Build types
@@ -42,7 +44,21 @@ python3 ../tools/android/check_no_trial_code.py app/build/outputs/apk/release/ap
 | `release` | The shipped app: R8-shrunk, debug-signed until the beta. Contains no map-trial code; `tools/android/check_no_trial_code.py` fails when its manifest names an `app.seerah.trial` component (ADR 0007, decision 10). |
 | `benchmark` | Release-like build for measuring on devices (`:app:assembleBenchmark`, application ID `app.seerah.benchmark`). Never published. The only build type that may depend on `:core:map`; its unit tests run with `check` (`:app:testBenchmarkUnitTest`). |
 
-CI (`.github/workflows/android.yml`) runs all of these on every push and pull request that touches `android/` (except the spike), and attaches the release APK to the run as `seerah-app`.
+CI (`.github/workflows/android.yml`) runs all of these on every push and pull request that touches `android/` (except the spike), runs the release guard and its tests, checks 16 KB page alignment on the release and benchmark APKs, and attaches the release APK to the run as `seerah-app` and the benchmark APK as `seerah-app-benchmark`.
+
+## Running the map trial
+
+The benchmark APK carries the map trial screen, launched from its own launcher icon "Map trial".
+
+1. Download the artifact `seerah-app-benchmark` from the `Android` workflow run (or build it with `./gradlew assembleBenchmark`; the APK is in `app/build/outputs/apk/benchmark/`).
+2. Install it. Its application ID is `app.seerah.benchmark`, so it installs beside the normal app without replacing it: `adb install app-benchmark.apk`.
+3. Push a trial folder (a folder produced by the map pipeline) to the app's external files folder: `adb push <folder> /sdcard/Android/data/app.seerah.benchmark/files/trial/`.
+4. Open "Map trial" and pick the folder and view.
+
+Two rules for the runs:
+
+- **Runs that measure open time** (checklist item 11) must launch with the `app.seerah.trial.VIEW` intent extra set to `<folder>/<view id>` (for example `adb shell am start -n app.seerah.benchmark/app.seerah.trial.TrialActivity --es app.seerah.trial.VIEW <folder>/zoom12`), or with a valid last-used view already stored. Otherwise the view picker appears first and its waiting time is counted as open time.
+- **Do not rotate the device during a camera-path run.** Rotation recreates the screen and loses that run's results.
 
 ## Convention plugins
 
