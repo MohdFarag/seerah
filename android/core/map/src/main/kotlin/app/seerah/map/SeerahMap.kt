@@ -1,6 +1,10 @@
 package app.seerah.map
 
+import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.res.Configuration
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -18,7 +22,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -51,14 +57,11 @@ fun SeerahMap(
     val context = LocalContext.current
     val currentOnCamera by rememberUpdatedState(onCamera)
     val currentOnEvent by rememberUpdatedState(onEvent)
-    val mapView = remember { createMapView(context) { currentOnEvent(it) } }
+    val mapView = remember { createMapView(context) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
 
+    MapViewOwnership(mapView, onMap = { map = it }, onEvent = { currentOnEvent(it) })
     MapLifecycle(mapView)
-    DisposableEffect(mapView) {
-        mapView.getMapAsync { map = it }
-        onDispose { map = null }
-    }
 
     AndroidView(factory = { mapView }, modifier = modifier)
     map?.let { MapContent(it, files, style, limits) { camera -> currentOnCamera(camera) } }
@@ -76,26 +79,72 @@ private fun MapContent(
     val camera = remember(map) { MapLibreCamera(map) }
     val currentOnCamera by rememberUpdatedState(onCamera)
     LaunchedEffect(map, limits) { map.applyLimits(limits) }
-    LaunchedEffect(map, files, style) {
-        map.setStyle(Style.Builder().fromJson(styleJson(files, style))) { currentOnCamera(camera) }
+    DisposableEffect(map, files, style) {
+        var active = true
+        map.setStyle(Style.Builder().fromJson(styleJson(files, style))) { if (active) currentOnCamera(camera) }
+        onDispose { active = false }
     }
 }
 
-/** Creates the map view once, with its rendering listeners reporting to [onEvent]. */
-private fun createMapView(context: Context, onEvent: (MapEvent) -> Unit): MapView {
+/** Creates the map view once, after making sure MapLibre is initialised. */
+private fun createMapView(context: Context): MapView {
     MapLibre.getInstance(context)
-    return MapView(context).apply {
-        onCreate(null)
-        addOnDidFinishRenderingMapListener { fully -> if (fully) onEvent(MapEvent.FullyRendered) }
-        addOnDidFinishRenderingFrameListener { _, _, _ ->
-            onEvent(MapEvent.FrameRendered(SystemClock.elapsedRealtime()))
+    return MapView(context).apply { onCreate(null) }
+}
+
+/**
+ * Owns [mapView] for as long as it is composed: hands its map to [onMap], reports its rendering
+ * events to [onEvent] and forwards low-memory warnings to it. On leaving the composition it removes
+ * its listeners and destroys the view; no callback reaches the caller after that.
+ *
+ * Declared before [MapLifecycle] so that its disposal runs after the lifecycle has stepped the view
+ * down (effects are disposed in reverse order).
+ */
+@Composable
+private fun MapViewOwnership(mapView: MapView, onMap: (MapLibreMap?) -> Unit, onEvent: (MapEvent) -> Unit) {
+    val context = LocalContext.current
+    val currentOnMap by rememberUpdatedState(onMap)
+    val currentOnEvent by rememberUpdatedState(onEvent)
+    DisposableEffect(mapView) {
+        var disposed = false
+        val mapRendered = MapView.OnDidFinishRenderingMapListener { fully ->
+            if (fully && !disposed) currentOnEvent(MapEvent.FullyRendered)
+        }
+        val frameRendered = MapView.OnDidFinishRenderingFrameListener { _, _, _ ->
+            if (!disposed) currentOnEvent(MapEvent.FrameRendered(SystemClock.elapsedRealtime()))
+        }
+        val memory = LowMemoryCallbacks(mapView)
+        mapView.addOnDidFinishRenderingMapListener(mapRendered)
+        mapView.addOnDidFinishRenderingFrameListener(frameRendered)
+        context.registerComponentCallbacks(memory)
+        mapView.getMapAsync { if (!disposed) currentOnMap(it) }
+        onDispose {
+            disposed = true
+            currentOnMap(null)
+            context.unregisterComponentCallbacks(memory)
+            mapView.removeOnDidFinishRenderingMapListener(mapRendered)
+            mapView.removeOnDidFinishRenderingFrameListener(frameRendered)
+            mapView.onDestroy()
         }
     }
 }
 
+/** Forwards the system's low-memory warning to [mapView]. */
+private class LowMemoryCallbacks(private val mapView: MapView) : ComponentCallbacks2 {
+    // Deprecated in ComponentCallbacks since API 34, but still called on older devices, which
+    // are the ones that run out of memory first; MapView offers no trim-level equivalent.
+    @Deprecated("Deprecated in ComponentCallbacks; kept for older devices.")
+    override fun onLowMemory() = mapView.onLowMemory()
+
+    override fun onTrimMemory(level: Int) = Unit
+
+    override fun onConfigurationChanged(newConfig: Configuration) = Unit
+}
+
 /**
- * Forwards the host's lifecycle to [mapView], and on leaving the composition takes the view down
- * through the steps it has not yet passed, ending with `onDestroy`.
+ * Forwards the host's lifecycle to [mapView]. When the host's lifecycle changes or the map leaves
+ * the composition, it stops observing and steps the view down to created; a new lifecycle then
+ * brings it back up to its own state. The view is destroyed by [MapViewOwnership], not here.
  */
 @Composable
 private fun MapLifecycle(mapView: MapView) {
@@ -119,7 +168,6 @@ private fun MapLifecycle(mapView: MapView) {
             lifecycle.removeObserver(observer)
             if (state.isAtLeast(Lifecycle.State.RESUMED)) mapView.onPause()
             if (state.isAtLeast(Lifecycle.State.STARTED)) mapView.onStop()
-            mapView.onDestroy()
         }
     }
 }
@@ -130,22 +178,32 @@ private fun MapLibreMap.applyLimits(limits: CameraLimits) {
     setMaxZoomPreference(limits.maxZoom)
 }
 
-/** [MapCamera] over a MapLibre map: [animateTo] suspends until MapLibre's animation ends. */
+/**
+ * [MapCamera] over a MapLibre map. [animateTo] runs on the main thread, whatever the caller's
+ * dispatcher, and suspends until MapLibre's animation ends. A cancelled coroutine stops the
+ * animation (posted to the main thread); an animation that MapLibre cancels, for example by a
+ * gesture, ends the call with [CancellationException].
+ */
 private class MapLibreCamera(private val map: MapLibreMap) : MapCamera {
-    override suspend fun animateTo(lat: Double, lon: Double, zoom: Double, durationMs: Long) {
-        val target = CameraPosition.Builder().target(LatLng(lat, lon)).zoom(zoom).build()
-        suspendCancellableCoroutine { continuation ->
-            val callback = object : MapLibreMap.CancelableCallback {
-                override fun onFinish() {
-                    if (continuation.isActive) continuation.resume(Unit)
-                }
+    private val mainThread = Handler(Looper.getMainLooper())
 
-                override fun onCancel() {
-                    continuation.cancel(CancellationException("MapLibre cancelled the camera animation."))
+    override suspend fun animateTo(lat: Double, lon: Double, zoom: Double, durationMs: Long) {
+        require(durationMs in 0..Int.MAX_VALUE) { "durationMs must be between 0 and ${Int.MAX_VALUE}: $durationMs" }
+        val target = CameraPosition.Builder().target(LatLng(lat, lon)).zoom(zoom).build()
+        withContext(Dispatchers.Main.immediate) {
+            suspendCancellableCoroutine { continuation ->
+                val callback = object : MapLibreMap.CancelableCallback {
+                    override fun onFinish() {
+                        if (continuation.isActive) continuation.resume(Unit)
+                    }
+
+                    override fun onCancel() {
+                        continuation.cancel(CancellationException("MapLibre cancelled the camera animation."))
+                    }
                 }
+                continuation.invokeOnCancellation { mainThread.post { map.cancelTransitions() } }
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(target), durationMs.toInt(), callback)
             }
-            continuation.invokeOnCancellation { map.cancelTransitions() }
-            map.animateCamera(CameraUpdateFactory.newCameraPosition(target), durationMs.toInt(), callback)
         }
     }
 }

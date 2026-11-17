@@ -12,6 +12,7 @@ dependencies {
     api(libs.androidx.compose.ui)
     implementation(libs.maplibre.android.opengl)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.lifecycle.common)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
     testImplementation(libs.junit4)
