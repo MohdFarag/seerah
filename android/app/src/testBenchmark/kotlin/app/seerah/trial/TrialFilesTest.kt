@@ -5,6 +5,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -98,10 +99,37 @@ class TrialFilesTest {
     }
 
     @Test
-    fun folderWithMalformedJson_isSkippedWithParserMessage() {
+    fun folderWithMalformedJson_isSkippedWithFileNameAndParserMessage() {
         variantFolder(metadata = "{not json")
 
         assertSkippedMentioning("metadata.json")
+        assertSkippedMentioning("Expected")
+    }
+
+    @Test
+    fun folderWithoutMetadata_isSkippedWithReason() {
+        variantFolder(metadata = null)
+
+        assertSkippedMentioning("metadata.json")
+    }
+
+    @Test
+    fun folderWithShortFingerprint_isSkippedWithReason() {
+        variantFolder(metadata = validMetadata.replace("0123456789abcdef", "0123"))
+
+        assertSkippedMentioning("fingerprint")
+    }
+
+    @Test
+    fun folderWithUnreadableFile_isSkippedNotThrown() {
+        val folder = variantFolder()
+        val metadata = File(folder, "metadata.json")
+        metadata.setReadable(false)
+        assumeFalse("running as a user that ignores file permissions", metadata.canRead())
+
+        val skipped = assertIs<VariantLoad.Skipped>(loadOnlyEntry())
+
+        assertTrue(skipped.reason.contains("cannot read", ignoreCase = true), "reason was: ${skipped.reason}")
     }
 
     @Test

@@ -2,6 +2,7 @@ package app.seerah.trial
 
 import app.seerah.map.CameraLimits
 import java.io.File
+import java.io.IOException
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -86,6 +87,10 @@ private fun loadVariant(folder: File): VariantLoad = try {
     readVariant(folder)
 } catch (error: JSONException) {
     VariantLoad.Skipped(folder, "unreadable JSON in ${error.message}")
+} catch (error: IOException) {
+    VariantLoad.Skipped(folder, "cannot read a file: ${error.message}")
+} catch (error: IllegalArgumentException) {
+    VariantLoad.Skipped(folder, "invalid file content: ${error.message}")
 }
 
 private fun readVariant(folder: File): VariantLoad {

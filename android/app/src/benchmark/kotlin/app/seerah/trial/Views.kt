@@ -13,6 +13,7 @@ private const val COAST = 0xFF6F8F88.toInt()
 private const val INK_RGB = 0x967648
 
 private const val ALPHA_SHIFT = 24
+private const val ALPHA_OPAQUE = 0xFF
 private const val ALPHA_NONE = 0x00
 private const val ALPHA_LIGHT = 0x33
 private const val ALPHA_MEDIUM = 0x66
@@ -20,6 +21,9 @@ private const val ALPHA_STRONG = 0x99
 
 private const val BUILD_ZOOM = 12
 private const val COARSE_BUILD_ZOOM = 11
+
+private const val SELECTION_SEPARATOR = "/"
+private const val SELECTION_PARTS = 2
 
 // The relief fades out where the style's zoom (the build zoom minus one) passes these values.
 private val EARLY_FADE = ZoomRange(start = 11.5, end = 13.5)
@@ -40,7 +44,7 @@ private val OPTION_C_RAMP: List<RampStep> =
             listOf(RampStep(belowValue, ink(below)), RampStep(aboveValue, ink(above)))
         }.flatten()
 
-private val TRIAL_COLOURS = MapColours(sea = SEA, land = LAND, coast = COAST, ink = ink(0xFF))
+private val TRIAL_COLOURS = MapColours(sea = SEA, land = LAND, coast = COAST, ink = ink(ALPHA_OPAQUE))
 
 /**
  * A way of drawing the relief that the trial compares.
@@ -102,6 +106,3 @@ fun resolveView(requested: String?, loaded: List<TrialVariant>): TrialSelection?
     val view = viewsFor(variant.variant).firstOrNull { it.id == viewId } ?: return null
     return TrialSelection(variant, view)
 }
-
-private const val SELECTION_SEPARATOR = "/"
-private const val SELECTION_PARTS = 2
