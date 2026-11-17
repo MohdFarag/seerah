@@ -8,7 +8,6 @@ import android.os.Looper
 import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,7 +78,10 @@ private fun MapContent(
     val camera = remember(map) { MapLibreCamera(map) }
     DisposableEffect(camera) { onDispose { camera.dispose() } }
     val currentOnCamera by rememberUpdatedState(onCamera)
-    LaunchedEffect(map, limits) { map.applyLimits(limits) }
+    DisposableEffect(map, limits) {
+        map.applyLimits(limits)
+        onDispose {}
+    }
     DisposableEffect(map, files, style) {
         var active = true
         map.setStyle(Style.Builder().fromJson(styleJson(files, style))) { if (active) currentOnCamera(camera) }
@@ -204,17 +206,22 @@ private class MapLibreCamera(private val map: MapLibreMap) : MapCamera {
         val target = CameraPosition.Builder().target(LatLng(lat, lon)).zoom(zoom).build()
         withContext(Dispatchers.Main.immediate) {
             val animation = ++generation
+            if (disposed) throw CancellationException("The map camera was disposed.")
             suspendCancellableCoroutine { continuation ->
+                var cancelledByMap = false
                 val callback = object : MapLibreMap.CancelableCallback {
                     override fun onFinish() {
                         if (continuation.isActive) continuation.resume(Unit)
                     }
 
                     override fun onCancel() {
+                        cancelledByMap = true
                         continuation.cancel(CancellationException("MapLibre cancelled the camera animation."))
                     }
                 }
-                continuation.invokeOnCancellation { cancelIfCurrent(animation) }
+                // MapLibre already stopped the animation when it cancels; cancelling again from inside its
+                // callback would re-enter cancelTransitions.
+                continuation.invokeOnCancellation { if (!cancelledByMap) cancelIfCurrent(animation) }
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(target), durationMs.toInt(), callback)
             }
         }
