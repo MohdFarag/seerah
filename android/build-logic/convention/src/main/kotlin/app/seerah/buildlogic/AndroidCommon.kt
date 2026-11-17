@@ -1,6 +1,6 @@
 package app.seerah.buildlogic
 
-import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
@@ -22,15 +22,15 @@ private val VERSION_CHECKS = setOf(
 )
 
 /** SDK levels, Java level and lint rules shared by every Android module. */
-internal fun Project.configureAndroid(android: ApplicationExtension) {
+internal fun Project.configureAndroid(android: CommonExtension) {
     android.apply {
         compileSdk = libs.intVersion("compileSdk")
         defaultConfig.minSdk = libs.intVersion("minSdk")
-        compileOptions {
+        compileOptions.apply {
             sourceCompatibility = JAVA_TARGET
             targetCompatibility = JAVA_TARGET
         }
-        lint {
+        lint.apply {
             warningsAsErrors = true
             abortOnError = true
             checkDependencies = true

@@ -13,12 +13,15 @@ minSdk = "26"
 # Libraries
 androidxActivity = "1.13.0"
 androidxComposeBom = "2026.09.00"
+androidxCore = "1.18.0"
 androidxLifecycle = "2.11.0"
 androidxTestEspresso = "3.7.0"
 androidxTestExt = "1.3.0"
 hilt = "2.60.1"
 junit4 = "4.13.2"
+kotlinxCoroutines = "1.10.2"
 leakcanary = "2.14"
+maplibre = "13.7.1"
 robolectric = "4.17"
 # Quality tooling
 composeRules = "0.6.8"
@@ -31,6 +34,7 @@ spotless = "8.11.0"
 [libraries]
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "androidxActivity" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidxActivity" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCore" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
@@ -44,14 +48,19 @@ androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-unit = { group = "androidx.compose.ui", name = "ui-unit" }
+androidx-lifecycle-common = { group = "androidx.lifecycle", name = "lifecycle-common", version.ref = "androidxLifecycle" }
 androidx-lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime", version.ref = "androidxLifecycle" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidxTestEspresso" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExt" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 leakcanary = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
+maplibre-android-opengl = { group = "org.maplibre.gl", name = "android-sdk-opengl", version.ref = "maplibre" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 robolectric-annotations = { group = "org.robolectric", name = "annotations", version.ref = "robolectric" }
 
@@ -67,6 +76,7 @@ moduleGraphAssert-gradlePlugin = { group = "com.jraska.module.graph.assertion", 
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
+android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependencyAnalysis" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
@@ -78,4 +88,6 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 # Convention plugins from build-logic (no version: they are part of this build)
 seerah-android-application = { id = "seerah.android.application" }
 seerah-android-application-compose = { id = "seerah.android.application.compose" }
+seerah-android-library = { id = "seerah.android.library" }
+seerah-android-library-compose = { id = "seerah.android.library.compose" }
 seerah-hilt = { id = "seerah.hilt" }

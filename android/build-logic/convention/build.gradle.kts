@@ -25,6 +25,14 @@ gradlePlugin {
             id = "seerah.android.application.compose"
             implementationClass = "AndroidApplicationComposeConventionPlugin"
         }
+        register("androidLibrary") {
+            id = "seerah.android.library"
+            implementationClass = "AndroidLibraryConventionPlugin"
+        }
+        register("androidLibraryCompose") {
+            id = "seerah.android.library.compose"
+            implementationClass = "AndroidLibraryComposeConventionPlugin"
+        }
         register("hilt") {
             id = "seerah.hilt"
             implementationClass = "HiltConventionPlugin"

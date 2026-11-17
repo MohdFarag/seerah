@@ -58,9 +58,16 @@ dependencies {
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.junit4)
+    testImplementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.robolectric.annotations)
     testRuntimeOnly(libs.robolectric)
     // Only contributes the test activity to the debug manifest.
     debugRuntimeOnly(libs.androidx.compose.ui.test.manifest)
+    // Compose tests launch ComponentActivity, which this artifact declares; benchmark unit tests need it too.
+    benchmarkRuntimeOnly(libs.androidx.compose.ui.test.manifest)
+    benchmarkImplementation(project(":core:map"))
+    benchmarkImplementation(libs.androidx.core.ktx)
+    benchmarkImplementation(libs.kotlinx.coroutines.core)
+    testBenchmarkImplementation(project(":core:map"))
 }
