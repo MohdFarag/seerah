@@ -10,7 +10,7 @@ Not yet run.
 
 Not yet run.
 
-## Check 3: `color-relief-color` accepts `step`
+## Check 3: `color-relief` draws option (c)'s band edges sharp
 
 Not yet run.
 
