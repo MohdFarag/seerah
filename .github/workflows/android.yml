@@ -38,11 +38,11 @@ jobs:
       - name: Check and build
         run: ./gradlew spotlessCheck check buildHealth assembleRelease assembleBenchmark --console=plain
 
-      - name: No trial code in release
-        run: python3 ../tools/android/check_no_trial_code.py app/build/outputs/apk/release/app-release.apk
-
       - name: Release guard tests
         run: python3 -m unittest discover -s ../tools/android/tests
+
+      - name: No trial code in release
+        run: python3 ../tools/android/check_no_trial_code.py app/build/outputs/apk/release/app-release.apk
 
       - name: 16 KB page alignment
         run: >-

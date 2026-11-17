@@ -52,7 +52,13 @@ The benchmark APK carries the map trial screen, launched from its own launcher i
 
 1. Download the artifact `seerah-app-benchmark` from the `Android` workflow run (or build it with `./gradlew assembleBenchmark`; the APK is in `app/build/outputs/apk/benchmark/`).
 2. Install it. Its application ID is `app.seerah.benchmark`, so it installs beside the normal app without replacing it: `adb install app-benchmark.apk`.
-3. Push a trial folder (a folder produced by the map pipeline) to the app's external files folder: `adb push <folder> /sdcard/Android/data/app.seerah.benchmark/files/trial/`.
+3. Push each variant folder (a folder produced by the map pipeline) into the app's external files folder. Each one must land as `trial/<folder>/`, because the `<folder>/<view id>` selection value uses that folder name. Create the parent first, then push, for example:
+
+   ```sh
+   adb shell mkdir -p /sdcard/Android/data/app.seerah.benchmark/files/trial
+   adb push zoom12 /sdcard/Android/data/app.seerah.benchmark/files/trial/zoom12
+   ```
+
 4. Open "Map trial" and pick the folder and view.
 
 Two rules for the runs:
