@@ -65,8 +65,9 @@ dependencies {
     // Only contributes the test activity to the debug manifest.
     debugRuntimeOnly(libs.androidx.compose.ui.test.manifest)
     // Compose tests launch ComponentActivity, which this artifact declares; benchmark unit tests need it too.
-    benchmarkImplementation(libs.androidx.compose.ui.test.manifest)
+    benchmarkRuntimeOnly(libs.androidx.compose.ui.test.manifest)
     benchmarkImplementation(project(":core:map"))
     benchmarkImplementation(libs.androidx.core.ktx)
     benchmarkImplementation(libs.kotlinx.coroutines.core)
+    testBenchmarkImplementation(project(":core:map"))
 }
