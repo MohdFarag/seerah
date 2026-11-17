@@ -77,6 +77,7 @@ private fun MapContent(
     onCamera: (MapCamera) -> Unit,
 ) {
     val camera = remember(map) { MapLibreCamera(map) }
+    DisposableEffect(camera) { onDispose { camera.dispose() } }
     val currentOnCamera by rememberUpdatedState(onCamera)
     LaunchedEffect(map, limits) { map.applyLimits(limits) }
     DisposableEffect(map, files, style) {
@@ -181,16 +182,28 @@ private fun MapLibreMap.applyLimits(limits: CameraLimits) {
 /**
  * [MapCamera] over a MapLibre map. [animateTo] runs on the main thread, whatever the caller's
  * dispatcher, and suspends until MapLibre's animation ends. A cancelled coroutine stops the
- * animation (posted to the main thread); an animation that MapLibre cancels, for example by a
+ * animation, unless a newer one has started or the map is gone; an animation that MapLibre cancels, for example by a
  * gesture, ends the call with [CancellationException].
  */
 private class MapLibreCamera(private val map: MapLibreMap) : MapCamera {
     private val mainThread = Handler(Looper.getMainLooper())
 
+    /** Counts the animations started; read and written on the main thread only. */
+    private var generation = 0
+
+    /** Set on the main thread when the map leaves the composition; no cancel reaches it after. */
+    private var disposed = false
+
+    /** Stops this camera from touching the map. Call on the main thread. */
+    fun dispose() {
+        disposed = true
+    }
+
     override suspend fun animateTo(lat: Double, lon: Double, zoom: Double, durationMs: Long) {
         require(durationMs in 0..Int.MAX_VALUE) { "durationMs must be between 0 and ${Int.MAX_VALUE}: $durationMs" }
         val target = CameraPosition.Builder().target(LatLng(lat, lon)).zoom(zoom).build()
         withContext(Dispatchers.Main.immediate) {
+            val animation = ++generation
             suspendCancellableCoroutine { continuation ->
                 val callback = object : MapLibreMap.CancelableCallback {
                     override fun onFinish() {
@@ -201,9 +214,19 @@ private class MapLibreCamera(private val map: MapLibreMap) : MapCamera {
                         continuation.cancel(CancellationException("MapLibre cancelled the camera animation."))
                     }
                 }
-                continuation.invokeOnCancellation { mainThread.post { map.cancelTransitions() } }
+                continuation.invokeOnCancellation { cancelIfCurrent(animation) }
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(target), durationMs.toInt(), callback)
             }
         }
+    }
+
+    /**
+     * Stops animation [animation] if it is still the latest one and the map is alive. Runs at once on
+     * the main thread, otherwise is posted there; the check keeps a late cancel from stopping a newer
+     * animation started in the meantime.
+     */
+    private fun cancelIfCurrent(animation: Int) {
+        val cancel = { if (animation == generation && !disposed) map.cancelTransitions() }
+        if (Looper.myLooper() == Looper.getMainLooper()) cancel() else mainThread.post(cancel)
     }
 }
