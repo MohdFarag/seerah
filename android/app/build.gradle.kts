@@ -57,4 +57,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     // Compose tests launch ComponentActivity, which this artifact declares; benchmark unit tests need it too.
     benchmarkImplementation(libs.androidx.compose.ui.test.manifest)
+    benchmarkImplementation(project(":core:map"))
 }
