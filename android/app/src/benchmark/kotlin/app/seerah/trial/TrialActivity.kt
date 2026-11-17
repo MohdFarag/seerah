@@ -42,6 +42,7 @@ import app.seerah.map.MapFiles
 import app.seerah.map.SeerahMap
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -100,8 +101,10 @@ private fun TrialScreen(
     var loads by remember { mutableStateOf<List<VariantLoad>?>(null) }
     var selection by remember { mutableStateOf<TrialSelection?>(null) }
     LaunchedEffect(root) {
-        val loaded = withContext(Dispatchers.IO) { root?.let(::loadVariants).orEmpty() }
-        selection = startSelection(requested, preferences.getString(LAST_VIEW, null), loaded.variants())
+        val (loaded, lastUsed) = withContext(Dispatchers.IO) {
+            root?.let(::loadVariants).orEmpty() to preferences.getString(LAST_VIEW, null)
+        }
+        selection = startSelection(requested, lastUsed, loaded.variants())
         loads = loaded
     }
     val current = selection
@@ -159,16 +162,26 @@ private class RunRecorder {
     var readings: MutableList<Double>? = null
 }
 
+/**
+ * The map with the overlay and the camera path's controls.
+ *
+ * Measurement cost: the overlay's state is read only inside [OverlayPanel], so a published reading
+ * recomposes the overlay alone, and the memory (PSS) is read off the main thread, so neither sits on
+ * the frame path being measured. The screen does not lock its orientation: rotating it during a run
+ * recreates the activity and loses that run's results.
+ */
 @Composable
 private fun TrialMap(selection: TrialSelection, onViews: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val stats = remember(selection) { FrameStats() }
     val recorder = remember(selection) { RunRecorder() }
-    var camera by remember { mutableStateOf<MapCamera?>(null) }
+    var camera by remember(selection) { mutableStateOf<MapCamera?>(null) }
     var running by remember(selection) { mutableStateOf(false) }
     var stopped by remember(selection) { mutableStateOf(false) }
-    var overlay by remember(selection) {
+    var hasRuns by remember(selection) { mutableStateOf(false) }
+    val pssReader = remember(selection) { PssReader() }
+    val overlay = remember(selection) {
         mutableStateOf(
             OverlayState(
                 device = "${Build.MANUFACTURER} ${Build.MODEL}",
@@ -183,17 +196,23 @@ private fun TrialMap(selection: TrialSelection, onViews: () -> Unit, modifier: M
         )
     }
 
+    fun update(change: (OverlayState) -> OverlayState) {
+        overlay.value = change(overlay.value)
+    }
+
     fun runPath(path: MapCamera) = scope.launch {
         running = true
         stopped = false
-        overlay = overlay.copy(runs = emptyList())
+        update { it.copy(runs = emptyList()) }
+        hasRuns = false
         try {
             repeat(RUNS) {
                 stats.reset()
                 val readings = mutableListOf<Double>()
                 recorder.readings = readings
                 animateThrough(path, selection.variant.cameraPath.stops)
-                overlay = overlay.copy(runs = overlay.runs + RunResult(readings.toList()))
+                update { it.copy(runs = it.runs + RunResult(readings.toList())) }
+                hasRuns = true
             }
         } catch (cancelled: CancellationException) {
             // A touch on the map stops the path; only a cancelled screen ends this coroutine.
@@ -214,34 +233,59 @@ private fun TrialMap(selection: TrialSelection, onViews: () -> Unit, modifier: M
             onCamera = { camera = it },
             onEvent = { event ->
                 when (event) {
-                    MapEvent.FullyRendered -> if (overlay.openTimeMs == null) {
+                    MapEvent.FullyRendered -> if (overlay.value.openTimeMs == null) {
                         OpenTime.recordOnce()
-                        overlay = overlay.copy(openTimeMs = OpenTime.millis)
+                        update { it.copy(openTimeMs = OpenTime.millis) }
                     }
 
                     is MapEvent.FrameRendered -> stats.onFrame(event.atMillis)?.let { reading ->
                         recorder.readings?.add(reading.fps)
-                        overlay = overlay.copy(
-                            fps = reading.fps,
-                            lowestFps = reading.lowestFps,
-                            pssMb = (Debug.getPss() / KB_PER_MB).toInt(),
-                        )
+                        update { it.copy(fps = reading.fps, lowestFps = reading.lowestFps) }
+                        pssReader.read(scope) { mb -> update { it.copy(pssMb = mb) } }
                     }
                 }
             },
         )
-        Column(Modifier.align(Alignment.TopStart).padding(SPACING)) {
-            Overlay(overlay)
-            if (stopped) Text("Path stopped", color = MaterialTheme.colorScheme.error)
-        }
+        OverlayPanel({ overlay.value }, stopped, Modifier.align(Alignment.TopStart).padding(SPACING))
         Row(
             Modifier.align(Alignment.BottomCenter).padding(SPACING),
             horizontalArrangement = Arrangement.spacedBy(SPACING),
         ) {
             Button(onClick = onViews) { Text("Views") }
             Button(onClick = { camera?.let(::runPath) }, enabled = camera != null && !running) { Text("Run path") }
-            Button(onClick = { copyResults(context, overlay) }, enabled = overlay.runs.isNotEmpty()) {
+            Button(onClick = { copyResults(context, overlay.value) }, enabled = hasRuns) {
                 Text("Copy results")
+            }
+        }
+    }
+}
+
+/** Reads only the overlay's state, so a published reading recomposes nothing else. */
+@Composable
+private fun OverlayPanel(state: () -> OverlayState, stopped: Boolean, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Overlay(state())
+        if (stopped) Text("Path stopped", color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/**
+ * Reads the memory (PSS) off the main thread: `Debug.getPss()` walks `/proc/self/smaps`, which can
+ * take tens of milliseconds, so on the main thread it would drop the frames being measured. A read
+ * is skipped while the previous one is still running.
+ */
+private class PssReader {
+    private var reading = false
+
+    fun read(scope: CoroutineScope, onMb: (Int) -> Unit) {
+        if (reading) return
+        reading = true
+        scope.launch {
+            try {
+                val kb = withContext(Dispatchers.Default) { Debug.getPss() }
+                onMb((kb / KB_PER_MB).toInt())
+            } finally {
+                reading = false
             }
         }
     }

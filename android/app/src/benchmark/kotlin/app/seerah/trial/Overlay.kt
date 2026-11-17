@@ -16,8 +16,9 @@ private val OVERLAY_PADDING = 8.dp
 
 /**
  * What the measurement overlay shows. The screen replaces it only when [FrameStats] publishes a
- * reading or a run of the camera path ends, never per frame, so the overlay does not lower the
- * rate it measures.
+ * reading (and when that reading's memory value arrives), when a run of the camera path starts or
+ * ends, and at the first open time; never per frame, so the overlay does not lower the rate it
+ * measures.
  *
  * @property device the manufacturer and model.
  * @property view the selection's `<folder>/<view id>` value.
@@ -60,9 +61,7 @@ fun Overlay(state: OverlayState, modifier: Modifier = Modifier) {
         Text(report, color = Color.White, style = style)
         if (state.runs.isEmpty()) {
             Text(
-                "Open time: ${state.openTimeMs?.let {
-                    "$it ms"
-                } ?: "-"} | Memory (PSS): ${state.pssMb?.let { "$it MB" } ?: "-"}",
+                "Open time: ${state.openTimeMs.msText()} | Memory (PSS): ${state.pssMb.mbText()}",
                 color = Color.White,
                 style = style,
             )
@@ -71,3 +70,7 @@ fun Overlay(state: OverlayState, modifier: Modifier = Modifier) {
 }
 
 private fun Double?.fpsText(): String = if (this == null) "-" else String.format(Locale.ROOT, "%.1f fps", this)
+
+private fun Long?.msText(): String = if (this == null) "-" else "$this ms"
+
+private fun Int?.mbText(): String = if (this == null) "-" else "$this MB"
