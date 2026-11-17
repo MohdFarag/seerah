@@ -1,8 +1,18 @@
 package app.seerah.trial
 
+/** Milliseconds in a second: the numerator of the rate. */
 private const val MILLIS_PER_SECOND = 1_000L
+
+/** The least time between two published readings. */
+private const val PUBLISH_INTERVAL_MILLIS = 1_000L
+
+/** The shortest frame gap that counts. */
 private const val MIN_GAP_MILLIS = 1L
+
+/** The longest frame gap that counts; a longer one is an idle pause, not a slow frame. */
 private const val MAX_GAP_MILLIS = 250L
+
+/** How many kept gaps one reading averages over. */
 private const val WINDOW_GAPS = 30
 
 /**
@@ -55,7 +65,7 @@ class FrameStats {
     private fun publishIfDue(atMillis: Long): FrameReading? {
         if (gaps.size < WINDOW_GAPS) return null
         val published = lastPublishedMillis
-        if (published != null && atMillis - published < MILLIS_PER_SECOND) return null
+        if (published != null && atMillis - published < PUBLISH_INTERVAL_MILLIS) return null
 
         lastPublishedMillis = atMillis
         val fps = MILLIS_PER_SECOND * WINDOW_GAPS.toDouble() / gaps.sum()

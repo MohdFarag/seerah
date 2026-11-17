@@ -75,6 +75,7 @@ class FrameStatsTest {
     @Test
     fun reset_clearsLowest() {
         val stats = FrameStats()
+        // A slow run first, so the lowest rate is 20; a faster run after reset must not inherit it.
         run(stats, listOf(50), durationMillis = 2_000)
 
         stats.reset()
@@ -83,5 +84,19 @@ class FrameStatsTest {
         val first = assertNotNull(published.firstOrNull(), "expected a reading after reset")
         assertEquals(50.0, first.reading.lowestFps, 0.01)
         published.forEach { assertEquals(50.0, it.reading.lowestFps, 0.01) }
+    }
+
+    @Test
+    fun reset_clearsLastFrame() {
+        val stats = FrameStats()
+        run(stats, listOf(20), durationMillis = 1_000)
+
+        stats.reset()
+        // With the old last frame kept, this first frame would add a 100 ms gap and the 30th gap
+        // (and a reading) would come one frame early.
+        val frames = listOf(1_100L) + (1..29).map { 1_100L + it * 20 }
+        val readings = frames.map { stats.onFrame(it) }
+
+        assertTrue(readings.all { it == null })
     }
 }
