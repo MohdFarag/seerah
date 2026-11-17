@@ -33,6 +33,7 @@ Baseline, refined by the v1 architecture ADR:
 - **Immutability by default:** `val`, read-only collections, data classes for state.
 - **Coroutines:** structured concurrency only (`viewModelScope`, injected dispatchers). No `GlobalScope`.
 - **Dependencies:** declared once in the Gradle version catalog, pinned, updated by Dependabot. Before adding one: is it maintained, licensed compatibly, and worth its size? Record notable ones in an ADR.
+- **Dependency analysis:** each module convention plugin applies the Dependency Analysis Gradle Plugin, so `buildHealth` checks every module ([ADR 0004](adr/0004-build-and-quality-tooling.md)).
 - **No dead code,** no commented-out code, no `TODO` without an issue link.
 
 ## Compose and UI

@@ -30,6 +30,7 @@ The owner's bar is quality first: clean code, a sound structure, real tests and 
 ### Build
 
 - Gradle with Kotlin DSL; one version catalog (`android/gradle/libs.versions.toml`); convention plugins for application, library, Compose, feature, Hilt, test and Roborazzi setup. A module's build file names its plugins and dependencies, nothing else.
+  - *Note (owner, 2026-11-17):* the owner approved fixing this on a separate branch. The Dependency Analysis Gradle Plugin has to be applied to every module: since [DAGP 2.0.0](https://github.com/autonomousapps/dependency-analysis-gradle-plugin/blob/main/CHANGELOG.md#version-200) removed auto-apply, the root plugin alone analyses nothing, so `buildHealth` had been passing without checking any module. Each module convention plugin applies it (today the application one); the root `dependencyAnalysis {}` block only configures it. Hilt's generated-code dependencies are grouped in a `hilt` bundle there.
 - **Android Gradle Plugin 9** with its built-in Kotlin support (no separate `kotlin-android` plugin), with Hilt and KSP versions that support it (Hilt 2.59 or later).
 - Latest stable versions at scaffolding time; no alpha or beta library without a note in an ADR.
 - JDK 21 toolchain; Gradle configuration cache and build cache on.

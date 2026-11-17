@@ -41,18 +41,26 @@ dependencies {
         }
     }
 
+    implementation(libs.androidx.activity)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.compose.ui.unit)
 
-    debugImplementation(libs.leakcanary)
+    // LeakCanary installs itself; no code refers to it.
+    debugRuntimeOnly(libs.leakcanary)
 
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.junit4)
     testImplementation(libs.kotlin.test)
-    testImplementation(libs.robolectric)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    testImplementation(libs.robolectric.annotations)
+    testRuntimeOnly(libs.robolectric)
+    // Only contributes the test activity to the debug manifest.
+    debugRuntimeOnly(libs.androidx.compose.ui.test.manifest)
 }

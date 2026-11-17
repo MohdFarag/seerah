@@ -26,7 +26,23 @@ spotless {
 }
 
 // Unused or wrongly declared dependencies fail `buildHealth` (ADR 0004).
+// DAGP itself is applied to every module by the convention plugins; this block only configures it.
 dependencyAnalysis {
+    structure {
+        // Hilt-generated code (Hilt_*, the Dagger component) refers to these types, which hilt-android
+        // brings in. Treat them as part of hilt-android rather than declaring Hilt's internals in each module.
+        // This also hides direct ViewModel, fragment and annotation use in Hilt modules: an accepted trade-off,
+        // to revisit when the first ViewModel module lands.
+        bundle("hilt") {
+            primary("com.google.dagger:hilt-android")
+            includeDependency("com.google.dagger:dagger")
+            includeDependency("com.google.dagger:hilt-core")
+            includeDependency("androidx.annotation:annotation")
+            includeDependency("androidx.fragment:fragment")
+            includeDependency("androidx.lifecycle:lifecycle-viewmodel")
+            includeDependency("androidx.lifecycle:lifecycle-viewmodel-savedstate")
+        }
+    }
     issues {
         all {
             onAny { severity("fail") }
