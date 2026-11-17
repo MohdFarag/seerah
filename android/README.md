@@ -9,10 +9,11 @@ android/
   build-logic/   convention plugins: the shared Gradle setup every module applies
   gradle/        version catalog (libs.versions.toml) and the Gradle wrapper
   app/           :app, the application module
+  core/map/      :core:map, the map module: the only one that touches MapLibre (see its README)
   spike/         the finished technical spike, a separate build (reference only)
 ```
 
-Modules from ADR 0003 (`core/*`, `feature/*`) are added as their first real code lands; until then they don't exist.
+Other modules from ADR 0003 (`core/*`, `feature/*`) are added as their first real code lands; until then they don't exist.
 
 ## Requirements
 
