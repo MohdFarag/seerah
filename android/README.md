@@ -40,9 +40,11 @@ CI (`.github/workflows/android.yml`) runs all of these on every push and pull re
 | --- | --- |
 | `seerah.android.application` | SDK levels (min 26, compile and target 37), Java 17 bytecode, lint with warnings as errors, Kotlin warnings as errors, R8 for release, the licence check, the module dependency rules and the MapLibre boundary |
 | `seerah.android.application.compose` | Compose compiler, Compose BOM and preview tooling |
+| `seerah.android.library` | Like the application plugin for a library module: SDK levels, lint, Kotlin settings, the licence check and the MapLibre boundary (the module dependency rules run from `:app`) |
+| `seerah.android.library.compose` | Compose compiler and Compose BOM for a library module, without preview tooling |
 | `seerah.hilt` | Hilt with KSP |
 
-Library, feature and JVM conventions are added with the first module that needs them.
+Feature and JVM conventions are added with the first module that needs them.
 
 ## Rules the build enforces
 

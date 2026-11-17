@@ -60,6 +60,7 @@ moduleGraphAssert-gradlePlugin = { group = "com.jraska.module.graph.assertion", 
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
+android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependencyAnalysis" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
@@ -71,4 +72,6 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 # Convention plugins from build-logic (no version: they are part of this build)
 seerah-android-application = { id = "seerah.android.application" }
 seerah-android-application-compose = { id = "seerah.android.application.compose" }
+seerah-android-library = { id = "seerah.android.library" }
+seerah-android-library-compose = { id = "seerah.android.library.compose" }
 seerah-hilt = { id = "seerah.hilt" }
