@@ -1,7 +1,7 @@
 # Map trial build
 
 - **Author:** MohdFaragDev
-- **Status:** Approved by the owner on 2026-11-14. Revised after an [EGM review](egm-review-map-trial/consolidated_review_report.md) and the owner's answers of 2026-11-14 ([resolution](egm-review-map-trial/goldfish_review_report.md)).
+- **Status:** Approved by the owner on 2026-11-14; option (c)'s ramp and fade amended on 2026-11-17 (owner). Revised after an [EGM review](egm-review-map-trial/consolidated_review_report.md) and the owner's answers of 2026-11-14 ([resolution](egm-review-map-trial/goldfish_review_report.md)).
 - **Date:** 2026-11-14
 
 ---
@@ -125,6 +125,10 @@ The rest are facts to check in step 1, listed with their fallbacks under "Step 1
   - Its writer stores identical tiles once, matching them by Python's `hash()`.
   - **go-pmtiles** offers `verify`, `show` and `extract`.
 - **MapLibre Native Android** has had the `color-relief` layer since 13.0.0. The spike used 13.7.1 with `pmtiles://file://` sources and measured frames with `addOnDidFinishRenderingFrameListener` (`android/spike/spike/src/main/kotlin/app/seerah/spike/Stats.kt`).
+- **How `color-relief` reads its ramp** (MapLibre Native tag `android-v13.7.1`, checked 2026-11-17), in `src/mln/renderer/layers/render_color_relief_layer.cpp`, `updateColorRamp()`:
+  - if `color-relief-color` is an `interpolate` expression, its stop elevations are used exactly (lines 129–157), stored in a 32-bit float texture read with nearest filtering (lines 266–269);
+  - any other expression, `step` included, is sampled at 256 evenly spaced elevations from −500 to 9000 m, about 37 m apart (lines 159–176), so stored values 0–255 fall between only seven samples and bands at 42.5, 127.5 and 212.5 cannot be drawn;
+  - the fragment shader (`shaders/color_relief.fragment.glsl`) finds the two stops around each pixel's elevation by binary search and mixes their colours linearly.
 
 Sources are listed under Additional Resources.
 
@@ -372,7 +376,9 @@ The style is built by `styleJson(files, spec)`:
 - **Layers:** a sea background; `land` fill and `coast` line; and the relief as either:
   - a `raster` layer, with opacity interpolated over `reliefFade`; or
   - a `color-relief` layer on a `raster-dem` source (`encoding: terrarium`), with the ramp.
-- **Option (c)'s ramp:** thresholds at stored values 42.5, 127.5 and 212.5, giving ink alpha 0, 0.2, 0.4 and 0.6 between them. It is written with `step`, or with `interpolate linear` stops 0.5 apart if `step` is rejected (step 1 check).
+- **Option (c)'s ramp:** thresholds at stored values 42.5, 127.5 and 212.5, giving ink alpha 0, 0.2, 0.4 and 0.6 between them. It is written with `interpolate linear` and paired stops one stored value apart, so each threshold is a hard edge: 42 → 0, 43 → 0.2, 127 → 0.2, 128 → 0.4, 212 → 0.4, 213 → 0.6. Stored values are whole numbers, so no pixel's stored value falls inside a pair. Values below the first stop or above the last take its colour.
+  - **Why not `step`** (owner, 2026-11-17): MapLibre Native resolves only `interpolate` stops exactly and samples any other ramp 37 m apart over −500 to 9000 m (see Facts), which would lose the 0–255 values. The value encoding (0–255) is kept.
+- **Option (c)'s fade:** the `color-relief` layer's opacity is interpolated over `reliefFade`, like the `raster` layer's.
 - **Numbers:** every number in the style is a named constant or comes from the spec. The colours come from the spike's style values until `:core:designsystem` exists.
 
 **The `benchmark` build type** (in `:app`):
@@ -388,7 +394,7 @@ The trial code:
   - zoom 12: `Painted(12)`, fade at MapLibre zooms 11.5–13.5, the spike's 12.5–14.5 converted to MapLibre zooms;
   - zoom 11: `Painted(11)`, same fade;
   - option (a): `Painted(12)`, fade at 13.5–15.5, a trial variable;
-  - option (c): `Value(12, ramp)`;
+  - option (c): `Value(12, ramp)`, fade at 13.5–15.5, the same trial variable as option (a) (owner, 2026-11-17);
   - per-zoom: `Painted(12)` on the per-zoom variant.
 - **Measurement overlay:**
   - **Frame rate**, following `Stats.kt`: each frame's gap is kept if it is 1–250 ms. Over the last 30 kept gaps, the rate is 1000 × 30 ÷ their sum, published at most once a second. Lowest = the minimum published rate.
@@ -440,7 +446,7 @@ As decided (owner, 2026-11-14). Each step ends with something the owner can chec
 | --- | --- | --- | --- |
 | 1 | `adb push` into the benchmark app's external files folder works on all three devices | add the in-app folder import | `step-1.md` |
 | 2 | MapLibre honours a raster source's `maxzoom` on `pmtiles://` | cut a zoom-11 copy with `pmtiles extract --maxzoom=11` | `step-1.md` |
-| 3 | `color-relief-color` accepts `step` | `interpolate linear` with stops 0.5 apart | `step-1.md` |
+| 3 | `color-relief` with option (c)'s paired `interpolate` stops draws sharp band edges on the device (the ramp reading is confirmed in MapLibre's source, see Facts) | report to the owner before step 2 | `step-1.md` |
 | 4 | `addOnDidFinishRenderingFrameListener` reports every frame MapLibre draws | none needed: it is the spike's method, so results stay comparable | `step-1.md` |
 | 5 | GDAL writes each tile atomically | keep "delete and retile" (already the default) | `step-1.md` |
 | 6 | Average resampling of the painted RGBA keeps the ink colour under semi-transparent pixels | write the ink in every pixel (already done), and check one decoded edge tile | `step-1.md` |
@@ -621,6 +627,7 @@ Each alternative was weighed in the concepts brief ("brief") or while drafting t
   - Protomaps' [PMTiles repository](https://github.com/protomaps/PMTiles), `python/pmtiles/pmtiles/convert.py` and `writer.py` (read 2026-11-14);
   - [rio-pmtiles](https://pypi.org/project/rio-pmtiles/);
   - MapLibre Native's [Android changelog](https://github.com/maplibre/maplibre-native/blob/main/platform/android/CHANGELOG.md) (13.0.0: color-relief);
+  - MapLibre Native's [`render_color_relief_layer.cpp`](https://github.com/maplibre/maplibre-native/blob/android-v13.7.1/src/mln/renderer/layers/render_color_relief_layer.cpp) and [`color_relief.fragment.glsl`](https://github.com/maplibre/maplibre-native/blob/android-v13.7.1/shaders/color_relief.fragment.glsl) at `android-v13.7.1` (how the ramp is read);
   - the GHCR tag list for `osgeo/gdal` (read 2026-11-14).
 
 ## Future Improvements
@@ -864,7 +871,7 @@ Each phase ends with the code building and its tests passing in CI.
   - uses `terrarium` encoding for the value source;
   - uses `pmtiles://file://` URLs;
   - has `tileSize` 256 and the spec's `maxzoom`;
-  - has the ramp's thresholds.
+  - has the ramp as `interpolate linear` with the paired stops.
 
 #### 28. `android/core/map/README.md` (Create)
 
