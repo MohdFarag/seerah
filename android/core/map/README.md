@@ -10,7 +10,11 @@ The map module. It is the only module that may touch MapLibre ([ADR 0003](../../
 - `MapCamera`: moves the camera.
 - `MapEvent`: rendering events (`FullyRendered`, `FrameRendered`).
 
-The map screen and the style builder arrive in the next steps of the map trial ([plan](../../../docs/design/map-trial-phase-2-plan.md)). Until then the module holds only these types.
+## Style builder
+
+`styleJson(files, spec)` (internal) turns `MapFiles` and a `MapStyleSpec` into the MapLibre style document: a land-coloured background and one relief layer that fades out over `reliefFade`. A `Painted` source is a raster layer; a `Value` source is a Terrarium raster-dem coloured by an elevation ramp, which must be in strictly ascending order (the builder fails fast otherwise). Its tests run under Robolectric because `org.json` is a stub on the plain JVM.
+
+The map screen arrives in the next steps of the map trial ([plan](../../../docs/design/map-trial-phase-2-plan.md)).
 
 ## Test
 
