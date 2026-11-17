@@ -74,6 +74,10 @@ A pull request merges only when every check is green.
 - CI time grows with the module count; Gradle and GitHub Actions caches keep it reasonable.
 - detekt and Google's screenshot tool are tracked to adopt once stable.
 
+## Notes
+
+- **2026-11-17 (owner):** the Dependency Analysis Gradle Plugin must be applied to every module, not only the root; since DAGP 2.x the root plugin alone analyses nothing, so `buildHealth` passed without checking any module. The application convention plugin now applies it (every new module convention plugin must do the same), and the root `dependencyAnalysis {}` block only configures it. Hilt's generated code is covered by a `hilt` bundle there instead of declaring Hilt's internals in each module.
+
 ## References
 
 - [Now in Android build-logic](https://github.com/android/nowinandroid/blob/main/build-logic/README.md).
