@@ -4,11 +4,15 @@ import app.cash.licensee.LicenseeExtension
 import com.jraska.module.graph.assertion.GraphRulesExtension
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.kotlin.dsl.configure
 
 /** The only module allowed to depend on MapLibre (ADR 0003). */
 private const val MAP_MODULE = ":core:map"
 private const val MAPLIBRE_GROUP = "org.maplibre.gl"
+
+/** Configurations that belong to the `benchmark` build type, including its test configurations. */
+private val BENCHMARK_CONFIGURATION = Regex("^(test|androidTest)?benchmark", RegexOption.IGNORE_CASE)
 
 /** Licences a runtime dependency may carry (SPDX identifiers, ADR 0004). */
 private val ALLOWED_LICENCES = listOf("Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause")
@@ -43,6 +47,27 @@ internal fun Project.enforceMapLibreBoundary() {
             if (group == MAPLIBRE_GROUP) {
                 throw GradleException(
                     "$modulePath depends on $group:$name. Only $MAP_MODULE may use MapLibre (ADR 0003).",
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Fails the build when `:app` declares a project dependency on `:core:map` in a configuration
+ * that does not belong to the `benchmark` build type. A configuration belongs to it when its name
+ * starts with `benchmark`, `testBenchmark` or `androidTestBenchmark` (case-insensitive), so the map
+ * trial can never reach the release build.
+ */
+internal fun Project.enforceMapOnlyInBenchmark() {
+    configurations.configureEach {
+        if (BENCHMARK_CONFIGURATION.containsMatchIn(name)) return@configureEach
+        val configurationName = name
+        dependencies.configureEach {
+            if (this is ProjectDependency && path == MAP_MODULE) {
+                throw GradleException(
+                    "Configuration $configurationName declares $MAP_MODULE. " +
+                        "Only the benchmark build type may depend on it.",
                 )
             }
         }

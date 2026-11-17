@@ -55,4 +55,6 @@ dependencies {
     testImplementation(libs.kotlin.test)
     testImplementation(libs.robolectric)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Compose tests launch ComponentActivity, which this artifact declares; benchmark unit tests need it too.
+    benchmarkImplementation(libs.androidx.compose.ui.test.manifest)
 }

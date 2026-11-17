@@ -30,7 +30,16 @@ Run from `android/`:
 ./gradlew buildHealth          # unused or wrongly declared dependencies
 ./gradlew assembleRelease      # R8-shrunk release APK (debug-signed until the beta)
 python3 ../tools/android/check_page_alignment.py app/build/outputs/apk/release/app-release.apk
+python3 ../tools/android/check_no_trial_code.py app/build/outputs/apk/release/app-release.apk
 ```
+
+## Build types
+
+| Build type | Used for |
+| --- | --- |
+| `debug` | Development: LeakCanary, no shrinking. |
+| `release` | The shipped app: R8-shrunk, debug-signed until the beta. Contains no map-trial code; `tools/android/check_no_trial_code.py` fails when its manifest names an `app.seerah.trial` component (ADR 0007, decision 10). |
+| `benchmark` | Release-like build for measuring on devices (`:app:assembleBenchmark`, application ID `app.seerah.benchmark`). Never published. The only build type that may depend on `:core:map`; its unit tests run with `check` (`:app:testBenchmarkUnitTest`). |
 
 CI (`.github/workflows/android.yml`) runs all of these on every push and pull request that touches `android/` (except the spike), and attaches the release APK to the run as `seerah-app`.
 
@@ -38,7 +47,7 @@ CI (`.github/workflows/android.yml`) runs all of these on every push and pull re
 
 | Plugin | What it sets up |
 | --- | --- |
-| `seerah.android.application` | SDK levels (min 26, compile and target 37), Java 17 bytecode, lint with warnings as errors, Kotlin warnings as errors, R8 for release, the licence check, the module dependency rules and the MapLibre boundary |
+| `seerah.android.application` | SDK levels (min 26, compile and target 37), Java 17 bytecode, lint with warnings as errors, Kotlin warnings as errors, R8 for release, the licence check, the module dependency rules, the MapLibre boundary, the `benchmark` build type and the rule that keeps `:core:map` out of other build types |
 | `seerah.android.application.compose` | Compose compiler, Compose BOM and preview tooling |
 | `seerah.android.library` | Like the application plugin for a library module: SDK levels, lint, Kotlin settings, the licence check and the MapLibre boundary (the module dependency rules run from `:app`) |
 | `seerah.android.library.compose` | Compose compiler and Compose BOM for a library module, without preview tooling |
@@ -50,6 +59,7 @@ Feature and JVM conventions are added with the first module that needs them.
 
 - **Module graph** (`assertModuleGraph`, part of `check`): features never depend on features; `core:model` and `core:designsystem` depend on no module; `core:model` and `core:domain` never depend on UI or map modules.
 - **MapLibre boundary:** only `:core:map` may declare a MapLibre dependency.
+- **Map only in `benchmark`:** `:app` may depend on `:core:map` only through `benchmark`, `testBenchmark` and `androidTestBenchmark` configurations.
 - **Licences** (Licensee): runtime dependencies must be Apache-2.0, MIT, BSD-2-Clause or BSD-3-Clause.
 - **Dependency health** (`buildHealth`): unused or misdeclared dependencies fail.
 - **Formatting** (Spotless with ktlint and Compose Rules, configured in the root `.editorconfig`).
