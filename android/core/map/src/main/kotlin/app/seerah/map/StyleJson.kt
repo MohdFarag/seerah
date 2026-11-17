@@ -17,6 +17,10 @@ private const val CHANNEL_MASK = 0xFF
 private const val ALPHA_SHIFT = 24
 private const val RED_SHIFT = 16
 private const val GREEN_SHIFT = 8
+private const val BLUE_SHIFT = 0
+private const val RASTER_OPACITY = "raster-opacity"
+private const val COLOR_RELIEF_COLOR = "color-relief-color"
+private const val COLOR_RELIEF_OPACITY = "color-relief-opacity"
 private const val RELIEF_TILE_SIZE = 256
 private const val MAX_CHANNEL = 255.0
 private const val ALPHA_DECIMALS = "%.3f"
@@ -39,28 +43,28 @@ internal fun styleJson(files: MapFiles, spec: MapStyleSpec): String = JSONObject
     .toString()
 
 private fun source(files: MapFiles, relief: ReliefSource): JSONObject = JSONObject()
-    .put("type", if (relief is ReliefSource.Value) "raster-dem" else "raster")
+    .put("type", if (relief is ReliefSource.Value) RASTER_DEM_SOURCE_TYPE else RASTER_SOURCE_TYPE)
     .put("url", "pmtiles://file://${files.relief.absolutePath}")
     .put("tileSize", RELIEF_TILE_SIZE)
     .put("maxzoom", relief.maxZoom)
     .apply { if (relief is ReliefSource.Value) put("encoding", "terrarium") }
 
 private fun backgroundLayer(colours: MapColours): JSONObject = JSONObject()
-    .put("id", "background")
-    .put("type", "background")
+    .put("id", BACKGROUND_LAYER_ID)
+    .put("type", BACKGROUND_LAYER_TYPE)
     .put("paint", JSONObject().put("background-color", rgba(colours.land)))
 
 private fun reliefLayer(spec: MapStyleSpec): JSONObject {
     val fade = fadeExpression(spec.reliefFade)
     val (type, paint) =
         when (val relief = spec.relief) {
-            is ReliefSource.Painted -> RASTER_LAYER_TYPE to JSONObject().put("raster-opacity", fade)
+            is ReliefSource.Painted -> RASTER_LAYER_TYPE to JSONObject().put(RASTER_OPACITY, fade)
 
             is ReliefSource.Value ->
                 COLOR_RELIEF_LAYER_TYPE to
                     JSONObject()
-                        .put("color-relief-color", rampExpression(relief.ramp))
-                        .put("color-relief-opacity", fade)
+                        .put(COLOR_RELIEF_COLOR, rampExpression(relief.ramp))
+                        .put(COLOR_RELIEF_OPACITY, fade)
         }
     return JSONObject()
         .put("id", RELIEF_LAYER_ID)
@@ -96,7 +100,7 @@ private fun rgba(colour: Int): String {
         .trimEnd('.')
     val red = channel(colour, RED_SHIFT)
     val green = channel(colour, GREEN_SHIFT)
-    val blue = channel(colour, 0)
+    val blue = channel(colour, BLUE_SHIFT)
     return "rgba($red, $green, $blue, $alpha)"
 }
 
