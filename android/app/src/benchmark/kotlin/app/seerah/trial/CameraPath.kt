@@ -27,7 +27,10 @@ data class RunResult(val readings: List<Double>) {
     /** The median reading (the mean of the middle two for an even count), or null without readings. */
     val typicalFps: Double? = median(readings)
 
-    /** The smallest reading, or null without readings. */
+    /**
+     * The smallest reading, or null without readings. It is derived from [readings], so it agrees with
+     * [FrameReading.lowestFps] of the last reading of the same run.
+     */
     val lowestFps: Double? = readings.minOrNull()
 }
 
@@ -35,8 +38,13 @@ data class RunResult(val readings: List<Double>) {
  * The runs of one trial.
  *
  * @property runs the runs in order; the first is the cold one.
+ * @throws IllegalArgumentException if [runs] is empty: the results exist only after the runs completed.
  */
 data class PathResults(val runs: List<RunResult>) {
+    init {
+        require(runs.isNotEmpty()) { "PathResults needs at least one run" }
+    }
+
     /** The first run, before anything is cached. */
     val cold: RunResult = runs.first()
 

@@ -2,8 +2,10 @@ package app.seerah.trial
 
 import app.seerah.map.MapCamera
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
@@ -66,5 +68,45 @@ class CameraPathTest {
 
         assertEquals("Map trial | Pixel 7 | zoom12 | ab12cd34", lines[0])
         assertEquals("Open time: 850 ms | Memory (PSS): 310 MB", lines[1])
+    }
+
+    @Test
+    fun text_showsNoReadingForMissingOpenTimeAndMemory() {
+        val unmeasured = header.copy(openTimeMs = null, pssMb = null)
+
+        val lines = results(listOf(60.0), listOf(60.0), listOf(60.0)).asText(unmeasured).lines()
+
+        assertEquals("Open time: no reading | Memory (PSS): no reading", lines[1])
+    }
+
+    @Test
+    fun animateThrough_stopsAndPropagatesWhenAFlightIsCancelled() {
+        val visited = mutableListOf<CameraStop>()
+        val camera = object : MapCamera {
+            override suspend fun animateTo(lat: Double, lon: Double, zoom: Double, durationMs: Long) {
+                visited += CameraStop(lat, lon, zoom, durationMs)
+                if (visited.size == 2) throw CancellationException("gesture")
+            }
+        }
+        val stops = List(3) { CameraStop(it.toDouble(), 0.0, 1.0, 100) }
+
+        assertFailsWith<CancellationException> { runBlocking { animateThrough(camera, stops) } }
+
+        assertEquals(stops.take(2), visited)
+    }
+
+    @Test
+    fun animateThrough_withNoStops_doesNothing() {
+        val camera = object : MapCamera {
+            override suspend fun animateTo(lat: Double, lon: Double, zoom: Double, durationMs: Long) =
+                error("no stop to fly to")
+        }
+
+        runBlocking { animateThrough(camera, emptyList()) }
+    }
+
+    @Test
+    fun results_withoutRuns_areRejected() {
+        assertFailsWith<IllegalArgumentException> { PathResults(emptyList()) }
     }
 }
