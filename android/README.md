@@ -62,7 +62,7 @@ Feature and JVM conventions are added with the first module that needs them.
 - **MapLibre boundary:** only `:core:map` may declare a MapLibre dependency.
 - **Map only in `benchmark`:** `:app` may depend on `:core:map` only through `benchmark`, `testBenchmark` and `androidTestBenchmark` configurations.
 - **Licences** (Licensee): runtime dependencies must be Apache-2.0, MIT, BSD-2-Clause or BSD-3-Clause.
-- **Dependency health** (`buildHealth`): unused or misdeclared dependencies fail.
+- **Dependency health** (`buildHealth`): unused or misdeclared dependencies fail. The convention plugins apply the Dependency Analysis plugin to every module; the root build only configures it (ADR 0004).
 - **Formatting** (Spotless with ktlint and Compose Rules, configured in the root `.editorconfig`).
 
 ## The app today

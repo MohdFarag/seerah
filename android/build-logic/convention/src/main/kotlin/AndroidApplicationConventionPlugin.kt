@@ -15,7 +15,7 @@ import org.gradle.kotlin.dsl.configure
 
 /**
  * The application module: SDK levels, lint, Kotlin settings, R8 for release builds,
- * the licence check and the module dependency rules.
+ * the licence check, the module dependency rules and dependency analysis (`buildHealth`).
  */
 class AndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -23,6 +23,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             pluginManager.apply("com.android.application")
             pluginManager.apply("app.cash.licensee")
             pluginManager.apply("com.jraska.module.graph.assertion")
+            pluginManager.apply("com.autonomousapps.dependency-analysis")
 
             extensions.configure<ApplicationExtension> {
                 configureAndroid(this)
