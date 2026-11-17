@@ -89,7 +89,10 @@ fun TrialView.styleSpec(): MapStyleSpec = when (this) {
  * @property variant the loaded variant.
  * @property view one of the views [viewsFor] gives for it.
  */
-data class TrialSelection(val variant: TrialVariant, val view: TrialView)
+data class TrialSelection(val variant: TrialVariant, val view: TrialView) {
+    /** The `<folder>/<view id>` value that [resolveView] turns back into this selection. */
+    val key: String get() = variant.folder.name + SELECTION_SEPARATOR + view.id
+}
 
 /**
  * Turns a `<folder>/<view id>` value into a selection, or null when it names nothing the app offers.
@@ -106,3 +109,10 @@ fun resolveView(requested: String?, loaded: List<TrialVariant>): TrialSelection?
     val view = viewsFor(variant.variant).firstOrNull { it.id == viewId } ?: return null
     return TrialSelection(variant, view)
 }
+
+/**
+ * The view the trial screen opens with: the launch intent's value, else the last used one, each
+ * checked with [resolveView]. Null means the screen shows the picker.
+ */
+fun startSelection(requested: String?, lastUsed: String?, loaded: List<TrialVariant>): TrialSelection? =
+    resolveView(requested, loaded) ?: resolveView(lastUsed, loaded)

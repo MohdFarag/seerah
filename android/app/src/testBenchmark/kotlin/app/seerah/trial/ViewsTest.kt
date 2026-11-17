@@ -118,4 +118,32 @@ class ViewsTest {
         assertNull(resolveView("trial-painted-01234567", listOf(painted)))
         assertNull(resolveView("trial-painted-01234567/zoom12/extra", listOf(painted)))
     }
+
+    @Test
+    fun selectionKey_resolvesBackToTheSameSelection() {
+        val selection = TrialSelection(value, TrialView.OPTION_C)
+
+        assertEquals("trial-value-01234567/option-c", selection.key)
+        assertEquals(selection, resolveView(selection.key, listOf(painted, value)))
+    }
+
+    @Test
+    fun startSelection_prefersTheIntentOverTheLastUsedView() {
+        val start =
+            startSelection("trial-painted-01234567/zoom11", "trial-value-01234567/option-c", listOf(painted, value))
+
+        assertEquals(TrialSelection(painted, TrialView.ZOOM_11), start)
+    }
+
+    @Test
+    fun startSelection_fallsBackToTheLastUsedViewWhenTheIntentIsInvalid() {
+        val start = startSelection("../x/zoom12", "trial-value-01234567/option-c", listOf(painted, value))
+
+        assertEquals(TrialSelection(value, TrialView.OPTION_C), start)
+    }
+
+    @Test
+    fun startSelection_isNullWhenNeitherValueResolves() {
+        assertNull(startSelection(null, "gone-folder/zoom12", listOf(painted, value)))
+    }
 }

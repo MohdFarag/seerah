@@ -1,0 +1,253 @@
+package app.seerah.trial
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.Build
+import android.os.Bundle
+import android.os.Debug
+import android.os.Process
+import android.os.SystemClock
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
+import app.seerah.map.MapCamera
+import app.seerah.map.MapEvent
+import app.seerah.map.MapFiles
+import app.seerah.map.SeerahMap
+import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private const val TRIAL_FOLDER = "trial"
+private const val PREFERENCES = "map_trial"
+private const val LAST_VIEW = "last_view"
+private const val KB_PER_MB = 1_024
+private val SPACING = 8.dp
+
+/**
+ * The map trial's screen, in the benchmark build type only: opens a view of an imported variant,
+ * shows the measurement overlay and runs the camera path [RUNS] times.
+ *
+ * Launch it with [EXTRA_VIEW] set to `<folder>/<view id>` to open that view directly.
+ */
+class TrialActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val root = getExternalFilesDir(null)?.let { File(it, TRIAL_FOLDER) }
+        val requested = intent.getStringExtra(EXTRA_VIEW)
+        val preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+        setContent {
+            MaterialTheme {
+                Surface(Modifier.fillMaxSize()) {
+                    TrialScreen(root, requested, preferences, Modifier.safeDrawingPadding())
+                }
+            }
+        }
+    }
+
+    companion object {
+        /** The intent extra naming the view to open, as `<folder>/<view id>`. */
+        const val EXTRA_VIEW = "app.seerah.trial.VIEW"
+    }
+}
+
+/** Open time, measured once per process at the first fully rendered map, as the spec defines it. */
+private object OpenTime {
+    var millis: Long? = null
+        private set
+
+    fun recordOnce() {
+        if (millis == null) millis = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime()
+    }
+}
+
+@Composable
+private fun TrialScreen(
+    root: File?,
+    requested: String?,
+    preferences: SharedPreferences,
+    modifier: Modifier = Modifier,
+) {
+    var loads by remember { mutableStateOf<List<VariantLoad>?>(null) }
+    var selection by remember { mutableStateOf<TrialSelection?>(null) }
+    LaunchedEffect(root) {
+        val loaded = withContext(Dispatchers.IO) { root?.let(::loadVariants).orEmpty() }
+        selection = startSelection(requested, preferences.getString(LAST_VIEW, null), loaded.variants())
+        loads = loaded
+    }
+    val current = selection
+    when {
+        loads == null -> Text("Loading the trial files…", modifier.padding(SPACING))
+
+        loads.orEmpty().isEmpty() -> NoFiles(root, modifier)
+
+        current == null -> Picker(
+            loads = loads.orEmpty(),
+            onPick = { picked ->
+                preferences.edit { putString(LAST_VIEW, picked.key) }
+                selection = picked
+            },
+            modifier = modifier,
+        )
+
+        else -> TrialMap(current, onViews = { selection = null }, modifier = modifier)
+    }
+}
+
+private fun List<VariantLoad>.variants(): List<TrialVariant> = filterIsInstance<VariantLoad.Loaded>().map { it.variant }
+
+@Composable
+private fun NoFiles(root: File?, modifier: Modifier = Modifier) {
+    val message = if (root == null) {
+        "External storage is not available, so the trial files cannot be read."
+    } else {
+        "No trial files. Push a variant folder with:\nadb push <folder> ${root.absolutePath}/"
+    }
+    Text(message, modifier.padding(SPACING))
+}
+
+@Composable
+private fun Picker(loads: List<VariantLoad>, onPick: (TrialSelection) -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier.verticalScroll(rememberScrollState()).padding(SPACING),
+        verticalArrangement = Arrangement.spacedBy(SPACING),
+    ) {
+        loads.forEach { load ->
+            when (load) {
+                is VariantLoad.Loaded -> viewsFor(load.variant.variant).forEach { view ->
+                    val choice = TrialSelection(load.variant, view)
+                    Button(onClick = { onPick(choice) }) { Text(choice.key) }
+                }
+
+                is VariantLoad.Skipped -> Text("Skipped ${load.folder.name}: ${load.reason}")
+            }
+        }
+    }
+}
+
+/** The recording of the camera path's current run; `null` readings means no run is recording. */
+private class RunRecorder {
+    var readings: MutableList<Double>? = null
+}
+
+@Composable
+private fun TrialMap(selection: TrialSelection, onViews: () -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val stats = remember(selection) { FrameStats() }
+    val recorder = remember(selection) { RunRecorder() }
+    var camera by remember { mutableStateOf<MapCamera?>(null) }
+    var running by remember(selection) { mutableStateOf(false) }
+    var stopped by remember(selection) { mutableStateOf(false) }
+    var overlay by remember(selection) {
+        mutableStateOf(
+            OverlayState(
+                device = "${Build.MANUFACTURER} ${Build.MODEL}",
+                view = selection.key,
+                fingerprint8 = selection.variant.fingerprint8,
+                fps = null,
+                lowestFps = null,
+                pssMb = null,
+                openTimeMs = OpenTime.millis,
+                runs = emptyList(),
+            ),
+        )
+    }
+
+    fun runPath(path: MapCamera) = scope.launch {
+        running = true
+        stopped = false
+        overlay = overlay.copy(runs = emptyList())
+        try {
+            repeat(RUNS) {
+                stats.reset()
+                val readings = mutableListOf<Double>()
+                recorder.readings = readings
+                animateThrough(path, selection.variant.cameraPath.stops)
+                overlay = overlay.copy(runs = overlay.runs + RunResult(readings.toList()))
+            }
+        } catch (cancelled: CancellationException) {
+            // A touch on the map stops the path; only a cancelled screen ends this coroutine.
+            ensureActive()
+            stopped = true
+        } finally {
+            recorder.readings = null
+            running = false
+        }
+    }
+
+    Box(modifier.fillMaxSize()) {
+        SeerahMap(
+            files = MapFiles(selection.variant.relief),
+            style = selection.view.styleSpec(),
+            limits = selection.variant.cameraPath.limits,
+            modifier = Modifier.fillMaxSize(),
+            onCamera = { camera = it },
+            onEvent = { event ->
+                when (event) {
+                    MapEvent.FullyRendered -> if (overlay.openTimeMs == null) {
+                        OpenTime.recordOnce()
+                        overlay = overlay.copy(openTimeMs = OpenTime.millis)
+                    }
+
+                    is MapEvent.FrameRendered -> stats.onFrame(event.atMillis)?.let { reading ->
+                        recorder.readings?.add(reading.fps)
+                        overlay = overlay.copy(
+                            fps = reading.fps,
+                            lowestFps = reading.lowestFps,
+                            pssMb = (Debug.getPss() / KB_PER_MB).toInt(),
+                        )
+                    }
+                }
+            },
+        )
+        Column(Modifier.align(Alignment.TopStart).padding(SPACING)) {
+            Overlay(overlay)
+            if (stopped) Text("Path stopped", color = MaterialTheme.colorScheme.error)
+        }
+        Row(
+            Modifier.align(Alignment.BottomCenter).padding(SPACING),
+            horizontalArrangement = Arrangement.spacedBy(SPACING),
+        ) {
+            Button(onClick = onViews) { Text("Views") }
+            Button(onClick = { camera?.let(::runPath) }, enabled = camera != null && !running) { Text("Run path") }
+            Button(onClick = { copyResults(context, overlay) }, enabled = overlay.runs.isNotEmpty()) {
+                Text("Copy results")
+            }
+        }
+    }
+}
+
+private fun copyResults(context: Context, overlay: OverlayState) {
+    val text = PathResults(overlay.runs).asText(overlay.header)
+    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Map trial", text))
+}
