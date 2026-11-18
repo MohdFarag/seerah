@@ -4,19 +4,21 @@ Results of the specification's step-1 checks ([docs/design/map-trial-build.md](.
 
 ## Check 1: `adb push` into the benchmark app's external files folder
 
-Not yet run.
+Run on 2026-11-18 on the Galaxy A54 only (SM-A546E, Android 16). The Oppo A55 and the MatePad 11.5 are not yet run, so the check is not complete.
+
+Result on the A54: it works. The synthetic example's painted variant was pushed to `/sdcard/Android/data/app.seerah.benchmark/files/trial/example-painted-d891878a/` (`relief.pmtiles`, `metadata.json`, `report.json`, `camera-path.json`), the app listed it under "Views", and all three painted views opened from it. `relief.pmtiles` is 32,928 bytes, so this says nothing about the 2 GiB limit.
 
 ## Check 2: MapLibre honours a raster source's `maxzoom` on `pmtiles://`
 
-Not yet run.
+Not yet run. The A54 run used the example's camera path, which has one stop at MapLibre zoom 10, below the variant's `maxzoom` of 12 (shown from MapLibre zoom 11), so it does not reach the case. It needs a path or a manual zoom past MapLibre zoom 11 on a variant with `maxzoom` 12.
 
 ## Check 3: `color-relief` draws option (c)'s band edges sharp
 
-Not yet run.
+Not yet run. The A54 run covered the three painted views (zoom 12, zoom 11, option (a)). No value variant was built or installed, so option (c) was not shown.
 
 ## Check 4: `addOnDidFinishRenderingFrameListener` reports every frame
 
-Not yet run.
+Run on 2026-11-18 on the Galaxy A54 only. Indirect result: consistent, not proven. With the panel at its 120 Hz mode (`renderFrameRate` 120.00001, read with `adb shell dumpsys display`), the overlay's typical rate was 119.8 to 120.7 fps in all nine runs and the lowest published rate was 118.6 fps. A listener that dropped frames would read below the refresh rate while the map moved. Counting the frames against an independent source, such as `dumpsys gfxinfo` over the same path, was not done. Not yet run on the other two devices.
 
 ## Check 5: GDAL writes each tile atomically
 
@@ -65,7 +67,7 @@ Not yet run.
 
 ## Check 9: The GHCR package is public and free to pull
 
-Not yet run.
+Run on 2026-11-16, after the owner made `ghcr.io/mohdfarag/seerah-map` public: with no `docker login`, `docker manifest inspect ghcr.io/mohdfarag/seerah-map:8cd01906e238e68b` succeeded, and the package page shows "Public". A full anonymous `docker pull` was not run, and GHCR's pricing was not checked.
 
 ## Check 10: Licensee accepts MapLibre Native and its dependencies
 
@@ -76,8 +78,29 @@ Run on 2026-11-17 with MapLibre Native Android 13.7.1 (`org.maplibre.gl:android-
 
 ## Check 11: The three devices' screen widths in dp
 
-Not yet run.
+Run on 2026-11-18 on the Galaxy A54 only, with `adb shell wm size` and `adb shell wm density`: 1080 × 2340 px at density 450 (no override), so the width in portrait is 1080 ÷ (450 ÷ 160) = **384 dp** (the specification's estimate was about 385 dp), and 832 dp in landscape. The Oppo A55 and the MatePad 11.5 are not yet run.
 
 ## Check 12: The per-worker memory allowance for 2,048-pixel blocks
 
 Not yet run.
+
+## Galaxy A54 run, 2026-11-18
+
+Device: Samsung SM-A546E, Android 16 (API 36), 120 Hz panel. App: `app.seerah.benchmark` 0.1.0, installed from the CI artifact `seerah-app-benchmark` beside the normal app. Data: the synthetic example's painted variant `example-painted-d891878a` (Masirah window, `maxzoom` 12). This is a mechanics check of phase 2: there is no base layer yet, so the screenshots show relief on a plain land colour, and nothing here judges the look or answers trial item 11 for the Oppo A55 (the device that decides it).
+
+The camera path (one stop at MapLibre zoom 10, 4 s) ran three times per view. No reading carries the warm-process marker, so each open time comes from a fresh process:
+
+| View | Open time | Memory (PSS) | Run 1 (cold), typical / lowest | Run 2 | Run 3 | All runs, typical / lowest |
+| --- | --- | --- | --- | --- | --- | --- |
+| zoom 12 | 369 ms | 117 MB | 120.2 / 118.6 fps | 120.0 / 120.0 | 120.0 / 119.5 | 120.0 / 118.6 fps |
+| zoom 11 | 326 ms | 116 MB | 120.2 / 120.0 fps | 120.5 / 119.5 | 120.7 / 120.0 | 120.5 / 119.5 fps |
+| option (a) | 311 ms | 117 MB | 120.0 / 119.0 fps | 120.5 / 120.0 | 119.8 / 119.5 | 120.0 / 119.0 fps |
+
+Observations:
+
+- **Against trial item 11's rules for the devices other than the Oppo A55** (open time at most 1.5 s, typical rate equal to the screen's rate, lowest at least 45 fps, memory at most 200 MB): the three painted views meet all four on the A54 (open time 311 to 369 ms, typical 119.8 to 120.7 fps on a 120 Hz panel, lowest 118.6 fps or higher, memory 116 to 139 MB). Option (c) and the per-zoom view were not run, and the A54 is not the device that decides the trial.
+- **Cancelling a path** ([screenshot](step-1-results/a54/a54-cancel-path.png)): a path was cancelled during a run on the zoom 11 view and the overlay showed "Path stopped", with "Copy results" disabled and no error. How it was cancelled is not recorded. This is the cancellation case that `SeerahMap` has no automated test for.
+- **Warm-process marker:** in the same screenshot the open time reads "311 ms (from warm process)", the value from the option (a) launch carried into a view opened in the same process, as designed.
+- **Memory:** 116 to 117 MB after a path; 139 MB in the cancelled-path screenshot.
+
+Evidence (screenshots before and after each path, and the copied results text): [step-1-results/a54/](step-1-results/a54/).

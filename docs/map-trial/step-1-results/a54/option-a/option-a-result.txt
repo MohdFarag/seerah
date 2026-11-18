@@ -1,0 +1,6 @@
+Map trial | samsung SM-A546E | example-painted-d891878a/option-a | d891878a
+Open time: 311 ms | Memory (PSS): 117 MB
+Run 1 (cold): typical 120.0 fps, lowest 119.0 fps
+Run 2: typical 120.5 fps, lowest 120.0 fps
+Run 3: typical 119.8 fps, lowest 119.5 fps
+All runs: typical 120.0 fps, lowest 119.0 fps
