@@ -99,8 +99,8 @@ The camera path (one stop at MapLibre zoom 10, 4 s) ran three times per view. No
 Observations:
 
 - **Against trial item 11's rules for the devices other than the Oppo A55** (open time at most 1.5 s, typical rate equal to the screen's rate, lowest at least 45 fps, memory at most 200 MB): the three painted views meet all four on the A54 (open time 311 to 369 ms, typical 119.8 to 120.7 fps on a 120 Hz panel, lowest 118.6 fps or higher, memory 116 to 139 MB). Option (c) and the per-zoom view were not run, and the A54 is not the device that decides the trial.
-- **Cancelling a path** ([screenshot](step-1-results/a54/a54-cancel-path.png)): a path was cancelled during a run on the zoom 11 view and the overlay showed "Path stopped", with "Copy results" disabled and no error. How it was cancelled is not recorded. This is the cancellation case that `SeerahMap` has no automated test for.
+- **Cancelling a path** ([screenshot](step-1-results/samsung-a54/a54-cancel-path.png)): a path was cancelled during a run on the zoom 11 view and the overlay showed "Path stopped", with "Copy results" disabled and no error. How it was cancelled is not recorded. This is the cancellation case that `SeerahMap` has no automated test for.
 - **Warm-process marker:** in the same screenshot the open time reads "311 ms (from warm process)", the value from the option (a) launch carried into a view opened in the same process, as designed.
 - **Memory:** 116 to 117 MB after a path; 139 MB in the cancelled-path screenshot.
 
-Evidence (screenshots before and after each path, and the copied results text): [step-1-results/a54/](step-1-results/a54/).
+Evidence (screenshots before and after each path, and the copied results text): [step-1-results/samsung-a54/](step-1-results/samsung-a54/).
