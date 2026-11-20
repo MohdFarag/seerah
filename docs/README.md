@@ -31,6 +31,8 @@ Where every document lives and what it is for. If you add a document, list it he
 
 The [map profile validation plan](design/map-profile-validation-plan.md) covers coordinate bounds, outline paths and strict YAML regression tests. Its [consolidated EGM review](design/egm-review-map-profile-validation/consolidated_review_report.md) records the findings and revisions.
 
+The [map trial phase 3 plan](design/map-trial-phase-3-plan.md) covers the vector base layer (`base.pmtiles`), `tippecanoe` and `WhiteboxTools` in the toolchain image, `:core:map` base-layer wiring, private trial inputs, and phase 3 documentation. Its [consolidated EGM review](design/egm-review-map-trial-phase-3/consolidated_review_report.md) records the five-stage review findings and revisions.
+
 ## Research and spike
 
 | Document | Purpose |
