@@ -37,13 +37,28 @@ def _profile_with_scalar(tmp_path, key, scalar):
     return _write(tmp_path, text, "p.yaml")
 
 
-def _assert_rejected(path, key, *fragments):
+def _assert_rejected(path, key, *fragments, data_root=None):
     """Assert loading ``path`` raises ConfigError naming the file, ``key`` and every fragment."""
     with pytest.raises(ConfigError) as caught:
-        config.load_profile(path)
+        if data_root is None:
+            config.load_profile(path)
+        else:
+            config.load_profile(path, data_root=data_root)
     message = str(caught.value)
     for expected in (str(path), f"key {key}:", *fragments):
         assert expected in message
+
+
+def _outline_dirs(tmp_path):
+    """Create a data root with ``trial`` and ``shared`` folders and sample outlines."""
+    data = tmp_path / "data"
+    trial = data / "trial"
+    shared = data / "shared"
+    trial.mkdir(parents=True)
+    shared.mkdir(parents=True)
+    (trial / "local.geojson").write_text("{}", encoding="utf-8")
+    (shared / "outline.geojson").write_text("{}", encoding="utf-8")
+    return data, trial, shared
 
 
 def _edits_with(tmp_path, schema="trial-0", **edit_changes):
@@ -72,7 +87,7 @@ def test_profile_loads():
     assert profile.style.exaggeration == 7.36
     assert profile.data_extent == Bounds(33, 11, 61, 33)
     assert profile.name == "profile_ok"
-    assert profile.peninsula_outline == FIXTURES / "outline.geojson"
+    assert profile.peninsula_outline == (FIXTURES / "outline.geojson").resolve()
     assert profile.webp_quality == 80
 
 
@@ -168,6 +183,159 @@ def test_profile_rejects_non_finite_style_numbers(tmp_path, setting, scalar):
     base = (FIXTURES / "profile_ok.yaml").read_text(encoding="utf-8")
     path = _write(tmp_path, f"{base.rstrip()}\nstyle:\n  {setting}: {scalar}\n", "p.yaml")
     _assert_rejected(path, f"style.{setting}", "finite")
+
+
+def test_profile_resolves_local_and_sibling_outlines(tmp_path):
+    data, trial, shared = _outline_dirs(tmp_path)
+    local = _profile_with(trial, peninsula_outline="local.geojson")
+    assert config.load_profile(local).peninsula_outline == (trial / "local.geojson").resolve()
+    assert (
+        config.load_profile(local, data_root=data).peninsula_outline
+        == (trial / "local.geojson").resolve()
+    )
+    sibling = _profile_with(trial, peninsula_outline="../shared/outline.geojson")
+    assert (
+        config.load_profile(sibling, data_root=data).peninsula_outline
+        == (shared / "outline.geojson").resolve()
+    )
+
+
+def test_profile_sibling_outline_requires_broader_data_root(tmp_path):
+    data, trial, shared = _outline_dirs(tmp_path)
+    path = _profile_with(trial, peninsula_outline="../shared/outline.geojson")
+    assert (
+        config.load_profile(path, data_root=data).peninsula_outline
+        == (shared / "outline.geojson").resolve()
+    )
+    _assert_rejected(path, "peninsula_outline")
+
+
+def test_profile_accepts_uncreated_in_root_outline(tmp_path):
+    data, trial, shared = _outline_dirs(tmp_path)
+    local_missing = _profile_with(trial, peninsula_outline="future.geojson")
+    assert (
+        config.load_profile(local_missing).peninsula_outline == (trial / "future.geojson").resolve()
+    )
+    sibling_missing = _profile_with(trial, peninsula_outline="../shared/future.geojson")
+    assert (
+        config.load_profile(sibling_missing, data_root=data).peninsula_outline
+        == (shared / "future.geojson").resolve()
+    )
+
+
+def test_profile_accepts_internal_symlink_outline(tmp_path):
+    data, trial, shared = _outline_dirs(tmp_path)
+    local_link = trial / "local-link.geojson"
+    local_link.symlink_to(trial / "local.geojson")
+    local_profile = _profile_with(trial, peninsula_outline="local-link.geojson")
+    assert (
+        config.load_profile(local_profile).peninsula_outline == (trial / "local.geojson").resolve()
+    )
+
+    shared_link = trial / "shared-link.geojson"
+    shared_link.symlink_to("../shared/outline.geojson")
+    shared_profile = _profile_with(trial, peninsula_outline="shared-link.geojson")
+    assert (
+        config.load_profile(shared_profile, data_root=data).peninsula_outline
+        == (shared / "outline.geojson").resolve()
+    )
+    _assert_rejected(shared_profile, "peninsula_outline")
+
+    dangling_link = trial / "dangling-internal.geojson"
+    dangling_link.symlink_to("../shared/future.geojson")
+    dangling_profile = _profile_with(trial, peninsula_outline="dangling-internal.geojson")
+    assert (
+        config.load_profile(dangling_profile, data_root=data).peninsula_outline
+        == (shared / "future.geojson").resolve()
+    )
+    _assert_rejected(dangling_profile, "peninsula_outline")
+
+
+def test_profile_rejects_absolute_outlines(tmp_path):
+    data, trial, shared = _outline_dirs(tmp_path)
+    outside = tmp_path / "outside.geojson"
+    outside.write_text("{}", encoding="utf-8")
+    for target in (trial / "local.geojson", shared / "outline.geojson", outside):
+        path = _profile_with(trial, peninsula_outline=str(target.resolve()))
+        _assert_rejected(path, "peninsula_outline", "relative")
+        _assert_rejected(path, "peninsula_outline", "relative", data_root=data)
+
+
+@pytest.mark.parametrize(
+    "outline",
+    [
+        "../../outside.geojson",
+        "../../data-other/outline.geojson",
+    ],
+)
+def test_profile_rejects_escaping_outline_paths(tmp_path, outline):
+    data, trial, _ = _outline_dirs(tmp_path)
+    (tmp_path / "outside.geojson").write_text("{}", encoding="utf-8")
+    prefix_sibling = tmp_path / "data-other"
+    prefix_sibling.mkdir()
+    (prefix_sibling / "outline.geojson").write_text("{}", encoding="utf-8")
+    path = _profile_with(trial, peninsula_outline=outline)
+    _assert_rejected(path, "peninsula_outline")
+    _assert_rejected(path, "peninsula_outline", data_root=data)
+
+
+def test_profile_rejects_outside_symlink_outline(tmp_path):
+    data, trial, _ = _outline_dirs(tmp_path)
+    outside = tmp_path / "outside.geojson"
+    outside.write_text("{}", encoding="utf-8")
+    link = trial / "escape.geojson"
+    link.symlink_to(outside)
+    path = _profile_with(trial, peninsula_outline="escape.geojson")
+    _assert_rejected(path, "peninsula_outline")
+    _assert_rejected(path, "peninsula_outline", data_root=data)
+
+    dangling = trial / "dangling-escape.geojson"
+    dangling.symlink_to(tmp_path / "missing-outside.geojson")
+    dangling_path = _profile_with(trial, peninsula_outline="dangling-escape.geojson")
+    _assert_rejected(dangling_path, "peninsula_outline")
+    _assert_rejected(dangling_path, "peninsula_outline", data_root=data)
+
+
+@pytest.mark.parametrize(
+    "outline",
+    [
+        "loop-a.geojson",
+        "missing/../loop-a.geojson",
+        "loop-dir/child.geojson",
+        "missing/../loop-dir/../local.geojson",
+        "loop-missing",
+        "loop-missing/../../outside.geojson",
+    ],
+)
+def test_profile_rejects_symlink_loop_outline(tmp_path, outline):
+    data, trial, _ = _outline_dirs(tmp_path)
+    loop_a = trial / "loop-a.geojson"
+    loop_b = trial / "loop-b.geojson"
+    loop_a.symlink_to(loop_b)
+    loop_b.symlink_to(loop_a)
+    (trial / "loop-dir").symlink_to("loop-dir")
+    (trial / "loop-missing").symlink_to("missing/../loop-missing")
+    path = _profile_with(trial, peninsula_outline=outline)
+    _assert_rejected(path, "peninsula_outline")
+    _assert_rejected(path, "peninsula_outline", data_root=data)
+
+
+@pytest.mark.parametrize(
+    "outline", ["local.geojson/child.geojson", "local.geojson/../local.geojson"]
+)
+def test_profile_rejects_regular_file_traversal_outline(tmp_path, outline):
+    data, trial, _ = _outline_dirs(tmp_path)
+    path = _profile_with(trial, peninsula_outline=outline)
+    _assert_rejected(path, "peninsula_outline")
+    _assert_rejected(path, "peninsula_outline", data_root=data)
+
+
+def test_profile_rejects_root_directory_outline(tmp_path):
+    data, trial, _ = _outline_dirs(tmp_path)
+    parent = _profile_with(trial, peninsula_outline="..")
+    _assert_rejected(parent, "peninsula_outline", data_root=data)
+    current = _profile_with(trial, peninsula_outline=".")
+    _assert_rejected(current, "peninsula_outline")
 
 
 def test_edits_rules(tmp_path):

@@ -5,8 +5,13 @@ hand edits to the terrain; a lock pins every downloaded file by SHA-256.
 All angles are degrees, all lengths in edits are metres.
 """
 
+import contextlib
+import errno
 import json
 import math
+import os
+import stat
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +23,7 @@ from .errors import ConfigError
 
 _SCHEMA_DIR = Path(__file__).parent / "schema"
 _MIN_BLOCK_ZOOM = 6
+_MAX_SYMLINKS = 40  # Linux's MAXSYMLINKS limit for symlink expansion.
 # The same tile grid as grid.py, which imports this module and so cannot be imported here.
 _TILE_GRID = morecantile.tms.get("WebMercatorQuad")
 # The part of the grid a profile may cover: the N/E quadrant, up to the grid's northern edge.
@@ -58,7 +64,7 @@ class StyleSettings:
 
 @dataclass(frozen=True)
 class Profile:
-    """A trial build profile; ``peninsula_outline`` is already resolved against ``folder``."""
+    """A trial build profile; ``peninsula_outline`` is canonical and confined to its data root."""
 
     name: str
     folder: Path
@@ -188,7 +194,61 @@ def _check_data_extent(profile: Profile, path: Path) -> None:
             )
 
 
-def load_profile(path: Path) -> Profile:
+def _canonical_path(target: Path) -> Path:
+    """Resolve symlinks component by component, allowing missing leaves while rejecting loops."""
+    absolute = target if target.is_absolute() else Path.cwd() / target
+    current = Path(absolute.anchor)
+    pending = deque(absolute.parts[1:])
+    links = 0
+    while pending:
+        part = pending.popleft()
+        if part in ("", "."):
+            continue
+        if part == "..":
+            with contextlib.suppress(FileNotFoundError):
+                os.lstat(current / "..")
+            current = current.parent
+            continue
+        nxt = current / part
+        try:
+            mode = os.lstat(nxt).st_mode
+        except FileNotFoundError:
+            current = nxt
+            continue
+        if stat.S_ISLNK(mode):
+            links += 1
+            if links > _MAX_SYMLINKS:
+                raise OSError(errno.ELOOP, os.strerror(errno.ELOOP), str(target))
+            dest = Path(os.readlink(nxt))
+            if dest.is_absolute():
+                current = Path(dest.anchor)
+                pending.extendleft(reversed(dest.parts[1:]))
+            else:
+                pending.extendleft(reversed(dest.parts))
+        else:
+            current = nxt
+    return current
+
+
+def _resolve_outline(raw: str, path: Path, data_root: Path | None) -> Path:
+    """Resolve ``peninsula_outline`` relative to ``path.parent`` inside ``data_root``."""
+    outline = Path(raw)
+    if outline.is_absolute():
+        raise _fail(path, "peninsula_outline", "a path relative to the profile folder", raw)
+    boundary = path.parent if data_root is None else Path(data_root)
+    try:
+        root = _canonical_path(boundary)
+        candidate = _canonical_path(path.parent / outline)
+    except (OSError, RuntimeError, ValueError) as error:
+        raise _fail(
+            path, "peninsula_outline", f"a resolvable path inside {boundary} ({error})", raw
+        ) from error
+    if candidate == root or not candidate.is_relative_to(root):
+        raise _fail(path, "peninsula_outline", f"a path inside {root}", raw)
+    return candidate
+
+
+def load_profile(path: Path, *, data_root: Path | None = None) -> Profile:
     """Load and validate a profile YAML file.
 
     The camera bounds and the data extent (the camera bounds widened by
@@ -197,14 +257,24 @@ def load_profile(path: Path) -> Profile:
     edges included. The schema reports out-of-range values first; non-finite
     values it lets through are reported next.
 
+    ``peninsula_outline`` must be a relative path resolved from the profile's
+    folder; its canonical target must stay inside ``data_root`` (or the
+    profile's folder when ``data_root`` is omitted), so sibling folders inside
+    a shared data root are allowed while escapes and symlink loops are
+    rejected. The file itself is not opened here; existence, file-type and
+    geometry checks remain in ``pack``.
+
     Args:
         path: The profile file; its stem becomes ``Profile.name``.
+        data_root: The directory that confines ``peninsula_outline``. Defaults
+            to ``path.parent`` when omitted.
 
     Returns:
-        The profile, with the outline path resolved against the file's folder.
+        The profile, with ``peninsula_outline`` canonicalized inside the root.
 
     Raises:
-        ConfigError: The file breaks the schema or a cross-field rule.
+        ConfigError: The file breaks the schema, a cross-field rule, or the
+            outline confinement rule.
     """
     path = Path(path)
     data = strict_yaml.load(path)
@@ -221,6 +291,7 @@ def load_profile(path: Path) -> Profile:
             f"{_MIN_BLOCK_ZOOM} <= block_zoom <= max_zoom ({data['max_zoom']})",
             data["block_zoom"],
         )
+    outline = _resolve_outline(data["peninsula_outline"], path, data_root)
     style = dict(data.get("style", {}))
     if "ink_rgb" in style:
         style["ink_rgb"] = tuple(style["ink_rgb"])
@@ -235,7 +306,7 @@ def load_profile(path: Path) -> Profile:
         block_zoom=data["block_zoom"],
         webp_quality=data.get("webp_quality", 80),
         style=StyleSettings(**style),
-        peninsula_outline=path.parent / data["peninsula_outline"],
+        peninsula_outline=outline,
     )
     _check_data_extent(profile, path)
     return profile
