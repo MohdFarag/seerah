@@ -6,9 +6,11 @@ All angles are degrees, all lengths in edits are metres.
 """
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
+import morecantile
 from jsonschema import Draft202012Validator
 
 from . import strict_yaml
@@ -16,6 +18,17 @@ from .errors import ConfigError
 
 _SCHEMA_DIR = Path(__file__).parent / "schema"
 _MIN_BLOCK_ZOOM = 6
+# The same tile grid as grid.py, which imports this module and so cannot be imported here.
+_TILE_GRID = morecantile.tms.get("WebMercatorQuad")
+# The part of the grid a profile may cover: the N/E quadrant, up to the grid's northern edge.
+_LON_RANGE = (0.0, _TILE_GRID.bbox.right)
+_LAT_RANGE = (0.0, _TILE_GRID.bbox.top)
+_SIDE_RANGES = {
+    "west": _LON_RANGE,
+    "south": _LAT_RANGE,
+    "east": _LON_RANGE,
+    "north": _LAT_RANGE,
+}
 
 
 @dataclass(frozen=True)
@@ -128,12 +141,32 @@ def _fail(path: Path, key: str, expected: str, found: object) -> ConfigError:
     return ConfigError(f"{path}: key {key}: expected {expected}, found {found!r}")
 
 
+def _check_finite(value: object, path: Path, prefix: str = "") -> None:
+    """Reject non-finite floats anywhere in ``value`` (YAML allows ``.inf`` and ``.nan``)."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            child = f"{prefix}.{key}" if prefix else str(key)
+            _check_finite(item, path, child)
+    elif isinstance(value, list):
+        for i, item in enumerate(value):
+            _check_finite(item, path, f"{prefix}[{i}]")
+    elif isinstance(value, float) and not math.isfinite(value):
+        raise _fail(path, prefix or "(top level)", "a finite number", value)
+
+
 def _check_bounds(raw: dict, path: Path) -> Bounds:
-    """Check the camera bounds are in the N/E quadrant and ordered."""
+    """Check the camera bounds are in the N/E quadrant, inside the tile grid and ordered."""
     bounds = Bounds(**raw)
-    for key in ("west", "south", "east", "north"):
-        if getattr(bounds, key) < 0:
-            raise _fail(path, f"camera_bounds.{key}", "a value >= 0 (N/E quadrant only)", raw[key])
+    for key, (low, high) in _SIDE_RANGES.items():
+        value = getattr(bounds, key)
+        if value < low:
+            raise _fail(
+                path, f"camera_bounds.{key}", f"a value >= {low} (N/E quadrant only)", value
+            )
+        if value > high:
+            raise _fail(
+                path, f"camera_bounds.{key}", f"a value <= {high} (the tile grid's edge)", value
+            )
     if not bounds.west < bounds.east:
         raise _fail(path, "camera_bounds", "west < east", f"{bounds.west} >= {bounds.east}")
     if not bounds.south < bounds.north:
@@ -141,8 +174,28 @@ def _check_bounds(raw: dict, path: Path) -> Bounds:
     return bounds
 
 
+def _check_data_extent(profile: Profile, path: Path) -> None:
+    """Check the margin keeps the data extent in the N/E quadrant and inside the tile grid."""
+    extent = profile.data_extent
+    for key, (low, high) in _SIDE_RANGES.items():
+        edge = getattr(extent, key)
+        if not low <= edge <= high:
+            raise _fail(
+                path,
+                "margin_deg",
+                f"a margin keeping the data extent's {key} edge ({edge}) within {low}..{high}",
+                profile.margin_deg,
+            )
+
+
 def load_profile(path: Path) -> Profile:
     """Load and validate a profile YAML file.
+
+    The camera bounds and the data extent (the camera bounds widened by
+    ``margin_deg``) must both lie in the N/E quadrant of the WebMercatorQuad
+    grid: longitude 0 to 180 and latitude 0 to the grid's northern edge, all
+    edges included. The schema reports out-of-range values first; non-finite
+    values it lets through are reported next.
 
     Args:
         path: The profile file; its stem becomes ``Profile.name``.
@@ -156,6 +209,7 @@ def load_profile(path: Path) -> Profile:
     path = Path(path)
     data = strict_yaml.load(path)
     _validate(data, "profile.schema.json", path)
+    _check_finite(data, path)
     bounds = _check_bounds(data["camera_bounds"], path)
     margin, fade = data["margin_deg"], data["fade_deg"]
     if margin > 0 and fade > margin:
@@ -170,7 +224,7 @@ def load_profile(path: Path) -> Profile:
     style = dict(data.get("style", {}))
     if "ink_rgb" in style:
         style["ink_rgb"] = tuple(style["ink_rgb"])
-    return Profile(
+    profile = Profile(
         name=path.stem,
         folder=path.parent,
         purpose=data["purpose"],
@@ -183,6 +237,8 @@ def load_profile(path: Path) -> Profile:
         style=StyleSettings(**style),
         peninsula_outline=path.parent / data["peninsula_outline"],
     )
+    _check_data_extent(profile, path)
+    return profile
 
 
 def load_edits(path: Path) -> list[Edit]:
