@@ -1,11 +1,10 @@
 """Tests for the command line: worker count, exit codes, build order and clean."""
 
-import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from seerah_map import cli
+from seerah_map import cli, report
 from seerah_map.base import BaseError
 from seerah_map.config import Cell, Lock, dump_lock, load_profile
 from seerah_map.fetch import FetchError, cells_for
@@ -116,10 +115,13 @@ def _stub_pipeline(
     calls: list[str],
     fail_at: str | None = None,
     outlines: list[Path] | None = None,
+    captured: dict[str, tuple] | None = None,
 ) -> None:
     def stage(name, result=None, error: type[Exception] = PackError):
         def run(*args, **kwargs):
             calls.append(name)
+            if captured is not None:
+                captured[name] = args
             if name == fail_at:
                 raise error("stub failure")
             return result
@@ -161,7 +163,8 @@ def test_exit_codes(tmp_path, monkeypatch):
 def test_build_pipeline_order(tmp_path, monkeypatch, capsys):
     _data(tmp_path)
     calls: list[str] = []
-    _stub_pipeline(monkeypatch, calls)
+    captured: dict[str, tuple] = {}
+    _stub_pipeline(monkeypatch, calls, captured=captured)
     assert cli.main(_build(tmp_path)) == 0
     assert calls == ["check lock", "block", "tile", "pack", "verify", "base", "report", "remove"]
     out = capsys.readouterr().out
@@ -169,14 +172,27 @@ def test_build_pipeline_order(tmp_path, monkeypatch, capsys):
     assert "base done: " in out
     assert "work area removed" in out
 
-    for fail_at in ("verify", "base"):
-        shutil.rmtree(tmp_path / "work")
-        calls.clear()
-        _stub_pipeline(monkeypatch, calls, fail_at=fail_at)
-        assert cli.main(_build(tmp_path)) == 1
-        assert "remove" not in calls
-        assert calls[-1] == fail_at
-        assert len(list_areas(tmp_path / "work")) == 1
+    _, _, cache, area, out_dir, provenance, _log = captured["base"]
+    assert cache == tmp_path / "cache"
+    assert area.path.parent == tmp_path / "work"
+    assert out_dir.parent == tmp_path / "out"
+    assert provenance.fingerprint == area.fp
+
+    report_data, report_out_dir = captured["report"]
+    assert report_out_dir == out_dir
+    assert "base" in report_data["stage_seconds"]
+    report._check_shape(report_data)
+
+
+@pytest.mark.parametrize("fail_at", ["verify", "base"])
+def test_failed_stage_keeps_work_area(tmp_path, monkeypatch, fail_at):
+    _data(tmp_path)
+    calls: list[str] = []
+    _stub_pipeline(monkeypatch, calls, fail_at=fail_at)
+    assert cli.main(_build(tmp_path)) == 1
+    assert "remove" not in calls
+    assert calls[-1] == fail_at
+    assert len(list_areas(tmp_path / "work")) == 1
 
 
 def test_clean_semantics(tmp_path, capsys):

@@ -6,20 +6,20 @@ output folders, so no test touches a real run's ``/out``. Downloads go to
 """
 
 import hashlib
+import itertools
 import json
 import os
 import shutil
 import stat
-import subprocess
 from pathlib import Path
 
 import numpy as np
 import pytest
 from conftest import StopAt
 from osgeo import gdal, ogr, osr
-from pmtiles.reader import MmapSource, all_tiles
+from pmtiles.reader import MmapSource, Reader, all_tiles
 from seerah_map import base, config, pack
-from seerah_map.grid import blocks, expected_tiles, pixel_m
+from seerah_map.grid import blocks, expected_tiles, pixel_m, shrink_extent
 
 pytestmark = pytest.mark.slow
 
@@ -166,9 +166,9 @@ def test_example_builds_complete(reference):
     base_archive = reference.parent / base.BASE_ARCHIVE_NAME
     assert base_archive.is_file()
     base.verify_base(base_archive, profile)
-    base_meta = json.loads(
-        subprocess.check_output(["pmtiles", "show", str(base_archive), "--metadata"], text=True)
-    )
+    with base_archive.open("rb") as f:
+        base_meta = Reader(MmapSource(f)).metadata()
+    assert base_meta["name"] == profile.name
     assert base_meta["trial"] is True
     assert {layer["id"] for layer in base_meta["vector_layers"]} == {
         base.LAND_LAYER,
@@ -270,6 +270,7 @@ def test_absent_neighbour_is_sea(reference):
 
 def test_example_base_has_no_inland_edge_coast(reference):
     profile = config.load_profile(EXAMPLE / "example.yaml")
+    inner = shrink_extent(profile.data_extent, pixels=2)
     base_archive = reference.parent / base.BASE_ARCHIVE_NAME
     tol = 1.5 * pixel_m()
     inside_segments = 0
@@ -284,15 +285,17 @@ def test_example_base_has_no_inland_edge_coast(reference):
         project = osr.CoordinateTransformation(geographic, coast.GetSpatialRef())
         west, south, _ = project.TransformPoint(profile.data_extent.west, profile.data_extent.south)
         east, north, _ = project.TransformPoint(profile.data_extent.east, profile.data_extent.north)
+        in_west, in_south, _ = project.TransformPoint(inner.west, inner.south)
+        in_east, in_north, _ = project.TransformPoint(inner.east, inner.north)
         for feature in coast:
             geom = feature.GetGeometryRef()
             if geom is None:
                 continue
             for line in _iter_lines(geom):
                 points = [line.GetPoint_2D(i) for i in range(line.GetPointCount())]
-                for (x0, y0), (x1, y1) in zip(points, points[1:], strict=False):
+                for (x0, y0), (x1, y1) in itertools.pairwise(points):
                     mx, my = (x0 + x1) / 2, (y0 + y1) / 2
-                    if west < mx < east and south < my < north:
+                    if in_west < mx < in_east and in_south < my < in_north:
                         inside_segments += 1
                     in_window = (
                         west - tol <= x0 <= east + tol
@@ -303,30 +306,15 @@ def test_example_base_has_no_inland_edge_coast(reference):
                     if not in_window:
                         continue
                     dx, dy = abs(x1 - x0), abs(y1 - y0)
-                    # Check edge-parallel segments (dy > dx on W/E, dx > dy on S/N) so a true
-                    # coastline crossing perpendicular to the boundary is not flagged.
-                    assert not (abs(x0 - west) <= tol and abs(x1 - west) <= tol and dy > dx), (
-                        x0,
-                        y0,
-                        x1,
-                        y1,
-                    )
-                    assert not (abs(x0 - east) <= tol and abs(x1 - east) <= tol and dy > dx), (
-                        x0,
-                        y0,
-                        x1,
-                        y1,
-                    )
-                    assert not (abs(y0 - south) <= tol and abs(y1 - south) <= tol and dx > dy), (
-                        x0,
-                        y0,
-                        x1,
-                        y1,
-                    )
-                    assert not (abs(y0 - north) <= tol and abs(y1 - north) <= tol and dx > dy), (
-                        x0,
-                        y0,
-                        x1,
-                        y1,
-                    )
+                    # Real pixel steps crossing an edge stay below tol; collinear false edge
+                    # contours span more than tol along the boundary.
+                    for name, c0, c1, edge, span in (
+                        ("west", x0, x1, west, dy),
+                        ("east", x0, x1, east, dy),
+                        ("south", y0, y1, south, dx),
+                        ("north", y0, y1, north, dx),
+                    ):
+                        assert not (
+                            abs(c0 - edge) <= tol and abs(c1 - edge) <= tol and span > tol
+                        ), (name, x0, y0, x1, y1)
     assert inside_segments > 0
