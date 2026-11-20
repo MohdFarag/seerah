@@ -31,10 +31,12 @@ class TrialFilesTest {
         metadata: String? = validMetadata,
         camera: String? = cameraPath,
         relief: Boolean = true,
+        base: Boolean = true,
     ): File = temporaryFolder.newFolder(name).also { folder ->
         metadata?.let { File(folder, "metadata.json").writeText(it) }
         camera?.let { File(folder, "camera-path.json").writeText(it) }
         if (relief) File(folder, "relief.pmtiles").writeText("tiles")
+        if (base) File(folder, "base.pmtiles").writeText("tiles")
     }
 
     private fun loadOnlyEntry(): VariantLoad = loadVariants(temporaryFolder.root).single()
@@ -54,6 +56,7 @@ class TrialFilesTest {
         assertEquals(Variant.PAINTED, loaded.variant)
         assertEquals("01234567", loaded.fingerprint8)
         assertEquals(File(folder, "relief.pmtiles"), loaded.relief)
+        assertEquals(File(folder, "base.pmtiles"), loaded.base)
         assertEquals(
             CameraStop(lat = 20.62, lon = 58.9, zoom = 10.0, durationMs = 4000),
             loaded.cameraPath.stops.single(),
@@ -89,6 +92,13 @@ class TrialFilesTest {
         variantFolder(relief = false)
 
         assertSkippedMentioning("relief.pmtiles")
+    }
+
+    @Test
+    fun folderWithoutBaseArchive_isSkippedWithReason() {
+        variantFolder(base = false)
+
+        assertEquals("base.pmtiles is missing", assertIs<VariantLoad.Skipped>(loadOnlyEntry()).reason)
     }
 
     @Test

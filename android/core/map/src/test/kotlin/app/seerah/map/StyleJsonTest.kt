@@ -10,7 +10,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class StyleJsonTest {
-    private val files = MapFiles(File("/data/t/relief.pmtiles"))
+    private val files = MapFiles(File("/data/t/relief.pmtiles"), File("/data/t/base.pmtiles"))
 
     private val fadeRange = ZoomRange(start = 11.5, end = 13.5)
 
@@ -48,7 +48,7 @@ class StyleJsonTest {
         val layers = style.getJSONArray("layers")
         assertEquals(8, style.getInt("version"))
         assertEquals(
-            listOf("background", "relief"),
+            listOf("background", "land", "coast", "relief"),
             (0 until layers.length()).map {
                 layers.getJSONObject(it).getString("id")
             },
@@ -56,6 +56,13 @@ class StyleJsonTest {
         assertEquals("background", style.layer("background").getString("type"))
         assertEquals("raster", style.layer("relief").getString("type"))
         assertEquals(RELIEF_SOURCE_ID, style.layer("relief").getString("source"))
+    }
+
+    @Test
+    fun baseSource_usesVectorPmtilesFileUrl() {
+        val source = style(spec()).getJSONObject("sources").getJSONObject(BASE_SOURCE_ID)
+        assertEquals("vector", source.getString("type"))
+        assertEquals("pmtiles://file:///data/t/base.pmtiles", source.getString("url"))
     }
 
     @Test
@@ -119,14 +126,40 @@ class StyleJsonTest {
     }
 
     @Test
-    fun background_isLandColour() {
+    fun background_isSeaColour() {
         assertEquals(
-            "rgba(241, 230, 200, 1)",
+            "rgba(159, 195, 216, 1)",
             style(spec()).layer("background").getJSONObject("paint").getString("background-color"),
         )
     }
 
+    @Test
+    fun landLayer_usesBaseSource_fillColor_andNoAntialias() {
+        val land = style(spec()).layer("land")
+        val paint = land.getJSONObject("paint")
+        assertEquals("fill", land.getString("type"))
+        assertEquals(BASE_SOURCE_ID, land.getString("source"))
+        assertEquals("land", land.getString("source-layer"))
+        assertEquals("rgba(241, 230, 200, 1)", paint.getString("fill-color"))
+        assertEquals(false, paint.getBoolean("fill-antialias"))
+    }
+
+    @Test
+    fun coastLayer_usesBaseSource_lineColor_andInterpolatedWidth() {
+        val style = style(spec())
+        val coast = style.layer("coast")
+        assertEquals("line", coast.getString("type"))
+        assertEquals(BASE_SOURCE_ID, coast.getString("source"))
+        assertEquals("coast", coast.getString("source-layer"))
+        assertEquals("rgba(91, 127, 149, 1)", coast.getJSONObject("paint").getString("line-color"))
+        assertEquals(
+            """["interpolate",["linear"],["zoom"],3,0.4,10,1.2]""",
+            style.paint("coast", "line-width"),
+        )
+    }
+
     private companion object {
+        const val BASE_SOURCE_ID = "base"
         const val RELIEF_SOURCE_ID = "relief"
 
         val PAIRED_RAMP =

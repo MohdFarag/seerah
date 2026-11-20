@@ -6,6 +6,7 @@ output folders, so no test touches a real run's ``/out``. Downloads go to
 """
 
 import hashlib
+import itertools
 import json
 import os
 import shutil
@@ -15,10 +16,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 from conftest import StopAt
-from osgeo import gdal
-from pmtiles.reader import MmapSource, all_tiles
-from seerah_map import config, pack
-from seerah_map.grid import blocks, expected_tiles
+from osgeo import gdal, ogr, osr
+from pmtiles.reader import MmapSource, Reader, all_tiles
+from seerah_map import base, config, pack
+from seerah_map.grid import blocks, expected_tiles, pixel_m, shrink_extent
 
 pytestmark = pytest.mark.slow
 
@@ -53,34 +54,34 @@ def _data(root: Path, block_zoom: int | None = None) -> Path:
     return root
 
 
-def _roots(base: Path, data: Path) -> list[str]:
+def _roots(run_dir: Path, data: Path) -> list[str]:
     return [
         "--data",
         str(data),
         "--cache",
         str(CACHE),
         "--work",
-        str(base / "work"),
+        str(run_dir / "work"),
         "--out",
-        str(base / "out"),
+        str(run_dir / "out"),
     ]
 
 
-def _build(run_cli, base: Path, data: Path, variant: str = "painted", **kwargs):
+def _build(run_cli, run_dir: Path, data: Path, variant: str = "painted", **kwargs):
     return run_cli(
-        ["build", *_roots(base, data), "--profile", PROFILE, "--variant", variant], **kwargs
+        ["build", *_roots(run_dir, data), "--profile", PROFILE, "--variant", variant], **kwargs
     )
 
 
-def _archive(base: Path) -> Path:
-    (archive,) = (base / "out").glob("*/relief.pmtiles")
+def _archive(run_dir: Path) -> Path:
+    (archive,) = (run_dir / "out").glob("*/relief.pmtiles")
     return archive
 
 
-def _built(run_cli, base: Path, data: Path, variant: str = "painted") -> Path:
-    result = _build(run_cli, base, data, variant)
+def _built(run_cli, run_dir: Path, data: Path, variant: str = "painted") -> Path:
+    result = _build(run_cli, run_dir, data, variant)
     assert result.returncode == 0, result.output
-    return _archive(base)
+    return _archive(run_dir)
 
 
 def _tiles(archive: Path) -> dict[tuple[int, int, int], bytes]:
@@ -135,9 +136,9 @@ def _fetched(tmp_path_factory) -> None:
     """Fill the cache with the example's files, checked against the committed lock."""
     from conftest import _run_cli
 
-    base = tmp_path_factory.mktemp("fetch")
-    data = _data(base / "data")
-    result = _run_cli(["fetch", *_roots(base, data), "--profile", PROFILE])
+    run_dir = tmp_path_factory.mktemp("fetch")
+    data = _data(run_dir / "data")
+    result = _run_cli(["fetch", *_roots(run_dir, data), "--profile", PROFILE])
     assert result.returncode == 0, result.output
 
 
@@ -146,8 +147,8 @@ def reference(tmp_path_factory) -> Path:
     """A clean painted build of the example, shared by the comparison tests."""
     from conftest import _run_cli
 
-    base = tmp_path_factory.mktemp("reference")
-    return _built(_run_cli, base, _data(base / "data"))
+    run_dir = tmp_path_factory.mktemp("reference")
+    return _built(_run_cli, run_dir, _data(run_dir / "data"))
 
 
 def test_example_builds_complete(reference):
@@ -162,6 +163,18 @@ def test_example_builds_complete(reference):
     for key in expected:
         assert _decode(tiles[key]).shape[0] == ALPHA_BAND, key
 
+    base_archive = reference.parent / base.BASE_ARCHIVE_NAME
+    assert base_archive.is_file()
+    base.verify_base(base_archive, profile)
+    with base_archive.open("rb") as f:
+        base_meta = Reader(MmapSource(f)).metadata()
+    assert base_meta["name"] == profile.name
+    assert base_meta["trial"] is True
+    assert {layer["id"] for layer in base_meta["vector_layers"]} == {
+        base.LAND_LAYER,
+        base.COAST_LAYER,
+    }
+
 
 def test_example_value_variant(run_cli, tmp_path):
     archive = _built(run_cli, tmp_path, _data(tmp_path / "data"), "value")
@@ -174,9 +187,11 @@ def test_double_build_identical(run_cli, tmp_path):
     data = _data(tmp_path / "data")
     hashes = []
     for run in ("a", "b"):
-        base = tmp_path / run
-        assert run_cli(["clean", *_roots(base, data), "--all"]).returncode == 0
-        hashes.append(_sha256(_built(run_cli, base, data)))
+        run_dir = tmp_path / run
+        assert run_cli(["clean", *_roots(run_dir, data), "--all"]).returncode == 0
+        relief = _built(run_cli, run_dir, data)
+        base_archive = relief.parent / base.BASE_ARCHIVE_NAME
+        hashes.append((_sha256(relief), _sha256(base_archive)))
     assert hashes[0] == hashes[1]
 
 
@@ -232,6 +247,15 @@ def test_block_split_matches_single_block(run_cli, tmp_path, reference):
     _assert_same_tiles(_built(run_cli, tmp_path, data), reference)
 
 
+def _iter_lines(geom: ogr.Geometry):
+    flat = ogr.GT_Flatten(geom.GetGeometryType())
+    if flat == ogr.wkbLineString:
+        yield geom
+    elif flat in (ogr.wkbMultiLineString, ogr.wkbGeometryCollection):
+        for i in range(geom.GetGeometryCount()):
+            yield from _iter_lines(geom.GetGeometryRef(i))
+
+
 def test_absent_neighbour_is_sea(reference):
     absent, land = [], []
     for (z, x, _y), pixels in _decoded_at(reference, BASE_ZOOM).items():
@@ -242,3 +266,55 @@ def test_absent_neighbour_is_sea(reference):
     assert absent, "no zoom-12 tile lies wholly in N20 E059"
     assert max(absent) == 0
     assert max(land) > 0
+
+
+def test_example_base_has_no_inland_edge_coast(reference):
+    profile = config.load_profile(EXAMPLE / "example.yaml")
+    inner = shrink_extent(profile.data_extent, pixels=2)
+    base_archive = reference.parent / base.BASE_ARCHIVE_NAME
+    tol = 1.5 * pixel_m()
+    inside_segments = 0
+    with gdal.OpenEx(
+        str(base_archive), gdal.OF_VECTOR, open_options=[f"ZOOM_LEVEL={BASE_ZOOM}"]
+    ) as ds:
+        coast = ds.GetLayerByName(base.COAST_LAYER)
+        assert coast is not None
+        geographic = osr.SpatialReference()
+        geographic.ImportFromEPSG(4326)
+        geographic.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        project = osr.CoordinateTransformation(geographic, coast.GetSpatialRef())
+        west, south, _ = project.TransformPoint(profile.data_extent.west, profile.data_extent.south)
+        east, north, _ = project.TransformPoint(profile.data_extent.east, profile.data_extent.north)
+        in_west, in_south, _ = project.TransformPoint(inner.west, inner.south)
+        in_east, in_north, _ = project.TransformPoint(inner.east, inner.north)
+        for feature in coast:
+            geom = feature.GetGeometryRef()
+            if geom is None:
+                continue
+            for line in _iter_lines(geom):
+                points = [line.GetPoint_2D(i) for i in range(line.GetPointCount())]
+                for (x0, y0), (x1, y1) in itertools.pairwise(points):
+                    mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+                    if in_west < mx < in_east and in_south < my < in_north:
+                        inside_segments += 1
+                    in_window = (
+                        west - tol <= x0 <= east + tol
+                        and west - tol <= x1 <= east + tol
+                        and south - tol <= y0 <= north + tol
+                        and south - tol <= y1 <= north + tol
+                    )
+                    if not in_window:
+                        continue
+                    dx, dy = abs(x1 - x0), abs(y1 - y0)
+                    # Real pixel steps crossing an edge stay below tol; collinear false edge
+                    # contours span more than tol along the boundary.
+                    for name, c0, c1, edge, span in (
+                        ("west", x0, x1, west, dy),
+                        ("east", x0, x1, east, dy),
+                        ("south", y0, y1, south, dx),
+                        ("north", y0, y1, north, dx),
+                    ):
+                        assert not (
+                            abs(c0 - edge) <= tol and abs(c1 - edge) <= tol and span > tol
+                        ), (name, x0, y0, x1, y1)
+    assert inside_segments > 0

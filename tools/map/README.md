@@ -1,15 +1,15 @@
 # tools/map
 
-The map build tool for the trial that [ADR 0009](../../docs/adr/0009-map-data-pipeline.md) decision 13 requires. It downloads pinned Copernicus elevation and Water Body Mask cells and Natural Earth files, renders the style C relief block by block, cuts it into tiles and packs them into one PMTiles archive with a run report. The design is in [docs/design/map-trial-build.md](../../docs/design/map-trial-build.md); this is phase 1 of [its plan](../../docs/design/map-trial-phase-1-plan.md).
+The map build tool for the trial that [ADR 0009](../../docs/adr/0009-map-data-pipeline.md) decision 13 requires. It downloads pinned Copernicus elevation and Water Body Mask cells and Natural Earth files, renders the style C relief block by block, cuts it into tiles, packs `relief.pmtiles`, and builds the vector base archive `base.pmtiles` (`land` and `coast` layers) alongside `metadata.json` and `report.json`. The design is in [docs/design/map-trial-build.md](../../docs/design/map-trial-build.md), planned across [phase 1](../../docs/design/map-trial-phase-1-plan.md), [phase 2](../../docs/design/map-trial-phase-2-plan.md) and [phase 3](../../docs/design/map-trial-phase-3-plan.md).
 
-The tool runs in a toolchain image (GDAL, go-pmtiles and the Python packages in `requirements.txt`). The image holds no tool code: the code runs from this checkout, mounted read-only at `/src`.
+The tool runs in a toolchain image (GDAL, `tippecanoe`, `tile-join`, `go-pmtiles`, `WhiteboxTools`, and the Python packages in `requirements.txt`). The image holds no tool code: the code runs from this checkout, mounted read-only at `/src`.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
 | `fetch --profile P` | Downloads P's cells and the Natural Earth files into `/cache`. With no lock it writes `/out/<name>.lock` and says where to copy it; with a lock it verifies every cached file and refuses any mismatch. |
-| `build --profile P --variant {painted,value}` | Runs the block stage, the tile stage and pack, and writes `/out/<name>-<variant>-<fp8>/`. Options: `--workers`, and `--per-worker-mib` (default 2048, `GDAL_CACHEMAX` included). |
+| `build --profile P --variant {painted,value}` | Runs the block stage, the tile stage, pack and the base layer stage, and writes `/out/<name>-<variant>-<fp8>/`. Options: `--workers`, and `--per-worker-mib` (default 2048, `GDAL_CACHEMAX` included). |
 | `clean [--fingerprint F \| --all]` | Lists work areas under `/work` with their sizes, or removes one or all. |
 
 Exit codes: 0 for success, 1 when a check fails, 2 for a usage or configuration error.
@@ -69,16 +69,52 @@ The thread and GDAL cache variables are set in the image, so every runner gets t
 
 ## Output
 
+Run one full build at a time for each fingerprint. Different fingerprints have separate work areas and can build concurrently. A completed build can remove its work area, so wait for it to finish before reusing or cleaning that fingerprint.
+
 `build` writes one folder per profile, variant and fingerprint:
 
 ```text
 <out>/<name>-<variant>-<fp8>/
   relief.pmtiles    the relief archive
+  base.pmtiles      the vector base archive (land and coast layers)
   metadata.json     format, zooms, bounds, trial: true, variant, encoding, fingerprint, commits, image digest
-  report.json       provenance, stage times, memory, disk, tile counts, size per zoom inside and outside the outline
+  report.json       provenance, stage times (stage_seconds: block, tile, pack, base; stage_seconds.base added in phase 3), memory, disk, tile counts, size per zoom inside and outside the outline
 ```
 
-**Trial output is never packaged or published.** Every `metadata.json` says `trial: true`, and the future packaging step must refuse it. It is not the `tile_schema` 1 map package.
+**Trial output is never packaged or published.** `relief.pmtiles`, `base.pmtiles` and `metadata.json` all carry `trial: true`, and the future packaging step must refuse them. This output is not the `tile_schema` 1 map package.
+
+## Valley probe
+
+The valley probe (ADR 0009 decision 13 item 7; [specification](../../docs/design/map-trial-build.md#valleys)) checks whether `WhiteboxTools` fits inside the 8,192 MiB container memory cap over the full trial data extent (`33..61° E, 11..33° N`) using unedited Copernicus GLO-90 (`copernicus-dem-90m`), before deciding whether to specify a valley layer. Nothing from the probe ships, so GLO-90 is read unpinned.
+
+1. Warp Copernicus GLO-90 (`copernicus-dem-90m`) over the full data extent (`33..61° E, 11..33° N`) using a VRT (`glo90.vrt` in `<glo90-dir>`) built from the extent's GLO-90 cells, mounted read-only at `/glo90`. Run in the `seerah-map` image under `--memory 8192m --memory-swap 8192m` with `gdalwarp -t_srs EPSG:3857 -tr 90 90 -r bilinear` and `-tr 180 180 -r bilinear` to `/work/valley-probe/dem_90m.tif` and `/work/valley-probe/dem_180m.tif`:
+
+   ```sh
+   docker run --rm --user "$(id -u):$(id -g)" --security-opt label=disable \
+     --memory 8192m --memory-swap 8192m \
+     -v "<glo90-dir>:/glo90:ro" -v seerah-map-work:/work <image> bash -c '
+       mkdir -p /work/valley-probe &&
+       gdalwarp -t_srs EPSG:3857 -tr 90 90 -r bilinear /glo90/glo90.vrt /work/valley-probe/dem_90m.tif &&
+       gdalwarp -t_srs EPSG:3857 -tr 180 180 -r bilinear /glo90/glo90.vrt /work/valley-probe/dem_180m.tif
+     '
+   ```
+
+2. Run `whitebox_tools` depression breaching and D8 flow accumulation for each resolution (`<res>` = `90m`, `180m`) under `--network none --memory 8192m --memory-swap 8192m`, capturing the exit status so `/sys/fs/cgroup/memory.peak` and `/sys/fs/cgroup/memory.events` (`oom_kill`) still print if `whitebox_tools` fails or is OOM-killed:
+
+   ```sh
+   docker run --rm --user "$(id -u):$(id -g)" --network none --security-opt label=disable \
+     --memory 8192m --memory-swap 8192m \
+     -v seerah-map-work:/work <image> bash -c '
+       whitebox_tools -v=false --wd=/work/valley-probe --run=BreachDepressionsLeastCost --dem=dem_<res>.tif --output=breached_<res>.tif --dist=100 &&
+       whitebox_tools -v=false --wd=/work/valley-probe --run=D8FlowAccumulation --input=breached_<res>.tif --output=accum_<res>.tif
+       status=$?
+       cat /sys/fs/cgroup/memory.peak
+       grep oom_kill /sys/fs/cgroup/memory.events
+       exit "$status"
+     '
+   ```
+
+   If comparing standard breaching, run `whitebox_tools -v=false --wd=/work/valley-probe --run=BreachDepressions --dem=dem_<res>.tif --output=breached_<res>.tif` in place of `BreachDepressionsLeastCost`. Record whether each resolution fits (wall time, `memory.peak`, `oom_kill`) in [docs/map-trial/step-1.md](../../docs/map-trial/step-1.md), then remove `/work/valley-probe` from the `seerah-map-work` volume (`docker run --rm --user "$(id -u):$(id -g)" --security-opt label=disable -v seerah-map-work:/work <image> rm -rf /work/valley-probe`).
 
 ## Tests
 

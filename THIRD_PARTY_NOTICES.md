@@ -1,6 +1,6 @@
 # Third-party notices
 
-The project's code and documentation are Apache-2.0 ([LICENSE](LICENSE)) and its content is all rights reserved ([content licence](LICENSES/LicenseRef-Seerah-Content.txt)); [REUSE.toml](REUSE.toml) says which applies to each file. The third-party material below keeps its own licence. This list covers what is **in the repository** or **downloaded by its build scripts**; the app's library dependencies are checked at build time by Licensee (allowed: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause; see [ADR 0004](docs/adr/0004-build-and-quality-tooling.md)) and will be listed in the app's open-source notices screen.
+The project's code and documentation are Apache-2.0 ([LICENSE](LICENSE)) and its content is all rights reserved ([content licence](LICENSES/LicenseRef-Seerah-Content.txt)); [REUSE.toml](REUSE.toml) says which applies to each file. The third-party material below keeps its own licence. This list covers what is **in the repository**, **downloaded by its build scripts**, or part of the **map build toolchain** (`tools/map/`); the app's library dependencies are checked at build time by Licensee (allowed: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause; see [ADR 0004](docs/adr/0004-build-and-quality-tooling.md)) and will be listed in the app's open-source notices screen. None of the map build tools or MapLibre Native ships in the `release` app build yet.
 
 ## In the repository
 
@@ -14,13 +14,33 @@ The project's code and documentation are Apache-2.0 ([LICENSE](LICENSE)) and its
 
 | Material | Used by | Licence and attribution |
 | --- | --- | --- |
-| Natural Earth land and coastlines | `tools/spike/build_base.sh` | Public domain |
-| Copernicus DEM GLO-30 | `tools/spike/build_base.sh` | Free licence with attribution. For derived data such as relief: "Produced using Copernicus WorldDEM-30 © DLR e.V." Confirm the wording against the current [licence](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/DEM/resources/license/License-COPDEM-30.pdf) before any release |
+| Natural Earth land and coastlines | `tools/spike/build_base.sh`, `tools/map/` | Public domain |
+| Copernicus DEM GLO-30 and Water Body Mask | `tools/spike/build_base.sh` (DEM), `tools/map/` (DEM and Water Body Mask; the valley probe also reads unpinned Copernicus DEM GLO-90 without shipping output) | Free licence with attribution. For derived data such as relief: "Produced using Copernicus WorldDEM-30 © DLR e.V." Confirm the wording against the current [licence](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/DEM/resources/license/License-COPDEM-30.pdf) before any release |
 
-## Used by the technical spike only
+## Map build tools (`tools/map/`)
 
-| Material | Licence |
+Used in the containerised map build toolchain (`tools/map/`); none of these tools ships in any app build. Exact pinned Python package versions and transitive dependencies are recorded in [tools/map/requirements.txt](tools/map/requirements.txt).
+
+| Tool | Licence |
 | --- | --- |
-| MapLibre Native Android | BSD-2-Clause |
+| GDAL | MIT |
+| `tippecanoe` (including `tile-join`) | BSD-2-Clause |
+| `go-pmtiles` | BSD-3-Clause |
+| Protomaps `pmtiles` | BSD-3-Clause |
+| `numpy` | BSD-3-Clause |
+| `scipy` | BSD-3-Clause |
+| `morecantile` | MIT |
+| `ruamel.yaml` | MIT |
+| `jsonschema` | MIT |
+| `pytest` (container test suite) | MIT |
+| `WhiteboxTools` (`whitebox_tools`) | MIT |
+
+## Map rendering (spike, `:core:map` and `benchmark`)
+
+| Material | Used by | Licence |
+| --- | --- | --- |
+| MapLibre Native Android | Technical spike (`android/spike/`), `:core:map` (`android/core/map/`) and `benchmark` build type | BSD-2-Clause |
+
+Neither the map build tools nor MapLibre Native ships in the `release` app build yet (`release` does not depend on `:core:map`). MapLibre Native moves to the shipped notices when `release` depends on `:core:map`.
 
 The Quran, hadith and narrations from classical works are not claimed as the project's own; see the [content licence](LICENSES/LicenseRef-Seerah-Content.txt).

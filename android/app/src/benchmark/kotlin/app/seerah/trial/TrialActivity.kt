@@ -236,7 +236,7 @@ private fun TrialMap(selection: TrialSelection, onViews: () -> Unit, modifier: M
 
     Box(modifier.fillMaxSize()) {
         SeerahMap(
-            files = MapFiles(selection.variant.relief),
+            files = MapFiles(relief = selection.variant.relief, base = selection.variant.base),
             style = selection.view.styleSpec(),
             limits = selection.variant.cameraPath.limits,
             modifier = Modifier.fillMaxSize(),

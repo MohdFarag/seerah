@@ -17,7 +17,7 @@ _CGROUP_V2_ROOT = Path("/sys/fs/cgroup")
 _OOM_KILL_KEY = "oom_kill"
 _SHAPE: dict[str, set[str] | None] = {
     "provenance": {"tool_commit", "data_commit", "image", "fingerprint"},
-    "stage_seconds": {"block", "tile", "pack"},
+    "stage_seconds": {"block", "tile", "pack", "base"},
     "memory": {"peak_bytes", "peak_reason", "oom_kills", "largest_child_rss_kib"},
     "disk": {"work_area_bytes_after_tiling"},
     "tiles": {"expected", "written", "stored"},

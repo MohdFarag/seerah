@@ -36,9 +36,6 @@ data class ZoomRange(val start: Double, val end: Double)
 /**
  * The colours of the map, as ARGB integers.
  *
- * [sea] and [coast] are drawn from phase 3, when the base map arrives; they are part of the
- * interface now so that it does not change then.
- *
  * @property sea the sea.
  * @property land the land.
  * @property coast the coastline.

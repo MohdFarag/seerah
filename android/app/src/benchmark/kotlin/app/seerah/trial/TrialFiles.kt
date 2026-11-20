@@ -15,6 +15,7 @@ private const val FINGERPRINT_LENGTH = 8
 private const val METADATA_FILE = "metadata.json"
 private const val CAMERA_PATH_FILE = "camera-path.json"
 private const val RELIEF_FILE = "relief.pmtiles"
+private const val BASE_FILE = "base.pmtiles"
 
 /** How a trial build stores the relief; the `variant` field of `metadata.json`. */
 enum class Variant(val metadataName: String) {
@@ -59,6 +60,9 @@ data class TrialVariant(
 ) {
     /** The relief tiles of the variant. */
     val relief: File get() = File(folder, RELIEF_FILE)
+
+    /** The vector base layer of the variant. */
+    val base: File get() = File(folder, BASE_FILE)
 }
 
 /** The outcome of reading one sub-folder of the trial folder. */
@@ -108,6 +112,7 @@ private fun readVariant(folder: File): VariantLoad {
     val fingerprint = metadata.optString("fingerprint")
     if (fingerprint.length < FINGERPRINT_LENGTH) return skipped(folder, "fingerprint is missing or too short")
     if (!File(folder, RELIEF_FILE).isFile) return skipped(folder, "$RELIEF_FILE is missing")
+    if (!File(folder, BASE_FILE).isFile) return skipped(folder, "$BASE_FILE is missing")
 
     val cameraPathFile = File(folder, CAMERA_PATH_FILE)
     if (!cameraPathFile.isFile) return skipped(folder, "$CAMERA_PATH_FILE is missing")

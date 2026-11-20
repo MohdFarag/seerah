@@ -4,7 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from seerah_map import cli
+from seerah_map import cli, report
+from seerah_map.base import BaseError
 from seerah_map.config import Cell, Lock, dump_lock, load_profile
 from seerah_map.fetch import FetchError, cells_for
 from seerah_map.pack import PackError
@@ -114,12 +115,15 @@ def _stub_pipeline(
     calls: list[str],
     fail_at: str | None = None,
     outlines: list[Path] | None = None,
+    captured: dict[str, tuple] | None = None,
 ) -> None:
-    def stage(name, result=None):
+    def stage(name, result=None, error: type[Exception] = PackError):
         def run(*args, **kwargs):
             calls.append(name)
+            if captured is not None:
+                captured[name] = args
             if name == fail_at:
-                raise PackError("stub failure")
+                raise error("stub failure")
             return result
 
         return run
@@ -134,6 +138,7 @@ def _stub_pipeline(
     monkeypatch.setattr(cli, "run_tile_stage", stage("tile", 0))
     monkeypatch.setattr(cli, "pack", stage("pack", Path("relief.pmtiles")))
     monkeypatch.setattr(cli, "verify", stage("verify"))
+    monkeypatch.setattr(cli, "build_base_layer", stage("base", Path("base.pmtiles"), BaseError))
     monkeypatch.setattr(cli, "stored_tiles", lambda path: 0)
     monkeypatch.setattr(cli, "size_by_zoom", record_size_by_zoom)
     monkeypatch.setattr(cli, "write_report", stage("report", Path("report.json")))
@@ -142,7 +147,7 @@ def _stub_pipeline(
 
 def test_exit_codes(tmp_path, monkeypatch):
     _data(tmp_path)
-    for error in (FetchError, CompletenessError, PackError):
+    for error in (FetchError, CompletenessError, PackError, BaseError):
 
         def fail(*args, error=error, **kwargs):
             raise error("stub")
@@ -158,17 +163,35 @@ def test_exit_codes(tmp_path, monkeypatch):
 def test_build_pipeline_order(tmp_path, monkeypatch, capsys):
     _data(tmp_path)
     calls: list[str] = []
-    _stub_pipeline(monkeypatch, calls)
+    captured: dict[str, tuple] = {}
+    _stub_pipeline(monkeypatch, calls, captured=captured)
     assert cli.main(_build(tmp_path)) == 0
-    assert calls == ["check lock", "block", "tile", "pack", "verify", "report", "remove"]
+    assert calls == ["check lock", "block", "tile", "pack", "verify", "base", "report", "remove"]
     out = capsys.readouterr().out
     assert "build: t painted fingerprint " in out
+    assert "base done: " in out
     assert "work area removed" in out
 
-    calls.clear()
-    _stub_pipeline(monkeypatch, calls, fail_at="verify")
+    _, _, cache, area, out_dir, provenance, _log = captured["base"]
+    assert cache == tmp_path / "cache"
+    assert area.path.parent == tmp_path / "work"
+    assert out_dir.parent == tmp_path / "out"
+    assert provenance.fingerprint == area.fp
+
+    report_data, report_out_dir = captured["report"]
+    assert report_out_dir == out_dir
+    assert "base" in report_data["stage_seconds"]
+    report._check_shape(report_data)
+
+
+@pytest.mark.parametrize("fail_at", ["verify", "base"])
+def test_failed_stage_keeps_work_area(tmp_path, monkeypatch, fail_at):
+    _data(tmp_path)
+    calls: list[str] = []
+    _stub_pipeline(monkeypatch, calls, fail_at=fail_at)
     assert cli.main(_build(tmp_path)) == 1
     assert "remove" not in calls
+    assert calls[-1] == fail_at
     assert len(list_areas(tmp_path / "work")) == 1
 
 
@@ -227,5 +250,14 @@ def test_sibling_outline_inside_data_root_runs_fetch_and_build(tmp_path, monkeyp
     assert fetch_calls == [outline.resolve()]
 
     assert cli.main(_build(tmp_path)) == 0
-    assert build_calls == ["check lock", "block", "tile", "pack", "verify", "report", "remove"]
+    assert build_calls == [
+        "check lock",
+        "block",
+        "tile",
+        "pack",
+        "verify",
+        "base",
+        "report",
+        "remove",
+    ]
     assert build_outlines == [outline.resolve()]

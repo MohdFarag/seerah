@@ -60,6 +60,8 @@ def test_areas_coexist(tmp_path):
     first = open_area(tmp_path, "a" * 64)
     second = open_area(tmp_path, "b" * 64)
     assert first.path != second.path
+    assert first.base_dir == first.path / "base"
+    assert first.base_dir.is_dir()
     assert first.path.is_dir() and second.path.is_dir()
     (first.tiles_dir / "t").write_bytes(b"12345")
     assert open_area(tmp_path, "a" * 64).path == first.path

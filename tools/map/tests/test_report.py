@@ -30,7 +30,7 @@ def test_report_without_cgroup_v2(tmp_path):
 def _report() -> dict:
     return {
         "provenance": {"tool_commit": "a", "data_commit": "b", "image": "c", "fingerprint": "d"},
-        "stage_seconds": {"block": 1.5, "tile": 2.0, "pack": 0.5},
+        "stage_seconds": {"block": 1.5, "tile": 2.0, "pack": 0.5, "base": 1.0},
         "memory": {
             "peak_bytes": None,
             "peak_reason": _NO_PEAK,
@@ -68,7 +68,7 @@ def test_report_keys(tmp_path: Path):
     assert set(written["tiles"]) == {"expected", "written", "stored"}
     assert set(written["edits"]) == {"applied", "skipped"}
     assert set(written["workers"]) == {"count", "reason", "gdal_cachemax_mib"}
-    assert set(written["stage_seconds"]) == {"block", "tile", "pack"}
+    assert set(written["stage_seconds"]) == {"block", "tile", "pack", "base"}
     assert set(written["provenance"]) == {"tool_commit", "data_commit", "image", "fingerprint"}
     assert set(written["disk"]) == {"work_area_bytes_after_tiling"}
 
@@ -77,4 +77,11 @@ def test_write_report_rejects_other_keys(tmp_path: Path):
     bad = _report()
     bad["tiles"]["extra"] = 1
     with pytest.raises(ValueError, match="tiles"):
+        report.write_report(bad, tmp_path)
+
+
+def test_write_report_rejects_missing_base_stage(tmp_path: Path):
+    bad = _report()
+    del bad["stage_seconds"]["base"]
+    with pytest.raises(ValueError, match="stage_seconds"):
         report.write_report(bad, tmp_path)
