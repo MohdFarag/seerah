@@ -1,12 +1,14 @@
 """Tests for strict YAML loading and the profile, edits and lock loaders."""
 
 import copy
+import datetime
 import math
 import re
 from pathlib import Path
 
 import morecantile
 import pytest
+from ruamel.yaml import YAML
 from seerah_map import config, strict_yaml
 from seerah_map.config import Bounds, Cell, ConfigError, FileRef, Lock
 
@@ -80,6 +82,29 @@ def test_duplicate_key_rejected(tmp_path):
 def test_yes_no_and_dates_stay_strings(tmp_path):
     data = strict_yaml.load(_write(tmp_path, "x: yes\ny: no\nd: 2024-01-01\n"))
     assert data == {"x": "yes", "y": "no", "d": "2024-01-01"}
+
+
+def test_strict_yaml_timestamp_resolver_isolation(tmp_path):
+    timestamp = "2026-11-15T12:34:56+02:00"
+    date = "2026-11-15"
+    path = _write(tmp_path, f"ts: {timestamp}\nd: {date}\nflag: true\n")
+
+    for _ in range(2):
+        strict = strict_yaml.load(path)
+        assert isinstance(strict["ts"], str)
+        assert strict["ts"] == timestamp
+        assert isinstance(strict["d"], str)
+        assert strict["d"] == date
+        assert strict["flag"] is True
+
+        default_yaml = YAML(typ="safe", pure=True)
+        default_yaml.version = (1, 2)
+        with open(path, encoding="utf-8") as handle:
+            default = default_yaml.load(handle)
+        assert isinstance(default["ts"], datetime.datetime)
+        assert isinstance(default["d"], datetime.date)
+        assert not isinstance(default["d"], datetime.datetime)
+        assert default["flag"] is True
 
 
 def test_profile_loads():
