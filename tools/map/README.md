@@ -69,6 +69,8 @@ The thread and GDAL cache variables are set in the image, so every runner gets t
 
 ## Output
 
+Run one full build at a time for each fingerprint. Different fingerprints have separate work areas and can build concurrently. A completed build can remove its work area, so wait for it to finish before reusing or cleaning that fingerprint.
+
 `build` writes one folder per profile, variant and fingerprint:
 
 ```text

@@ -125,6 +125,11 @@ class WorkArea:
         return self.path / "mask"
 
     @property
+    def base_dir(self) -> Path:
+        """Directory for the vector base layer and its intermediate slices."""
+        return self.path / "base"
+
+    @property
     def tiles_dir(self) -> Path:
         """Directory for tiles."""
         return self.path / "tiles"
@@ -149,7 +154,7 @@ def open_area(work_root: Path, fp: str) -> WorkArea:
         The area, with its directories present.
     """
     area = WorkArea(work_root, fp)
-    for directory in (area.style_dir, area.mask_dir, area.tiles_dir):
+    for directory in (area.style_dir, area.mask_dir, area.tiles_dir, area.base_dir):
         directory.mkdir(parents=True, exist_ok=True)
     return area
 
