@@ -1,21 +1,29 @@
 import math
+from pathlib import Path
 
 import morecantile
 import numpy as np
-from seerah_map.config import Bounds, Edit, StyleSettings
+import pytest
+from seerah_map.config import Bounds, Edit, StyleSettings, load_profile
 from seerah_map.grid import (
     Block,
     Window,
     blocks,
     border_px,
+    check_base_coverage,
+    check_data_extent_coverage,
     expected_tiles,
+    natural_earth_max_zoom,
     pixel_m,
     row_latitudes,
+    shrink_extent,
+    view_bounds,
     view_reach_km,
 )
 
 BLOCK_ZOOM = 9
 BLOCK_PX = 2048
+CAMERA = Bounds(34, 12, 60, 32)
 DATA_EXTENT = Bounds(33, 11, 61, 33)
 
 
@@ -88,3 +96,53 @@ def test_expected_tiles_from_blocks():
 def test_view_reach_table():
     assert abs(view_reach_km(6, 550, 22) / 620 - 1) < 0.05
     assert abs(view_reach_km(9, 550, 22) / 80 - 1) < 0.05
+
+
+def test_natural_earth_max_zoom_full_extent():
+    assert natural_earth_max_zoom(CAMERA, margin_deg=1.0, max_zoom=12) == 9
+
+
+def test_natural_earth_max_zoom_zero_margin():
+    assert natural_earth_max_zoom(CAMERA, margin_deg=0.0, max_zoom=12) == 12
+
+
+def test_natural_earth_max_zoom_stays_at_zero_when_view_is_contained():
+    assert natural_earth_max_zoom(CAMERA, margin_deg=1.0, max_zoom=12, half_width_dp=1) == 0
+
+
+def test_view_bounds_expands_and_clamps():
+    tms = morecantile.tms.get("WebMercatorQuad")
+    view = view_bounds(CAMERA, maplibre_zoom=5)
+    assert view.west < CAMERA.west < CAMERA.east < view.east
+    assert view.south < CAMERA.south < CAMERA.north < view.north
+    assert view_bounds(CAMERA, maplibre_zoom=0) == Bounds(*tms.bbox)
+
+
+def test_shrink_extent_stays_inside_data_extent():
+    tms = morecantile.tms.get("WebMercatorQuad")
+    west, south = tms.xy(DATA_EXTENT.west, DATA_EXTENT.south)
+    east, north = tms.xy(DATA_EXTENT.east, DATA_EXTENT.north)
+    shrunk = shrink_extent(DATA_EXTENT)
+    shrunk_west, shrunk_south = tms.xy(shrunk.west, shrunk.south)
+    shrunk_east, shrunk_north = tms.xy(shrunk.east, shrunk.north)
+    insets_m = (shrunk_west - west, shrunk_south - south, east - shrunk_east, north - shrunk_north)
+    assert insets_m == pytest.approx((2 * pixel_m(),) * 4)
+
+    tiny_east, tiny_north = tms.lnglat(west + 3 * pixel_m(), south + 3 * pixel_m())
+    with pytest.raises(ValueError):
+        shrink_extent(Bounds(DATA_EXTENT.west, DATA_EXTENT.south, tiny_east, tiny_north))
+
+
+def test_coverage_checks_pass_for_trial_and_example():
+    check_data_extent_coverage(DATA_EXTENT, CAMERA, margin_deg=1.0)
+    check_base_coverage(CAMERA, margin_deg=1.0, ne_max_zoom=9, max_zoom=12)
+
+    example_yaml = Path(__file__).resolve().parents[3] / "map-data/example/example.yaml"
+    example = load_profile(example_yaml)
+    check_data_extent_coverage(example.data_extent, example.camera_bounds, example.margin_deg)
+    check_base_coverage(example.camera_bounds, example.margin_deg, 12, example.max_zoom)
+
+    with pytest.raises(ValueError):
+        check_data_extent_coverage(Bounds(34, 11, 61, 33), CAMERA, margin_deg=1.0)
+    with pytest.raises(ValueError, match=r"build zoom 9\b"):
+        check_base_coverage(CAMERA, margin_deg=1.0, ne_max_zoom=8, max_zoom=12)

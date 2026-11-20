@@ -17,6 +17,10 @@ BASE_ZOOM = 12
 TILE_PX = 256
 MASK_SIGMA_PX = 4.0
 BAND_BLUR_RADIUS_PX = 4
+# MatePad half-width working value, pending measurement in trial step 1, check 11.
+WIDEST_HALF_SCREEN_DP = 550.0
+# Working minimum for the trial (map trial specification Q1).
+TRIAL_MIN_MAPLIBRE_ZOOM = 4
 
 _EQUATOR_M = 40075016.68557849
 _EARTH_RADIUS_M = 6378137.0
@@ -153,5 +157,98 @@ def view_reach_km(maplibre_zoom: float, half_width_dp: float, lat_deg: float) ->
     ``half_width_dp`` is half the screen width in Android density-independent pixels.
     MapLibre zooms use 512-pixel tiles.
     """
+    return _view_reach_m(maplibre_zoom, half_width_dp) * math.cos(math.radians(lat_deg)) / _M_PER_KM
+
+
+def _view_reach_m(maplibre_zoom: float, half_width_dp: float) -> float:
+    """Half the view width in projected Web Mercator metres."""
     metres_per_dp = _EQUATOR_M / (_MAPLIBRE_TILE_PX * 2**maplibre_zoom)
-    return half_width_dp * metres_per_dp * math.cos(math.radians(lat_deg)) / _M_PER_KM
+    return half_width_dp * metres_per_dp
+
+
+def view_bounds(
+    camera: Bounds, maplibre_zoom: float, half_width_dp: float = WIDEST_HALF_SCREEN_DP
+) -> Bounds:
+    """Expand the camera box by half the view width and return degrees within the tile grid."""
+    west, south = _TMS.xy(camera.west, camera.south)
+    east, north = _TMS.xy(camera.east, camera.north)
+    reach_m = _view_reach_m(maplibre_zoom, half_width_dp)
+    # Clamp before inverse projection so longitude cannot wrap at the antimeridian.
+    grid = _TMS.xy_bbox
+    return Bounds(
+        *_TMS.lnglat(max(west - reach_m, grid.left), max(south - reach_m, grid.bottom)),
+        *_TMS.lnglat(min(east + reach_m, grid.right), min(north + reach_m, grid.top)),
+    )
+
+
+def shrink_extent(extent: Bounds, pixels: int = 2) -> Bounds:
+    """Inset the lon/lat extent on each side by zoom-12 pixels, or raise if it collapses."""
+    west, south = _TMS.xy(extent.west, extent.south)
+    east, north = _TMS.xy(extent.east, extent.north)
+    inset_m = pixels * pixel_m()
+    west, south, east, north = west + inset_m, south + inset_m, east - inset_m, north - inset_m
+    if west >= east or south >= north:
+        raise ValueError(f"Extent {extent} collapses when inset by {pixels} pixels")
+    return Bounds(*_TMS.lnglat(west, south), *_TMS.lnglat(east, north))
+
+
+def _widen_camera(camera: Bounds, margin_deg: float) -> Bounds:
+    return Bounds(
+        camera.west - margin_deg,
+        camera.south - margin_deg,
+        camera.east + margin_deg,
+        camera.north + margin_deg,
+    )
+
+
+def _contains(outer: Bounds, inner: Bounds) -> bool:
+    return (
+        outer.west <= inner.west
+        and outer.south <= inner.south
+        and outer.east >= inner.east
+        and outer.north >= inner.north
+    )
+
+
+def natural_earth_max_zoom(
+    camera: Bounds, margin_deg: float, max_zoom: int, half_width_dp: float = WIDEST_HALF_SCREEN_DP
+) -> int:
+    """Return the highest build zoom whose view exceeds the data margin in degrees.
+
+    Use build zoom 0 if the view always fits, or max_zoom if the margin is zero.
+    Build tiles use 256-pixel tiles and display one zoom lower in MapLibre.
+    """
+    if margin_deg == 0:
+        return max_zoom
+    extent = _widen_camera(camera, margin_deg)
+    for build_zoom in range(max_zoom, 0, -1):
+        if not _contains(extent, view_bounds(camera, build_zoom - 1, half_width_dp)):
+            return build_zoom
+    return 0
+
+
+def check_data_extent_coverage(data_extent: Bounds, camera: Bounds, margin_deg: float) -> None:
+    """Raise if the data extent fails to enclose the camera plus the margin in degrees."""
+    required_extent = _widen_camera(camera, margin_deg)
+    if not _contains(data_extent, required_extent):
+        raise ValueError(
+            f"Data extent {data_extent} does not cover required extent {required_extent}"
+        )
+
+
+def check_base_coverage(
+    camera: Bounds,
+    margin_deg: float,
+    ne_max_zoom: int,
+    max_zoom: int,
+    min_maplibre_zoom: int = TRIAL_MIN_MAPLIBRE_ZOOM,
+    half_width_dp: float = WIDEST_HALF_SCREEN_DP,
+) -> None:
+    """Raise if a trial view needs Natural Earth above its maximum build zoom."""
+    extent = _widen_camera(camera, margin_deg)
+    for maplibre_zoom in range(min_maplibre_zoom, max_zoom):
+        build_zoom = maplibre_zoom + 1
+        if build_zoom > ne_max_zoom and not _contains(
+            extent, view_bounds(camera, maplibre_zoom, half_width_dp)
+        ):
+            raise ValueError(f"Base coverage is incomplete at build zoom {build_zoom}")
