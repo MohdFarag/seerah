@@ -127,7 +127,7 @@ def _profile_path(data: Path, rel: str) -> Path:
 
 def _cmd_fetch(args: argparse.Namespace) -> int:
     profile_path = _profile_path(args.data, args.profile)
-    profile = config.load_profile(profile_path)
+    profile = config.load_profile(profile_path, data_root=args.data)
     lock_path = profile_path.with_suffix(".lock")
     result = fetch(profile, lock_path, args.cache, args.out)
     _say(f"fetch: {result.downloaded} downloaded, {result.verified} verified")
@@ -154,7 +154,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
         raise _UsageError(f"no edits file at {edits_path}")
     if not lock_path.is_file():
         raise _UsageError(_MISSING_LOCK.format(path=lock_path))
-    profile = config.load_profile(profile_path)
+    profile = config.load_profile(profile_path, data_root=args.data)
     all_edits = config.load_edits(edits_path)
     lock = config.load_lock(lock_path)
 

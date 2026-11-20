@@ -29,6 +29,8 @@ Where every document lives and what it is for. If you add a document, list it he
 | [design/](design/) | Design specifications and drafts, including EGM drafts and review reports (see [AGENTS.md](../AGENTS.md#agent-tooling)). |
 | [design/exploration-and-story.md](design/exploration-and-story.md) | Specification of the content model accepted in ADR 0005: the exploration layer (facts on the map and in time) and the story layer (directed steps built from a fixed set of app moves). |
 
+The [map profile validation plan](design/map-profile-validation-plan.md) covers coordinate bounds, outline paths and strict YAML regression tests. Its [consolidated EGM review](design/egm-review-map-profile-validation/consolidated_review_report.md) records the findings and revisions.
+
 ## Research and spike
 
 | Document | Purpose |

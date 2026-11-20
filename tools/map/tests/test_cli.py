@@ -1,6 +1,7 @@
 """Tests for the command line: worker count, exit codes, build order and clean."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from seerah_map import cli
@@ -74,6 +75,27 @@ def _build(tmp_path: Path) -> list[str]:
     return ["build", "--profile", "trial/t", "--variant", "painted", *_roots(tmp_path)]
 
 
+def _fetch(tmp_path: Path) -> list[str]:
+    return ["fetch", "--profile", "trial/t", *_roots(tmp_path)]
+
+
+def _set_outline(tmp_path: Path, outline: str) -> Path:
+    profile = tmp_path / "data" / "trial" / "t.yaml"
+    text = profile.read_text(encoding="utf-8")
+    updated = text.replace("peninsula_outline: outline.geojson", f"peninsula_outline: {outline}")
+    assert updated != text
+    profile.write_text(updated, encoding="utf-8")
+    return profile
+
+
+def _stub_fetch(monkeypatch, calls: list[Path]) -> None:
+    def run(profile, lock_path, cache, out):
+        calls.append(profile.peninsula_outline)
+        return SimpleNamespace(downloaded=0, verified=0, message="stub fetch")
+
+    monkeypatch.setattr(cli, "fetch", run)
+
+
 def test_build_missing_lock_message(tmp_path, capsys):
     _data(tmp_path, lock=False)
     assert cli.main(_build(tmp_path)) == 2
@@ -87,7 +109,12 @@ def test_build_lock_mismatch(tmp_path):
     assert cli.main(_build(tmp_path)) == 1
 
 
-def _stub_pipeline(monkeypatch, calls: list[str], fail_at: str | None = None) -> None:
+def _stub_pipeline(
+    monkeypatch,
+    calls: list[str],
+    fail_at: str | None = None,
+    outlines: list[Path] | None = None,
+) -> None:
     def stage(name, result=None):
         def run(*args, **kwargs):
             calls.append(name)
@@ -97,13 +124,18 @@ def _stub_pipeline(monkeypatch, calls: list[str], fail_at: str | None = None) ->
 
         return run
 
+    def record_size_by_zoom(tiles, outline):
+        if outlines is not None:
+            outlines.append(outline)
+        return []
+
     monkeypatch.setattr(cli, "check_lock_matches", stage("check lock"))
     monkeypatch.setattr(cli, "run_block_stage", stage("block", []))
     monkeypatch.setattr(cli, "run_tile_stage", stage("tile", 0))
     monkeypatch.setattr(cli, "pack", stage("pack", Path("relief.pmtiles")))
     monkeypatch.setattr(cli, "verify", stage("verify"))
     monkeypatch.setattr(cli, "stored_tiles", lambda path: 0)
-    monkeypatch.setattr(cli, "size_by_zoom", lambda tiles, outline: [])
+    monkeypatch.setattr(cli, "size_by_zoom", record_size_by_zoom)
     monkeypatch.setattr(cli, "write_report", stage("report", Path("report.json")))
     monkeypatch.setattr(cli, "remove", stage("remove"))
 
@@ -151,3 +183,49 @@ def test_clean_semantics(tmp_path, capsys):
     assert [fp for fp, _ in list_areas(work)] == ["b" * 64, "c" * 64]
     assert cli.main(["clean", "--all", *_roots(tmp_path)]) == 0
     assert list_areas(work) == []
+
+
+@pytest.mark.parametrize("outline", ["../../outside.geojson", "/outside.geojson"])
+def test_escaping_outline_fails_before_fetch_or_build(tmp_path, monkeypatch, capsys, outline):
+    _data(tmp_path)
+    profile_path = _set_outline(tmp_path, outline)
+    fetch_calls: list[Path] = []
+    build_calls: list[str] = []
+    _stub_fetch(monkeypatch, fetch_calls)
+    _stub_pipeline(monkeypatch, build_calls)
+
+    assert cli.main(_fetch(tmp_path)) == 2
+    fetch_err = capsys.readouterr().err
+    assert str(profile_path) in fetch_err
+    assert "peninsula_outline" in fetch_err
+
+    assert cli.main(_build(tmp_path)) == 2
+    build_err = capsys.readouterr().err
+    assert str(profile_path) in build_err
+    assert "peninsula_outline" in build_err
+
+    assert fetch_calls == []
+    assert build_calls == []
+    assert list_areas(tmp_path / "work") == []
+
+
+def test_sibling_outline_inside_data_root_runs_fetch_and_build(tmp_path, monkeypatch):
+    _data(tmp_path)
+    shared = tmp_path / "data" / "shared"
+    shared.mkdir()
+    outline = shared / "outline.geojson"
+    outline.write_text("{}", encoding="utf-8")
+    _set_outline(tmp_path, "../shared/outline.geojson")
+
+    fetch_calls: list[Path] = []
+    build_calls: list[str] = []
+    build_outlines: list[Path] = []
+    _stub_fetch(monkeypatch, fetch_calls)
+    _stub_pipeline(monkeypatch, build_calls, outlines=build_outlines)
+
+    assert cli.main(_fetch(tmp_path)) == 0
+    assert fetch_calls == [outline.resolve()]
+
+    assert cli.main(_build(tmp_path)) == 0
+    assert build_calls == ["check lock", "block", "tile", "pack", "verify", "report", "remove"]
+    assert build_outlines == [outline.resolve()]

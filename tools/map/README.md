@@ -25,6 +25,10 @@ A profile `P` is named by its path relative to `/data`, without `.yaml` (for exa
   <name>.lock       every cell's address, size and SHA-256 (or absent: true), and the Natural Earth files
 ```
 
+A profile's `camera_bounds` are the box the app's camera may show. Its data extent is that box widened by `margin_deg` on every side: the area `fetch` downloads and `build` renders. Both must be finite and lie in the N/E quadrant of the WebMercatorQuad tile grid, edges included: longitude 0 to 180° and latitude 0 to the grid's northern edge (about 85.0511°), with `west < east` and `south < north`. A valid camera box whose margin pushes the data extent past an edge is rejected as a `margin_deg` error. Any break of these rules is a configuration error (exit code 2) that names the file and the key.
+
+`peninsula_outline` must be a relative path resolved from the profile's folder; absolute paths are rejected. Its canonical target (after following symlinks) must stay inside the configured `--data` root (`/data` in the container, or the profile's folder when `load_profile` is called directly without `data_root`), so profiles can share an outline in a sibling folder under the data root such as `../shared/outline.geojson`. Parent escapes, the root directory itself, outside symlinks and symlink loops fail with exit code 2 before `fetch` or `build` starts work. The outline file is still opened only when `build` writes the size report.
+
 The schemas are in [src/seerah_map/schema/](src/seerah_map/schema/). A new lock is made by the first `fetch`, which writes it to `/out` and prints the copy command. Review it, copy it beside the profile (for the trial, `seerah-content/map/trial/`) and commit it there. `build` refuses to run without a committed lock.
 
 ## Running it: `run.py`
