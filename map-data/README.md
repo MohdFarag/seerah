@@ -29,7 +29,7 @@ A synthetic profile for [tools/map](../tools/map/README.md), used by its tests a
 | `edits.yaml` | one synthetic `raise` edit crossing a block edge, approved by the owner for the example |
 | `example.lock` | the pinned cells and Natural Earth files, with their SHA-256 |
 | `peninsula.geojson` | the outline for the run report's inside/outside size split |
-| `camera-path.json` | the camera path the trial app reads (phase 2) |
+| `camera-path.json` | the camera path the trial app reads |
 
 ## Map trial output
 
@@ -37,7 +37,8 @@ A synthetic profile for [tools/map](../tools/map/README.md), used by its tests a
 
 ```text
 dist/<name>-<variant>-<fp8>/
-  relief.pmtiles
+  relief.pmtiles  the relief archive (carries "trial": true)
+  base.pmtiles    the vector base archive: land and coast layers (carries "trial": true)
   metadata.json   says "trial": true
   report.json
 ```

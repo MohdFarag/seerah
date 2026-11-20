@@ -4,7 +4,7 @@ The spike app shows a measurement line under its status line:
 
 `device · fps · lowest fps · memory · open time`
 
-- **fps:** frames drawn in the last second. It only updates while the map is drawing, so read it while moving the map.
+- **fps:** *(out of date — historical spike note)* formerly described as frames drawn in the last second while the map is drawing; for the current calculation (rolling 30-frame gap window in build 21+, ignoring gaps over 250 ms and publishing at most once a second), see [Stats.kt](../../android/spike/spike/src/main/kotlin/app/seerah/spike/Stats.kt).
 - **lowest:** the slowest reading since the app started. From build 21 the rate comes from the gaps between consecutive frames over the last 30 frames, ignoring pauses over 250 ms, so it reflects motion only. (In build 20 the lowest value counted idle pauses and always read near 1; ignore it there.)
 - **memory:** the app's proportional memory use (PSS), in MB.
 - **open time:** from the app process starting to the first fully drawn map, in ms.

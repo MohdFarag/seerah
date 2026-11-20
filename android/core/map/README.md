@@ -25,7 +25,7 @@ The map module. It is the only module that may touch MapLibre ([ADR 0003](../../
 
 `SeerahMap` has no unit test: MapLibre's native view does not run under Robolectric. It is checked on devices in the map trial.
 
-## What is not here yet
+## What is not here
 
 - The module holds no trial code: the trial screen, its files and its measurements live in the app's `benchmark` build type.
 
