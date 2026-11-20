@@ -2,6 +2,8 @@
 
 Results of the specification's step-1 checks ([docs/design/map-trial-build.md](../design/map-trial-build.md), "Step 1 checks").
 
+As of 2026-11-20, the Oppo A55 and Huawei MatePad 11.5 are temporarily unavailable for testing. Checks 1, 4 and 11 on both devices are deferred until they are available. Trial item 11 remains open pending device measurements.
+
 ## Check 1: `adb push` into the benchmark app's external files folder
 
 Run on 2026-11-18 on the Galaxy A54 only (SM-A546E, Android 16). The Oppo A55 and the MatePad 11.5 are not yet run, so the check is not complete.
