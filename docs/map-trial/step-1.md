@@ -63,7 +63,7 @@ No other value appears (class 3, river, is absent from this cell). The expected 
 
 ## Check 8: Docker named volumes handle about 100,000 small files
 
-Not yet run.
+On 2026-11-20, a Docker container created 100,000 two-byte files in a temporary directory on the named volume `seerah-map-work` (100 directories with 1,000 files each). Creating the files and reading back every value took 20.36 seconds. Cleanup succeeded.
 
 ## Check 9: The GHCR package is public and free to pull
 
@@ -82,7 +82,16 @@ Run on 2026-11-18 on the Galaxy A54 only, with `adb shell wm size` and `adb shel
 
 ## Check 12: The per-worker memory allowance for 2,048-pixel blocks
 
-Not yet run.
+On 2026-11-20, the painted example ran with `block_zoom: 9` and `max_zoom: 12`, giving two 2,048 × 2,048-pixel blocks. The local probe commit was `c60adcc`, the build fingerprint started with `d0ecd547`, and the image was `seerah-map:dev`. Each build used `--workers 1 --per-worker-mib 2048`, rendered both blocks from scratch, and completed packing. Each cap had its own output folder under `map-data/dist/check12/`.
+
+| Container cap (MiB) | Container peak including page cache (bytes) | OOM kills |
+| --- | --- | --- |
+| 3,072 | 798,007,296 | 0 |
+| 2,048 | 603,181,056 | 0 |
+| 1,536 | 578,510,848 | 0 |
+| 1,024 | 578,179,072 | 0 |
+
+**1,024 MiB** was the smallest tested allowance that completed this single-worker painted build. Lower caps and concurrent workers remain untested. All four reports returned zero for `largest_child_rss_kib`, so the peak figures above use the container measurement.
 
 ## Galaxy A54 run, 2026-11-18
 
