@@ -12,7 +12,7 @@ The map module. It is the only module that may touch MapLibre ([ADR 0003](../../
 
 ## Style builder
 
-`styleJson(files, spec)` (internal) turns `MapFiles` and a `MapStyleSpec` into the MapLibre style document: a land-coloured background and one relief layer that fades out over `reliefFade`. A `Painted` source is a raster layer; a `Value` source is a Terrarium raster-dem coloured by an elevation ramp, which must be in strictly ascending order (the builder fails fast otherwise). Its tests run under Robolectric because `org.json` is a stub on the plain JVM.
+`styleJson(files, spec)` (internal) turns `MapFiles` and a `MapStyleSpec` into the MapLibre style document: a sea-coloured background, the `base` vector source's `land` fill and `coast` line layers, and one `relief` layer on top that fades out over `reliefFade`. A `Painted` source is a raster layer; a `Value` source is a Terrarium raster-dem coloured by an elevation ramp, which must be in strictly ascending order (the builder fails fast otherwise). Its tests run under Robolectric because `org.json` is a stub on the plain JVM.
 
 ## The map: `SeerahMap`
 
@@ -27,7 +27,6 @@ The map module. It is the only module that may touch MapLibre ([ADR 0003](../../
 
 ## What is not here yet
 
-- The base map (`MapFiles.base`, the sea, land and coast layers) arrives in phase 3 of the map trial (D1 in the [plan](../../../docs/design/map-trial-phase-2-plan.md)).
 - The module holds no trial code: the trial screen, its files and its measurements live in the app's `benchmark` build type.
 
 ## Test

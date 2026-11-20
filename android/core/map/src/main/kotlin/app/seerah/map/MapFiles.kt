@@ -5,7 +5,7 @@ import java.io.File
 /**
  * The map files on the device that the map reads.
  *
- * @property relief the relief tile archive (PMTiles). The base map file is added with the base
- * map in phase 3.
+ * @property relief the relief tile archive (PMTiles).
+ * @property base the vector base tile archive (PMTiles) holding land polygons and coastlines.
  */
-data class MapFiles(val relief: File)
+data class MapFiles(val relief: File, val base: File)
