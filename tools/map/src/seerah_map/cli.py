@@ -5,7 +5,8 @@ Profiles are named by their path relative to the data root, without ``.yaml``
 are read from the same folder.
 
 Exit codes: 0 for success, 1 when a check fails (``FetchError``,
-``CompletenessError``, ``PackError``), 2 for a usage or configuration error.
+``CompletenessError``, ``PackError``, ``BaseError``), 2 for a usage or
+configuration error.
 """
 
 import argparse
@@ -17,6 +18,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from . import config
+from .base import BaseError, build_base_layer
 from .blockstage import VARIANTS, run_block_stage
 from .edits import applicable
 from .errors import ConfigError
@@ -205,6 +207,12 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
     archive = _timed(seconds, "pack", pack_and_verify)
     _say(f"pack done: {archive}")
+    base_archive = _timed(
+        seconds,
+        "base",
+        lambda: build_base_layer(profile, lock, args.cache, area, out_dir, provenance, _say),
+    )
+    _say(f"base done: {base_archive}")
     report = _report(area, profile, provenance, seconds, child_rss_kib, area_bytes, archive)
     report["edits"] = {"applied": [e.id for e in edits], "skipped": skipped}
     report["workers"] = {
@@ -287,7 +295,9 @@ def _parser() -> argparse.ArgumentParser:
     fetch_cmd.add_argument("--profile", required=True, help=profile_help)
     fetch_cmd.set_defaults(run=_cmd_fetch)
 
-    build_cmd = commands.add_parser("build", parents=[roots], help="build the relief archive")
+    build_cmd = commands.add_parser(
+        "build", parents=[roots], help="build the relief and base archives"
+    )
     build_cmd.add_argument("--profile", required=True, help=profile_help)
     build_cmd.add_argument("--variant", required=True, choices=VARIANTS)
     build_cmd.add_argument(
@@ -333,7 +343,7 @@ def main(argv: list[str] | None = None) -> int:
         return int(exit_.code or EXIT_OK)
     try:
         return args.run(args)
-    except (FetchError, CompletenessError, PackError) as error:
+    except (FetchError, CompletenessError, PackError, BaseError) as error:
         print(f"error: {error}", file=sys.stderr, flush=True)
         return EXIT_CHECK_FAILED
     except (ConfigError, _UsageError) as error:
