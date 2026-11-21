@@ -24,8 +24,10 @@ _TILE_PATH = re.compile(r"\d+/\d+/\d+\.png")
 _EXTENT = Bounds(58.95, 20.45, 59.05, 20.55)
 
 
-def _args(variant: str, resume: bool = False) -> list[str]:
-    return tilestage.tile_args(Path("s.vrt"), Path("t"), _ZOOM, variant, _QUALITY, _WORKERS, resume)
+def _args(variant: str, resume: bool = False, min_zoom: int = 0) -> list[str]:
+    return tilestage.tile_args(
+        Path("s.vrt"), Path("t"), _ZOOM, variant, _QUALITY, _WORKERS, resume, min_zoom=min_zoom
+    )
 
 
 def _option(args: list[str], name: str) -> str:
@@ -93,6 +95,63 @@ def test_tile_args_value_is_png() -> None:
 
 def test_tile_args_resume() -> None:
     assert "--resume" in _args("value", resume=True)
+
+
+def test_tile_args_min_zoom() -> None:
+    args = _args("painted", min_zoom=_ZOOM)
+    assert _option(args, "--min-zoom") == str(_ZOOM)
+    assert _option(args, "--max-zoom") == str(_ZOOM)
+
+
+def test_per_zoom_tiles_each_zoom_from_its_mosaic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    profile = Profile(
+        name="t",
+        folder=tmp_path,
+        purpose="trial",
+        camera_bounds=_EXTENT,
+        margin_deg=0,
+        fade_deg=0.05,
+        max_zoom=2,
+        block_zoom=2,
+        webp_quality=80,
+        style=StyleSettings(),
+        peninsula_outline=tmp_path / "o.geojson",
+    )
+    work = open_area(tmp_path / "work", "fp")
+    expected = expected_tiles(blocks(profile.data_extent, profile.block_zoom), profile.max_zoom)
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], check: bool) -> None:
+        assert check is True
+        calls.append(args)
+        z = int(_option(args, "--min-zoom"))
+        for tz, x, y in expected:
+            if tz == z:
+                path = Path(args[-1]) / str(tz) / str(x) / f"{y}.webp"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                mem = gdal.GetDriverByName("MEM").Create("", 4, 4, 4, gdal.GDT_Byte)
+                gdal.GetDriverByName("WEBP").CreateCopy(str(path), mem).Close()
+
+    monkeypatch.setattr(tilestage.subprocess, "run", fake_run)
+    messages: list[str] = []
+    count = tilestage.run_tile_stage(
+        work, profile, "painted", _WORKERS, messages.append, mode="per-zoom"
+    )
+    assert count == len(expected)
+    assert work.tiles_done.exists()
+    assert [int(_option(c, "--min-zoom")) for c in calls] == [2, 1, 0]
+    assert [int(_option(c, "--max-zoom")) for c in calls] == [2, 1, 0]
+    assert [c[-2] for c in calls] == [str(work.path / f"style_z{z}.vrt") for z in (2, 1, 0)]
+    assert messages == ["tile stage started", f"tile stage done ({len(expected)} tiles)"]
+
+
+def test_run_tile_stage_rejects_unknown_mode(tmp_path: Path) -> None:
+    profile = _profile(tmp_path)
+    work = open_area(tmp_path / "work", "fp")
+    with pytest.raises(ValueError, match="mode"):
+        tilestage.run_tile_stage(work, profile, "painted", _WORKERS, lambda _m: None, mode="nope")
 
 
 def test_folder_without_done_is_retiled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

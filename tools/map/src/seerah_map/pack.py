@@ -21,6 +21,7 @@ from osgeo import ogr
 from pmtiles.reader import MmapSource, Reader
 from pmtiles.tile import MagicNumberNotFound
 
+from .blockstage import PYRAMID
 from .config import Bounds, Profile
 from .workarea import WorkArea, atomic_write
 
@@ -57,19 +58,20 @@ class Provenance:
     fingerprint: str = _UNKNOWN
 
 
-def metadata(profile: Profile, variant: str, provenance: Provenance) -> dict:
+def metadata(profile: Profile, variant: str, provenance: Provenance, mode: str = PYRAMID) -> dict:
     """Build the archive's metadata.
 
     Args:
         profile: the build profile.
         variant: ``painted`` or ``value``.
         provenance: where the build came from.
+        mode: how zooms below ``max_zoom`` were built (``pyramid`` or ``per-zoom``).
 
     Returns:
         A dict with ``format`` (``webp`` or ``png``), ``minzoom`` 0, ``maxzoom``,
         ``bounds`` (``"west,south,east,north"`` of the data extent, degrees),
-        ``name``, ``trial`` (always true), ``variant``, ``encoding`` and the
-        provenance fields.
+        ``name``, ``trial`` (always true), ``variant``, ``mode``, ``encoding``
+        and the provenance fields.
     """
     tile_format, encoding = _FORMATS[variant]
     return {
@@ -80,6 +82,7 @@ def metadata(profile: Profile, variant: str, provenance: Provenance) -> dict:
         "name": profile.name,
         "trial": True,
         "variant": variant,
+        "mode": mode,
         "encoding": encoding,
         "fingerprint": provenance.fingerprint,
         "tool_commit": provenance.tool_commit,

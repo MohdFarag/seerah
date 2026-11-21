@@ -58,6 +58,7 @@ def test_metadata_marks_trial(tmp_path):
         "name": "t",
         "trial": True,
         "variant": "painted",
+        "mode": "pyramid",
         "encoding": "painted-rgba",
         "fingerprint": "f" * 64,
         "tool_commit": "abc123",
@@ -65,7 +66,13 @@ def test_metadata_marks_trial(tmp_path):
         "image": "ghcr.io/x/seerah-map@sha256:1",
     }
     value = pack.metadata(_profile(tmp_path), "value", _PROVENANCE)
-    assert (value["format"], value["encoding"]) == ("png", "terrarium-value")
+    assert (value["format"], value["encoding"], value["mode"]) == (
+        "png",
+        "terrarium-value",
+        "pyramid",
+    )
+    per_zoom = pack.metadata(_profile(tmp_path), "painted", _PROVENANCE, mode="per-zoom")
+    assert per_zoom["mode"] == "per-zoom"
 
 
 def _packed(tmp_path: Path, out_name: str, meta_extent: Bounds = _EXTENT) -> Path:

@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import config
 from .base import BaseError, build_base_layer
-from .blockstage import VARIANTS, run_block_stage
+from .blockstage import MODES, PAINTED, PER_ZOOM, PYRAMID, VARIANTS, run_block_stage
 from .edits import applicable
 from .errors import ConfigError
 from .fetch import FetchError, check_lock_matches, fetch
@@ -149,6 +149,8 @@ def _tiles_written(tiles_dir: Path) -> int:
 
 
 def _cmd_build(args: argparse.Namespace) -> int:
+    if args.mode == PER_ZOOM and args.variant != PAINTED:
+        raise _UsageError("--mode per-zoom is only supported with --variant painted")
     profile_path = _profile_path(args.data, args.profile)
     edits_path = profile_path.parent / EDITS_NAME
     lock_path = profile_path.with_suffix(".lock")
@@ -171,9 +173,10 @@ def _cmd_build(args: argparse.Namespace) -> int:
         image_digest,
         args.variant,
         SRC_ROOT,
+        mode=args.mode,
     )
     fp8 = fp[:FP_SHORT]
-    _say(f"build: {profile.name} {args.variant} fingerprint {fp8}")
+    _say(f"build: {profile.name} {args.variant} fingerprint {fp8} ({args.mode})")
     count, reason = worker_count(_read_memory_max(), args.per_worker_mib, args.workers)
     _say(f"workers: {count} ({reason})")
     edits, skipped = applicable(all_edits)
@@ -182,15 +185,25 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
     check_lock_matches(lock, profile)
     area = open_area(args.work, fp)
-    out_dir = args.out / f"{profile.name}-{args.variant}-{fp8}"
+    out_dir = args.out / (
+        f"{profile.name}-{args.variant}-{fp8}"
+        if args.mode == PYRAMID
+        else f"{profile.name}-{args.variant}-{args.mode}-{fp8}"
+    )
     seconds: dict[str, float] = {}
     _timed(
         seconds,
         "block",
-        lambda: run_block_stage(profile, edits, args.variant, lock, args.cache, area, count, _say),
+        lambda: run_block_stage(
+            profile, edits, args.variant, lock, args.cache, area, count, _say, mode=args.mode
+        ),
     )
     child_rss_kib = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
-    _timed(seconds, "tile", lambda: run_tile_stage(area, profile, args.variant, count, _say))
+    _timed(
+        seconds,
+        "tile",
+        lambda: run_tile_stage(area, profile, args.variant, count, _say, mode=args.mode),
+    )
     area_bytes = dict(list_areas(args.work)).get(fp)
 
     provenance = Provenance(
@@ -201,7 +214,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
     )
 
     def pack_and_verify() -> Path:
-        archive = pack(area, out_dir, metadata(profile, args.variant, provenance))
+        archive = pack(area, out_dir, metadata(profile, args.variant, provenance, mode=args.mode))
         verify(archive, profile)
         return archive
 
@@ -300,6 +313,12 @@ def _parser() -> argparse.ArgumentParser:
     )
     build_cmd.add_argument("--profile", required=True, help=profile_help)
     build_cmd.add_argument("--variant", required=True, choices=VARIANTS)
+    build_cmd.add_argument(
+        "--mode",
+        choices=MODES,
+        default=PYRAMID,
+        help="how zooms below max_zoom are built (default pyramid)",
+    )
     build_cmd.add_argument(
         "--workers", type=_positive, help="worker processes (default: by memory)"
     )

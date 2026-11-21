@@ -116,12 +116,15 @@ def _stub_pipeline(
     fail_at: str | None = None,
     outlines: list[Path] | None = None,
     captured: dict[str, tuple] | None = None,
+    captured_kwargs: dict[str, dict] | None = None,
 ) -> None:
     def stage(name, result=None, error: type[Exception] = PackError):
         def run(*args, **kwargs):
             calls.append(name)
             if captured is not None:
                 captured[name] = args
+            if captured_kwargs is not None:
+                captured_kwargs[name] = kwargs
             if name == fail_at:
                 raise error("stub failure")
             return result
@@ -157,6 +160,7 @@ def test_exit_codes(tmp_path, monkeypatch):
     (tmp_path / "data" / "trial" / "t.yaml").write_text("purpose: other\n")
     assert cli.main(_build(tmp_path)) == 2
     assert cli.main(["build", "--variant", "nope", *_roots(tmp_path)]) == 2
+    assert cli.main(["build", "--variant", "painted", "--mode", "nope", *_roots(tmp_path)]) == 2
     assert cli.main(["clean", *_roots(tmp_path)]) == 0
 
 
@@ -261,3 +265,69 @@ def test_sibling_outline_inside_data_root_runs_fetch_and_build(tmp_path, monkeyp
         "remove",
     ]
     assert build_outlines == [outline.resolve()]
+
+
+def _wrap_mode_call(monkeypatch, attr: str, seen: dict[str, str | None]) -> None:
+    original = getattr(cli, attr)
+
+    def wrapped(*args, **kwargs):
+        seen[attr] = kwargs.get("mode")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(cli, attr, wrapped)
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_mode", "expected_prefix"),
+    [
+        ([], "pyramid", "t-painted-"),
+        (["--mode", "per-zoom"], "per-zoom", "t-painted-per-zoom-"),
+    ],
+)
+def test_build_mode_wiring_and_output_folder(
+    tmp_path, monkeypatch, capsys, extra_args, expected_mode, expected_prefix
+):
+    _data(tmp_path)
+    calls: list[str] = []
+    captured: dict[str, tuple] = {}
+    captured_kwargs: dict[str, dict] = {}
+    seen_modes: dict[str, str | None] = {}
+    _stub_pipeline(monkeypatch, calls, captured=captured, captured_kwargs=captured_kwargs)
+    _wrap_mode_call(monkeypatch, "fingerprint", seen_modes)
+    _wrap_mode_call(monkeypatch, "metadata", seen_modes)
+
+    assert cli.main([*_build(tmp_path), *extra_args]) == 0
+    out = capsys.readouterr().out
+    assert expected_mode in out or expected_mode == "pyramid"
+
+    _, _, _, area, out_dir, _, _ = captured["base"]
+    assert out_dir.name == f"{expected_prefix}{area.fp[:8]}"
+    assert seen_modes["fingerprint"] == expected_mode
+    assert seen_modes["metadata"] == expected_mode
+    assert captured_kwargs["block"].get("mode") == expected_mode
+    assert captured_kwargs["tile"].get("mode") == expected_mode
+
+
+def test_build_rejects_value_with_per_zoom(tmp_path, monkeypatch, capsys):
+    _data(tmp_path)
+    calls: list[str] = []
+    _stub_pipeline(monkeypatch, calls)
+
+    code = cli.main(
+        [
+            "build",
+            "--profile",
+            "trial/t",
+            "--variant",
+            "value",
+            "--mode",
+            "per-zoom",
+            *_roots(tmp_path),
+        ]
+    )
+    assert code == cli.EXIT_USAGE
+    err = capsys.readouterr().err
+    assert "--mode per-zoom" in err
+    assert "painted" in err
+    assert calls == []
+    assert list_areas(tmp_path / "work") == []
