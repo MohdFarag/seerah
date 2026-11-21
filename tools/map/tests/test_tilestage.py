@@ -132,19 +132,49 @@ def test_per_zoom_tiles_each_zoom_from_its_mosaic(
                 path = Path(args[-1]) / str(tz) / str(x) / f"{y}.webp"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 mem = gdal.GetDriverByName("MEM").Create("", 4, 4, 4, gdal.GDT_Byte)
-                gdal.GetDriverByName("WEBP").CreateCopy(str(path), mem).Close()
+                try:
+                    gdal.GetDriverByName("WEBP").CreateCopy(str(path), mem).Close()
+                finally:
+                    mem.Close()
 
     monkeypatch.setattr(tilestage.subprocess, "run", fake_run)
+    stale = work.tiles_dir / "2" / "stale.webp"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"half")
+
     messages: list[str] = []
     count = tilestage.run_tile_stage(
         work, profile, "painted", _WORKERS, messages.append, mode="per-zoom"
     )
     assert count == len(expected)
+    assert not stale.exists()
     assert work.tiles_done.exists()
     assert [int(_option(c, "--min-zoom")) for c in calls] == [2, 1, 0]
     assert [int(_option(c, "--max-zoom")) for c in calls] == [2, 1, 0]
     assert [c[-2] for c in calls] == [str(work.path / f"style_z{z}.vrt") for z in (2, 1, 0)]
     assert messages == ["tile stage started", f"tile stage done ({len(expected)} tiles)"]
+
+    calls.clear()
+    assert tilestage.run_tile_stage(
+        work, profile, "painted", _WORKERS, lambda _m: None, mode="per-zoom"
+    ) == len(expected)
+    assert calls == []
+
+    missing_coarse = next(work.tiles_dir.glob("1/*/*.webp"))
+    work.tiles_done.unlink()
+    corrupt_path = missing_coarse
+
+    def fake_run_corrupt(args: list[str], check: bool) -> None:
+        fake_run(args, check)
+        if int(_option(args, "--min-zoom")) == 1:
+            corrupt_path.write_bytes(b"bad")
+
+    monkeypatch.setattr(tilestage.subprocess, "run", fake_run_corrupt)
+    with pytest.raises(tilestage.CompletenessError):
+        tilestage.run_tile_stage(
+            work, profile, "painted", _WORKERS, lambda _m: None, mode="per-zoom"
+        )
+    assert not work.tiles_done.exists()
 
 
 def test_run_tile_stage_rejects_unknown_mode(tmp_path: Path) -> None:

@@ -154,31 +154,22 @@ def run_tile_stage(
     if not work.tiles_done.exists():
         shutil.rmtree(work.tiles_dir, ignore_errors=True)
         work.tiles_dir.mkdir(parents=True)
-        if mode == PER_ZOOM:
-            for z in range(profile.max_zoom, -1, -1):
-                subprocess.run(
-                    tile_args(
-                        work.path / f"style_z{z}.vrt",
-                        work.tiles_dir,
-                        max_zoom=z,
-                        min_zoom=z,
-                        variant=variant,
-                        webp_quality=profile.webp_quality,
-                        workers=workers,
-                        resume=False,
-                    ),
-                    check=True,
-                )
-        else:
+        jobs = (
+            [(work.path / f"style_z{z}.vrt", z, z) for z in range(profile.max_zoom, -1, -1)]
+            if mode == PER_ZOOM
+            else [(work.path / "style.vrt", 0, profile.max_zoom)]
+        )
+        for vrt, min_zoom, max_zoom in jobs:
             subprocess.run(
                 tile_args(
-                    work.path / "style.vrt",
+                    vrt,
                     work.tiles_dir,
-                    profile.max_zoom,
+                    max_zoom,
                     variant,
                     profile.webp_quality,
                     workers,
                     resume=False,
+                    min_zoom=min_zoom,
                 ),
                 check=True,
             )

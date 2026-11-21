@@ -298,7 +298,7 @@ def test_build_mode_wiring_and_output_folder(
 
     assert cli.main([*_build(tmp_path), *extra_args]) == 0
     out = capsys.readouterr().out
-    assert expected_mode in out or expected_mode == "pyramid"
+    assert f"({expected_mode})" in out
 
     _, _, _, area, out_dir, _, _ = captured["base"]
     assert out_dir.name == f"{expected_prefix}{area.fp[:8]}"

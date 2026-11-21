@@ -92,10 +92,20 @@ class Window:
     def pad_clamped(self, n: int) -> tuple["Window", tuple[int, int, int, int]]:
         """The window grown by up to ``n`` pixels per side, clamped to the grid at ``zoom``.
 
+        Requires ``self`` to lie inside the ``[0, TILE_PX * 2**zoom]`` pixel grid.
+
+        Args:
+            n: non-negative desired pixel padding on each side.
+
         Returns:
             ``(padded_window, (left, top, right, bottom))`` where the second
             element gives the actual pixel padding added on each side.
+
+        Raises:
+            ValueError: if ``n`` or ``self.zoom`` is negative.
         """
+        if self.zoom < 0:
+            raise ValueError(f"zoom {self.zoom} must be non-negative")
         if n < 0:
             raise ValueError(f"pad width {n} must be non-negative")
         max_px = TILE_PX * 2**self.zoom
@@ -139,6 +149,17 @@ def blocks(extent: Bounds, block_zoom: int, zoom: int = BASE_ZOOM) -> list[Block
     """Every tile at ``block_zoom`` that intersects ``extent`` (degrees), sorted by (y, x).
 
     Each block's window uses pixels at ``zoom`` (which must be at least ``block_zoom``).
+
+    Args:
+        extent: geographic bounds in degrees (WGS 84).
+        block_zoom: XYZ zoom defining block boundaries.
+        zoom: pixel grid zoom for each block's ``Window``.
+
+    Returns:
+        Blocks covering ``extent``, ordered north-to-south, west-to-east.
+
+    Raises:
+        ValueError: if ``block_zoom`` exceeds ``zoom``.
     """
     if block_zoom > zoom:
         raise ValueError(f"block_zoom {block_zoom} cannot exceed zoom {zoom}")
@@ -196,14 +217,27 @@ def row_latitudes(window: Window) -> np.ndarray:
 
 
 def expected_tiles(block_list: list[Block], max_zoom: int) -> set[tuple[int, int, int]]:
-    """Every XYZ tile (z, x, y) at zooms 0 to ``max_zoom`` that the blocks' windows cover."""
+    """Every XYZ tile (z, x, y) at zooms 0 to ``max_zoom`` that the blocks' windows cover.
+
+    Args:
+        block_list: the build's blocks, whose windows have ``zoom >= max_zoom``.
+        max_zoom: highest zoom level to enumerate (0 to ``BASE_ZOOM``).
+
+    Returns:
+        All covered ``(z, x, y)`` tile coordinates across zooms ``0..max_zoom``.
+
+    Raises:
+        ValueError: if ``max_zoom`` exceeds ``BASE_ZOOM`` or any block's ``window.zoom``.
+    """
     if max_zoom > BASE_ZOOM:
         raise ValueError(f"max_zoom {max_zoom} is above the base zoom {BASE_ZOOM}")
     tiles: set[tuple[int, int, int]] = set()
     for block in block_list:
         w = block.window
+        if max_zoom > w.zoom:
+            raise ValueError(f"max_zoom {max_zoom} is above block window zoom {w.zoom}")
         for z in range(max_zoom + 1):
-            side_px = TILE_PX * 2 ** (BASE_ZOOM - z)
+            side_px = TILE_PX * 2 ** (w.zoom - z)
             for x in range(w.col0 // side_px, (w.col0 + w.cols - 1) // side_px + 1):
                 for y in range(w.row0 // side_px, (w.row0 + w.rows - 1) // side_px + 1):
                     tiles.add((z, x, y))

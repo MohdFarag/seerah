@@ -97,6 +97,15 @@ def test_expected_tiles_from_blocks():
     assert (9, 5, 7) in tiles
     assert (0, 0, 0) in tiles
 
+    coarse_block = blocks(DATA_EXTENT, 6, zoom=8)[0]
+    coarse_tiles = expected_tiles([coarse_block], 8)
+    assert len({t for t in coarse_tiles if t[0] == 8}) == 16
+    assert len({t for t in coarse_tiles if t[0] == 7}) == 4
+    assert len({t for t in coarse_tiles if t[0] == 6}) == 1
+    assert (6, coarse_block.x, coarse_block.y) in coarse_tiles
+    with pytest.raises(ValueError, match="zoom"):
+        expected_tiles([coarse_block], 9)
+
 
 def test_view_reach_table():
     assert abs(view_reach_km(6, 550, 22) / 620 - 1) < 0.05
