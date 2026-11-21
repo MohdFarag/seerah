@@ -67,10 +67,13 @@ def _roots(run_dir: Path, data: Path) -> list[str]:
     ]
 
 
-def _build(run_cli, run_dir: Path, data: Path, variant: str = "painted", **kwargs):
-    return run_cli(
-        ["build", *_roots(run_dir, data), "--profile", PROFILE, "--variant", variant], **kwargs
-    )
+def _build(
+    run_cli, run_dir: Path, data: Path, variant: str = "painted", mode: str | None = None, **kwargs
+):
+    cmd = ["build", *_roots(run_dir, data), "--profile", PROFILE, "--variant", variant]
+    if mode is not None:
+        cmd.extend(["--mode", mode])
+    return run_cli(cmd, **kwargs)
 
 
 def _archive(run_dir: Path) -> Path:
@@ -78,8 +81,10 @@ def _archive(run_dir: Path) -> Path:
     return archive
 
 
-def _built(run_cli, run_dir: Path, data: Path, variant: str = "painted") -> Path:
-    result = _build(run_cli, run_dir, data, variant)
+def _built(
+    run_cli, run_dir: Path, data: Path, variant: str = "painted", mode: str | None = None
+) -> Path:
+    result = _build(run_cli, run_dir, data, variant, mode=mode)
     assert result.returncode == 0, result.output
     return _archive(run_dir)
 
@@ -181,6 +186,35 @@ def test_example_value_variant(run_cli, tmp_path):
     meta = json.loads((archive.parent / "metadata.json").read_text())
     assert meta["encoding"] == "terrarium-value"
     assert meta["trial"] is True
+
+
+def test_example_per_zoom_builds_complete_and_matches_z12(run_cli, tmp_path, reference):
+    archive = _built(run_cli, tmp_path, _data(tmp_path / "data"), "painted", mode="per-zoom")
+    assert archive.parent.name.startswith("example-painted-per-zoom-")
+    meta = json.loads((archive.parent / "metadata.json").read_text())
+    assert meta["mode"] == "per-zoom"
+    assert meta["variant"] == "painted"
+    assert meta["trial"] is True
+    assert meta["encoding"] == "painted-rgba"
+
+    profile = config.load_profile(EXAMPLE / "example.yaml")
+    pack.verify(archive, profile)
+    base_archive = archive.parent / base.BASE_ARCHIVE_NAME
+    assert base_archive.is_file()
+    base.verify_base(base_archive, profile)
+
+    tiles = _tiles(archive)
+    expected = expected_tiles(blocks(profile.data_extent, profile.block_zoom), profile.max_zoom)
+    assert expected <= set(tiles)
+    _assert_same_tiles(archive, reference)
+
+    coarse_zoom = 10
+    coarse_keys = {t for t in expected if t[0] == coarse_zoom}
+    pz_coarse = _decoded_at(archive, coarse_zoom)
+    ref_coarse = _decoded_at(reference, coarse_zoom)
+    assert coarse_keys <= pz_coarse.keys()
+    assert coarse_keys <= ref_coarse.keys()
+    assert any(not np.array_equal(pz_coarse[k], ref_coarse[k]) for k in sorted(coarse_keys))
 
 
 def test_double_build_identical(run_cli, tmp_path):

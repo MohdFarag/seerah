@@ -9,7 +9,7 @@ The tool runs in a toolchain image (GDAL, `tippecanoe`, `tile-join`, `go-pmtiles
 | Command | What it does |
 | --- | --- |
 | `fetch --profile P` | Downloads P's cells and the Natural Earth files into `/cache`. With no lock it writes `/out/<name>.lock` and says where to copy it; with a lock it verifies every cached file and refuses any mismatch. |
-| `build --profile P --variant {painted,value}` | Runs the block stage, the tile stage, pack and the base layer stage, and writes `/out/<name>-<variant>-<fp8>/`. Options: `--workers`, and `--per-worker-mib` (default 2048, `GDAL_CACHEMAX` included). |
+| `build --profile P --variant {painted,value} [--mode {pyramid,per-zoom}]` | Runs the block stage, the tile stage, pack and the base layer stage, and writes `/out/<name>-<variant>-<fp8>/` (or `/out/<name>-<variant>-per-zoom-<fp8>/` for `per-zoom`). Options: `--mode` (default `pyramid`; `per-zoom` is only supported with `--variant painted`), `--workers`, and `--per-worker-mib` (default 2048, `GDAL_CACHEMAX` included). |
 | `clean [--fingerprint F \| --all]` | Lists work areas under `/work` with their sizes, or removes one or all. |
 
 Exit codes: 0 for success, 1 when a check fails, 2 for a usage or configuration error.
@@ -71,13 +71,13 @@ The thread and GDAL cache variables are set in the image, so every runner gets t
 
 Run one full build at a time for each fingerprint. Different fingerprints have separate work areas and can build concurrently. A completed build can remove its work area, so wait for it to finish before reusing or cleaning that fingerprint.
 
-`build` writes one folder per profile, variant and fingerprint:
+`build` writes one folder per profile, variant, mode and fingerprint (`<name>-<variant>-<fp8>/` for `pyramid`, or `<name>-<variant>-per-zoom-<fp8>/` for `per-zoom`):
 
 ```text
-<out>/<name>-<variant>-<fp8>/
+<out>/<name>-<variant>-<fp8>/                  # or <name>-<variant>-per-zoom-<fp8>/ for --mode per-zoom
   relief.pmtiles    the relief archive
   base.pmtiles      the vector base archive (land and coast layers)
-  metadata.json     format, zooms, bounds, trial: true, variant, encoding, fingerprint, commits, image digest
+  metadata.json     format, zooms, bounds, trial: true, variant, mode, encoding, fingerprint, commits, image digest
   report.json       provenance, stage times (stage_seconds: block, tile, pack, base; stage_seconds.base added in phase 3), memory, disk, tile counts, size per zoom inside and outside the outline
 ```
 
@@ -120,7 +120,7 @@ The valley probe (ADR 0009 decision 13 item 7; [specification](../../docs/design
 
 ```sh
 docker build -t seerah-map:dev tools/map
-docker run --rm --security-opt label=disable \
+docker run --rm --security-opt label=disable --memory 6g \
   -v "$PWD:/src:ro" -v "$PWD/map-data:/data:ro" -v seerah-map-test-cache:/cache \
   -w /src/tools/map -e PYTHONPATH=/src/tools/map/src \
   seerah-map:dev python3 -m pytest            # every test, in the image

@@ -49,9 +49,8 @@ private val TRIAL_COLOURS = MapColours(sea = SEA, land = LAND, coast = COAST, in
 /**
  * A way of drawing the relief that the trial compares.
  *
- * There are four views, not five: the per-zoom variant (decision D2 of the trial plan) is not built,
- * so the trial offers no per-zoom view. Option (a) and (c) differ from the zoom views by their fade
- * range, which is a trial variable: the trial exists to judge it.
+ * Covers the five trial views: zooms 12 and 11 on the pyramid build, options (a) and (c) whose
+ * fade range moves later to style zoom 13.5–15.5, and the per-zoom build (`PER_ZOOM`).
  *
  * @property id the stable lowercase name of the view, used in the `<folder>/<view>` selection value.
  */
@@ -67,12 +66,22 @@ enum class TrialView(val id: String) {
 
     /** The value tiles with a stepped colour ramp, fading style zoom 13.5 to 15.5 (a trial variable). */
     OPTION_C("option-c"),
+
+    /** The painted tiles built per zoom to zoom 12, fading at style zoom 11.5 to 13.5. */
+    PER_ZOOM("per-zoom"),
 }
 
-/** The views that can be drawn from a variant built as [variant]. */
-fun viewsFor(variant: Variant): List<TrialView> = when (variant) {
-    Variant.PAINTED -> listOf(TrialView.ZOOM_12, TrialView.ZOOM_11, TrialView.OPTION_A)
-    Variant.VALUE -> listOf(TrialView.OPTION_C)
+/** The views that can be drawn from a variant built as [variant] in [mode]. */
+fun viewsFor(variant: Variant, mode: BuildMode = BuildMode.PYRAMID): List<TrialView> = when (mode) {
+    BuildMode.PYRAMID -> when (variant) {
+        Variant.PAINTED -> listOf(TrialView.ZOOM_12, TrialView.ZOOM_11, TrialView.OPTION_A)
+        Variant.VALUE -> listOf(TrialView.OPTION_C)
+    }
+
+    BuildMode.PER_ZOOM -> when (variant) {
+        Variant.PAINTED -> listOf(TrialView.PER_ZOOM)
+        Variant.VALUE -> emptyList()
+    }
 }
 
 /** The style this view asks the map to draw. */
@@ -81,6 +90,7 @@ fun TrialView.styleSpec(): MapStyleSpec = when (this) {
     TrialView.ZOOM_11 -> MapStyleSpec(ReliefSource.Painted(COARSE_BUILD_ZOOM), EARLY_FADE, TRIAL_COLOURS)
     TrialView.OPTION_A -> MapStyleSpec(ReliefSource.Painted(BUILD_ZOOM), LATE_FADE, TRIAL_COLOURS)
     TrialView.OPTION_C -> MapStyleSpec(ReliefSource.Value(BUILD_ZOOM, OPTION_C_RAMP), LATE_FADE, TRIAL_COLOURS)
+    TrialView.PER_ZOOM -> MapStyleSpec(ReliefSource.Painted(BUILD_ZOOM), EARLY_FADE, TRIAL_COLOURS)
 }
 
 /**
@@ -106,7 +116,7 @@ fun resolveView(requested: String?, loaded: List<TrialVariant>): TrialSelection?
     if (parts.size != SELECTION_PARTS) return null
     val (folderName, viewId) = parts
     val variant = loaded.firstOrNull { it.folder.name == folderName } ?: return null
-    val view = viewsFor(variant.variant).firstOrNull { it.id == viewId } ?: return null
+    val view = viewsFor(variant.variant, variant.mode).firstOrNull { it.id == viewId } ?: return null
     return TrialSelection(variant, view)
 }
 

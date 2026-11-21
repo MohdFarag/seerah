@@ -70,6 +70,7 @@ def fingerprint(
     image_digest: str | None,
     variant: str,
     src_root: Path,
+    mode: str = "pyramid",
 ) -> str:
     """Name a build by everything that decides its output.
 
@@ -82,6 +83,7 @@ def fingerprint(
         variant: the build variant's name.
         src_root: the tool's source directory, hashed when ``tool_commit`` is
             ``None``.
+        mode: the tiling mode's name (default ``"pyramid"``).
 
     Returns:
         SHA-256 hex digest of the parts joined with ``b"\\0"``.
@@ -93,6 +95,7 @@ def fingerprint(
         (tool_commit if tool_commit is not None else code_hash(src_root)).encode(),
         (image_digest if image_digest is not None else toolchain_id()).encode(),
         variant.encode(),
+        mode.encode(),
     ]
     return hashlib.sha256(_PART_SEPARATOR.join(parts)).hexdigest()
 

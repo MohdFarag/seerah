@@ -26,6 +26,15 @@ enum class Variant(val metadataName: String) {
     VALUE("value"),
 }
 
+/** How zoom levels below [TRIAL_MAX_ZOOM] are rendered; the `mode` field of `metadata.json`. */
+enum class BuildMode(val metadataName: String) {
+    /** Relief rendered at zoom 12 and averaged down. */
+    PYRAMID("pyramid"),
+
+    /** Relief rendered separately at each zoom. */
+    PER_ZOOM("per-zoom"),
+}
+
 /**
  * One stop of the camera path.
  *
@@ -51,12 +60,14 @@ data class CameraPathSpec(val stops: List<CameraStop>, val limits: CameraLimits)
  * @property variant how the relief is stored.
  * @property fingerprint8 the first eight characters of the build fingerprint.
  * @property cameraPath the camera path to run over this variant.
+ * @property mode how zoom levels below [TRIAL_MAX_ZOOM] were rendered.
  */
 data class TrialVariant(
     val folder: File,
     val variant: Variant,
     val fingerprint8: String,
     val cameraPath: CameraPathSpec,
+    val mode: BuildMode = BuildMode.PYRAMID,
 ) {
     /** The relief tiles of the variant. */
     val relief: File get() = File(folder, RELIEF_FILE)
@@ -106,6 +117,20 @@ private fun readVariant(folder: File): VariantLoad {
     val variant =
         Variant.entries.firstOrNull { it.metadataName == metadata.optString("variant") }
             ?: return skipped(folder, "unknown variant \"${metadata.optString("variant")}\"")
+    val mode = when {
+        !metadata.has("mode") -> BuildMode.PYRAMID
+
+        metadata.isNull("mode") -> return skipped(folder, "unknown mode \"null\"")
+
+        else -> {
+            val rawMode = metadata.optString("mode")
+            BuildMode.entries.firstOrNull { it.metadataName == rawMode }
+                ?: return skipped(folder, "unknown mode \"$rawMode\"")
+        }
+    }
+    if (variant == Variant.VALUE && mode == BuildMode.PER_ZOOM) {
+        return skipped(folder, "per-zoom mode is supported only for the painted variant")
+    }
     if (metadata.optInt("maxzoom", -1) != TRIAL_MAX_ZOOM) {
         return skipped(folder, "maxzoom is not $TRIAL_MAX_ZOOM, and every view assumes a zoom-$TRIAL_MAX_ZOOM build")
     }
@@ -123,6 +148,7 @@ private fun readVariant(folder: File): VariantLoad {
             variant = variant,
             fingerprint8 = fingerprint.take(FINGERPRINT_LENGTH),
             cameraPath = parsing(cameraPathFile) { parseCameraPath(JSONObject(it)) },
+            mode = mode,
         ),
     )
 }

@@ -33,10 +33,10 @@ A synthetic profile for [tools/map](../tools/map/README.md), used by its tests a
 
 ## Map trial output
 
-`tools/map/run.py` writes trial builds to `dist/` by default, one folder per profile, variant and fingerprint:
+`tools/map/run.py` writes trial builds to `dist/` by default, one folder per profile, variant, mode (`--mode per-zoom` adds `-per-zoom` after the variant) and fingerprint:
 
 ```text
-dist/<name>-<variant>-<fp8>/
+dist/<name>-<variant>-<fp8>/           # or dist/<name>-<variant>-per-zoom-<fp8>/ for --mode per-zoom
   relief.pmtiles  the relief archive (carries "trial": true)
   base.pmtiles    the vector base archive: land and coast layers (carries "trial": true)
   metadata.json   says "trial": true

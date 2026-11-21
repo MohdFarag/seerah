@@ -1,10 +1,11 @@
 """The tile stage: cut the styled mosaic into a Web Mercator XYZ tile pyramid.
 
-``gdal raster tile`` reads ``style.vrt`` and writes ``<area>/tiles/<z>/<x>/<y>.<ext>``
-for zooms 0 to the profile's maximum. Every tile in the data extent is written,
-transparent ones included, so the tiler never gets ``--skip-blank``. A finished
-tiling is marked by ``<area>/tiles.done``; a tiles folder without it is deleted
-and tiled again.
+``gdal raster tile`` reads ``style.vrt`` (``pyramid`` mode) or each zoom's
+``style_z<z>.vrt`` (``per-zoom`` mode) and writes
+``<area>/tiles/<z>/<x>/<y>.<ext>`` for zooms 0 to the profile's maximum. Every
+tile in the data extent is written, transparent ones included, so the tiler
+never gets ``--skip-blank``. A finished tiling is marked by ``<area>/tiles.done``;
+a tiles folder without it is deleted and tiled again.
 """
 
 import shutil
@@ -14,7 +15,7 @@ from pathlib import Path
 
 from osgeo import gdal
 
-from .blockstage import PAINTED
+from .blockstage import MODES, PAINTED, PER_ZOOM, PYRAMID
 from .config import Profile
 from .grid import blocks, expected_tiles
 from .workarea import WorkArea, atomic_write
@@ -36,6 +37,7 @@ def tile_args(
     webp_quality: int,
     workers: int,
     resume: bool,
+    min_zoom: int = 0,
 ) -> list[str]:
     """Build the ``gdal raster tile`` command line.
 
@@ -47,6 +49,7 @@ def tile_args(
         webp_quality: WebP quality, 1 to 100; used by ``painted`` only.
         workers: the number of tiling threads.
         resume: whether to write only the tiles that are missing.
+        min_zoom: the lowest zoom level written (XYZ zoom, default 0).
 
     Returns:
         The argument list. Tiles use XYZ numbering on WebMercatorQuad,
@@ -61,7 +64,7 @@ def tile_args(
         "--tiling-scheme",
         "WebMercatorQuad",
         "--min-zoom",
-        "0",
+        str(min_zoom),
         "--max-zoom",
         str(max_zoom),
         "--resampling",
@@ -121,15 +124,18 @@ def run_tile_stage(
     variant: str,
     workers: int,
     log: Callable[[str], None],
+    mode: str = PYRAMID,
 ) -> int:
     """Tile the styled mosaic unless a finished tiling is already there.
 
     Args:
-        work: the work area; ``style.vrt`` must be in it.
+        work: the work area; ``style.vrt`` (pyramid) or ``style_z<z>.vrt``
+            (per-zoom) must be in it.
         profile: the build profile.
         variant: ``painted`` or ``value``.
         workers: the number of tiling threads.
         log: receives ``tile stage started`` and ``tile stage done (<n> tiles)``.
+        mode: ``pyramid`` (default) or ``per-zoom``.
 
     Returns:
         The number of tiles the profile's blocks cover at zooms 0 to
@@ -138,25 +144,35 @@ def run_tile_stage(
     Raises:
         CompletenessError: if a tile is missing or broken after tiling;
             ``tiles.done`` is then not written.
+        ValueError: if ``mode`` is not one of ``MODES``.
     """
+    if mode not in MODES:
+        raise ValueError(f"unknown mode {mode!r}; expected one of {MODES}")
     expected = expected_tiles(blocks(profile.data_extent, profile.block_zoom), profile.max_zoom)
     ext = _WEBP_EXT if variant == PAINTED else _PNG_EXT
     log("tile stage started")
     if not work.tiles_done.exists():
         shutil.rmtree(work.tiles_dir, ignore_errors=True)
         work.tiles_dir.mkdir(parents=True)
-        subprocess.run(
-            tile_args(
-                work.path / "style.vrt",
-                work.tiles_dir,
-                profile.max_zoom,
-                variant,
-                profile.webp_quality,
-                workers,
-                resume=False,
-            ),
-            check=True,
+        jobs = (
+            [(work.path / f"style_z{z}.vrt", z, z) for z in range(profile.max_zoom, -1, -1)]
+            if mode == PER_ZOOM
+            else [(work.path / "style.vrt", 0, profile.max_zoom)]
         )
+        for vrt, min_zoom, max_zoom in jobs:
+            subprocess.run(
+                tile_args(
+                    vrt,
+                    work.tiles_dir,
+                    max_zoom,
+                    variant,
+                    profile.webp_quality,
+                    workers,
+                    resume=False,
+                    min_zoom=min_zoom,
+                ),
+                check=True,
+            )
         bad = check_completeness(work.tiles_dir, expected, ext)
         if bad:
             raise CompletenessError(

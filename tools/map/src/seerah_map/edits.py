@@ -14,7 +14,7 @@ from osgeo import gdal, ogr, osr
 from scipy import ndimage
 
 from .config import Edit
-from .grid import Window, edit_reach_m, pixel_m, row_latitudes
+from .grid import Window, edit_reach_m, row_latitudes
 
 _APPROVED = "approved"
 _MEMORY_DRIVER_NAMES = ("MEM", "Memory")
@@ -69,14 +69,14 @@ def apply(elevation: np.ndarray, edits: list[Edit], window: Window) -> np.ndarra
     Args:
         elevation: 2-D elevation in metres covering ``window``. Not modified.
         edits: the edits to apply (the caller filters by review state).
-        window: the zoom-12 pixel window ``elevation`` covers.
+        window: the pixel window ``elevation`` covers.
 
     Returns:
         A new float32 array. An edit whose outline covers no pixel of the
         window is skipped.
     """
     result = elevation.astype(np.float32, copy=True)
-    ground_per_px = pixel_m() * np.cos(np.radians(row_latitudes(window)))
+    ground_per_px = window.pixel_m() * np.cos(np.radians(row_latitudes(window)))
     for edit in edits:
         inside = _footprint(edit, window)
         if not inside.any():

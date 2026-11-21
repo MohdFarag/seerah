@@ -6,8 +6,12 @@ import numpy as np
 import pytest
 from seerah_map.config import Bounds, Edit, StyleSettings, load_profile
 from seerah_map.grid import (
+    BAND_BLUR_RADIUS_PX,
+    BASE_ZOOM,
+    TILE_PX,
     Block,
     Window,
+    band_blur_radius_px,
     blocks,
     border_px,
     check_base_coverage,
@@ -16,6 +20,7 @@ from seerah_map.grid import (
     natural_earth_max_zoom,
     pixel_m,
     row_latitudes,
+    scale_style,
     shrink_extent,
     view_bounds,
     view_reach_km,
@@ -92,6 +97,15 @@ def test_expected_tiles_from_blocks():
     assert (9, 5, 7) in tiles
     assert (0, 0, 0) in tiles
 
+    coarse_block = blocks(DATA_EXTENT, 6, zoom=8)[0]
+    coarse_tiles = expected_tiles([coarse_block], 8)
+    assert len({t for t in coarse_tiles if t[0] == 8}) == 16
+    assert len({t for t in coarse_tiles if t[0] == 7}) == 4
+    assert len({t for t in coarse_tiles if t[0] == 6}) == 1
+    assert (6, coarse_block.x, coarse_block.y) in coarse_tiles
+    with pytest.raises(ValueError, match="zoom"):
+        expected_tiles([coarse_block], 9)
+
 
 def test_view_reach_table():
     assert abs(view_reach_km(6, 550, 22) / 620 - 1) < 0.05
@@ -146,3 +160,113 @@ def test_coverage_checks_pass_for_trial_and_example():
         check_data_extent_coverage(Bounds(34, 11, 61, 33), CAMERA, margin_deg=1.0)
     with pytest.raises(ValueError, match=r"build zoom 9\b"):
         check_base_coverage(CAMERA, margin_deg=1.0, ne_max_zoom=8, max_zoom=12)
+
+
+def test_pixel_m_scales_with_zoom():
+    assert pixel_m() == pixel_m(BASE_ZOOM)
+    assert pixel_m(10) == pytest.approx(pixel_m() * 4)
+    assert pixel_m(0) == pytest.approx(pixel_m() * 2**BASE_ZOOM)
+    assert pixel_m(14) == pytest.approx(pixel_m() / 4)
+
+
+def test_window_zoom_and_pad_preserves_zoom():
+    default = Window(0, 0, TILE_PX, TILE_PX)
+    assert default.zoom == BASE_ZOOM
+    assert default.pixel_m() == pixel_m()
+
+    world = Window(0, 0, TILE_PX, TILE_PX, zoom=0)
+    assert world.pixel_m() == pixel_m(0)
+    origin_m = 20037508.342789244
+    assert world.bounds_3857() == pytest.approx((-origin_m, -origin_m, origin_m, origin_m))
+    assert world.geotransform() == pytest.approx(
+        (-origin_m, pixel_m(0), 0.0, origin_m, 0.0, -pixel_m(0))
+    )
+
+    padded = Window(10, 20, 30, 40, zoom=8).pad(5)
+    assert padded == Window(5, 15, 40, 50, zoom=8)
+
+
+def test_window_pad_clamped():
+    origin_m = 20037508.342789244
+    world = Window(0, 0, TILE_PX, TILE_PX, zoom=0)
+    padded_world, pads_world = world.pad_clamped(10)
+    assert padded_world == world
+    assert pads_world == (0, 0, 0, 0)
+    west, south, east, north = padded_world.bounds_3857()
+    assert -origin_m <= west and east <= origin_m
+    assert -origin_m <= south and north <= origin_m
+
+    top_left = Window(0, 0, TILE_PX, TILE_PX, zoom=1)
+    assert top_left.pad_clamped(10) == (Window(0, 0, TILE_PX + 10, TILE_PX + 10, 1), (0, 0, 10, 10))
+
+    bottom_right = Window(TILE_PX, TILE_PX, TILE_PX, TILE_PX, zoom=1)
+    assert bottom_right.pad_clamped(10) == (
+        Window(TILE_PX - 10, TILE_PX - 10, TILE_PX + 10, TILE_PX + 10, 1),
+        (10, 10, 0, 0),
+    )
+
+    interior = blocks(DATA_EXTENT, BLOCK_ZOOM)[0].window
+    assert interior.pad_clamped(38) == (interior.pad(38), (38, 38, 38, 38))
+    assert interior.pad_clamped(0) == (interior, (0, 0, 0, 0))
+    with pytest.raises(ValueError):
+        interior.pad_clamped(-1)
+
+
+def test_row_latitudes_at_coarse_zoom():
+    lats = row_latitudes(Window(0, 0, TILE_PX, TILE_PX, zoom=0))
+    assert lats.shape == (TILE_PX,)
+    assert np.all(np.diff(lats) < 0)
+    assert lats[0] == pytest.approx(-lats[-1])
+
+
+def test_blocks_at_coarse_zoom_and_validation():
+    with pytest.raises(ValueError):
+        blocks(DATA_EXTENT, 9, zoom=8)
+
+    coarse = blocks(DATA_EXTENT, 6, zoom=8)
+    side_px = TILE_PX * 2 ** (8 - 6)
+    assert coarse
+    assert all(b.window.zoom == 8 for b in coarse)
+    assert all(b.window.cols == side_px and b.window.rows == side_px for b in coarse)
+    assert all(b.window.col0 == b.x * side_px and b.window.row0 == b.y * side_px for b in coarse)
+
+    assert blocks(DATA_EXTENT, 0, zoom=0) == [Block(0, 0, 0, Window(0, 0, TILE_PX, TILE_PX, 0))]
+
+
+def test_scale_style_and_band_blur_radius():
+    base = StyleSettings()
+    assert scale_style(base, BASE_ZOOM) == base
+
+    coarse = scale_style(base, 8)
+    assert coarse.blur_px == pytest.approx(base.blur_px / 16)
+    assert coarse.band_blur_px == pytest.approx(base.band_blur_px / 16)
+    assert coarse.exaggeration == base.exaggeration
+    assert coarse.azimuth_deg == base.azimuth_deg
+    assert coarse.altitude_deg == base.altitude_deg
+    assert coarse.contrast == base.contrast
+    assert coarse.bands == base.bands
+    assert coarse.ink_rgb == base.ink_rgb
+    assert coarse.max_alpha == base.max_alpha
+
+    assert band_blur_radius_px(base.band_blur_px) == BAND_BLUR_RADIUS_PX == 4
+    assert band_blur_radius_px(coarse.band_blur_px) == 0
+    assert band_blur_radius_px(0.0) == 0
+
+
+def test_border_scales_down_at_coarse_zooms():
+    z12_block = blocks(DATA_EXTENT, 6, zoom=12)[0]
+    z8_block = blocks(DATA_EXTENT, 6, zoom=8)[0]
+    z0_block = blocks(DATA_EXTENT, 0, zoom=0)[0]
+
+    assert border_px(StyleSettings(), [], z8_block) == 2 + 0 + 1 + 1 == 4
+    assert border_px(StyleSettings(), [], z0_block) == 1 + 0 + 1 + 1 == 3
+
+    edit = _feather_edit(50000.0)
+    tms = morecantile.tms.get("WebMercatorQuad")
+    bbox = tms.bounds(morecantile.Tile(z8_block.x, z8_block.y, z8_block.z))
+    poleward = max(abs(bbox.bottom), abs(bbox.top))
+    expected_edit_px = math.ceil(50000.0 / (pixel_m(8) * math.cos(math.radians(poleward))))
+    assert border_px(StyleSettings(), [edit], z8_block) == 4 + expected_edit_px
+    assert border_px(StyleSettings(), [edit], z8_block) < border_px(
+        StyleSettings(), [edit], z12_block
+    )

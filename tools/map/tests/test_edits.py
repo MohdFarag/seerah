@@ -17,13 +17,13 @@ _LON = 39.6
 _PX_TOLERANCE = 1
 
 
-def _window_at(lon: float, lat: float, size: int = _SIZE_PX) -> Window:
-    """A window of ``size`` pixels whose centre is at ``lon``, ``lat``."""
-    world_px = TILE_PX * 2**BASE_ZOOM
+def _window_at(lon: float, lat: float, size: int = _SIZE_PX, zoom: int = BASE_ZOOM) -> Window:
+    """A window of ``size`` pixels at ``zoom`` whose centre is at ``lon``, ``lat``."""
+    world_px = TILE_PX * 2**zoom
     col = (lon + 180) / 360 * world_px
     y = math.log(math.tan(math.pi / 4 + math.radians(lat) / 2))
     row = (1 - y / math.pi) / 2 * world_px
-    return Window(int(col) - size // 2, int(row) - size // 2, size, size)
+    return Window(int(col) - size // 2, int(row) - size // 2, size, size, zoom)
 
 
 def _lonlat_box(window: Window, inset_px: int, span_px: int) -> dict:
@@ -31,8 +31,9 @@ def _lonlat_box(window: Window, inset_px: int, span_px: int) -> dict:
     from osgeo import osr
 
     west, _, _, north = window.bounds_3857()
-    xs = (west + inset_px * pixel_m(), west + (inset_px + span_px) * pixel_m())
-    ys = (north - inset_px * pixel_m(), north - (inset_px + span_px) * pixel_m())
+    px_m = window.pixel_m()
+    xs = (west + inset_px * px_m, west + (inset_px + span_px) * px_m)
+    ys = (north - inset_px * px_m, north - (inset_px + span_px) * px_m)
     src = osr.SpatialReference()
     src.ImportFromEPSG(3857)
     dst = osr.SpatialReference()
@@ -154,3 +155,20 @@ def test_edit_across_window_edge():
         cropped = out[pad:-pad, pad:-pad]
         expected = whole[:, col0 - wide.col0 : col0 - wide.col0 + _SIZE_PX]
         assert np.allclose(cropped, expected, atol=1e-4)
+
+
+def test_feather_uses_window_zoom():
+    zoom = 10
+    feather_m = 1600.0
+    window = _window_at(_LON, _LAT, zoom=zoom)
+    edit = _edit(_lonlat_box(window, 40, 40), feather_m=feather_m)
+    out = apply(_flat(window), [edit], window)
+    change = out - _FLAT_M
+    ground_per_px_10 = pixel_m(zoom) * math.cos(math.radians(_LAT))
+    ground_per_px_12 = pixel_m() * math.cos(math.radians(_LAT))
+    half_cols = round(feather_m / 2 / ground_per_px_10)
+    half_cols_z12 = round(feather_m / 2 / ground_per_px_12)
+    assert half_cols == pytest.approx(half_cols_z12 / 4, abs=1)
+    assert change[60, 40 - half_cols] == pytest.approx(_RAISE_M / 2, abs=0.5)
+    beyond = math.ceil(feather_m / ground_per_px_10) + 2
+    assert change[60, 40 - beyond] == 0

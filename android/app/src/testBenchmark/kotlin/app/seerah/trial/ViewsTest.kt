@@ -12,16 +12,19 @@ import org.junit.Test
 class ViewsTest {
     private val ink = { alpha: Int -> (alpha shl 24) or 0x967648 }
 
-    private fun variant(kind: Variant, folderName: String) = TrialVariant(
+    private fun variant(kind: Variant, folderName: String, mode: BuildMode = BuildMode.PYRAMID) = TrialVariant(
         folder = File("/trial/$folderName"),
         variant = kind,
         fingerprint8 = "01234567",
         cameraPath = CameraPathSpec(emptyList(), CameraLimits(0.0, 0.0, 1.0, 1.0, 4.0, 14.0)),
+        mode = mode,
     )
 
     private val painted = variant(Variant.PAINTED, "trial-painted-01234567")
 
     private val value = variant(Variant.VALUE, "trial-value-01234567")
+
+    private val perZoom = variant(Variant.PAINTED, "trial-painted-per-zoom-01234567", BuildMode.PER_ZOOM)
 
     @Test
     fun zoom12View_fadesAt11_5To13_5() {
@@ -75,9 +78,24 @@ class ViewsTest {
     }
 
     @Test
+    fun perZoom_isPainted12_earlyFade() {
+        val spec = TrialView.PER_ZOOM.styleSpec()
+
+        assertEquals(ReliefSource.Painted(maxZoom = 12), spec.relief)
+        assertEquals(ZoomRange(11.5, 13.5), spec.reliefFade)
+    }
+
+    @Test
     fun viewsFor_matchesVariant() {
         assertEquals(listOf(TrialView.ZOOM_12, TrialView.ZOOM_11, TrialView.OPTION_A), viewsFor(Variant.PAINTED))
         assertEquals(listOf(TrialView.OPTION_C), viewsFor(Variant.VALUE))
+        assertEquals(
+            listOf(TrialView.ZOOM_12, TrialView.ZOOM_11, TrialView.OPTION_A),
+            viewsFor(Variant.PAINTED, BuildMode.PYRAMID),
+        )
+        assertEquals(listOf(TrialView.OPTION_C), viewsFor(Variant.VALUE, BuildMode.PYRAMID))
+        assertEquals(listOf(TrialView.PER_ZOOM), viewsFor(Variant.PAINTED, BuildMode.PER_ZOOM))
+        assertEquals(emptyList(), viewsFor(Variant.VALUE, BuildMode.PER_ZOOM))
     }
 
     @Test
@@ -109,6 +127,24 @@ class ViewsTest {
     @Test
     fun resolveView_rejectsAViewTheVariantDoesNotOffer() {
         assertNull(resolveView("trial-value-01234567/zoom12", listOf(painted, value)))
+        assertNull(resolveView("trial-painted-01234567/per-zoom", listOf(painted, value, perZoom)))
+        assertNull(resolveView("trial-painted-per-zoom-01234567/zoom12", listOf(painted, value, perZoom)))
+        assertNull(resolveView("trial-painted-per-zoom-01234567/option-a", listOf(painted, value, perZoom)))
+    }
+
+    @Test
+    fun resolveView_acceptsPerZoomFolderAndView() {
+        val resolved = resolveView("trial-painted-per-zoom-01234567/per-zoom", listOf(painted, value, perZoom))
+
+        assertEquals(TrialSelection(perZoom, TrialView.PER_ZOOM), resolved)
+    }
+
+    @Test
+    fun selectionKey_roundTripsPerZoomSelection() {
+        val selection = TrialSelection(perZoom, TrialView.PER_ZOOM)
+
+        assertEquals("trial-painted-per-zoom-01234567/per-zoom", selection.key)
+        assertEquals(selection, resolveView(selection.key, listOf(painted, value, perZoom)))
     }
 
     @Test

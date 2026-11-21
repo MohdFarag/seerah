@@ -54,6 +54,7 @@ class TrialFilesTest {
 
         assertEquals(folder, loaded.folder)
         assertEquals(Variant.PAINTED, loaded.variant)
+        assertEquals(BuildMode.PYRAMID, loaded.mode)
         assertEquals("01234567", loaded.fingerprint8)
         assertEquals(File(folder, "relief.pmtiles"), loaded.relief)
         assertEquals(File(folder, "base.pmtiles"), loaded.base)
@@ -85,6 +86,71 @@ class TrialFilesTest {
         variantFolder(metadata = validMetadata.replace("painted", "per-zoom"))
 
         assertSkippedMentioning("variant")
+    }
+
+    @Test
+    fun folderWithExplicitPyramidMode_isLoaded() {
+        variantFolder(
+            metadata = validMetadata.replace("\"variant\":\"painted\"", "\"variant\":\"painted\",\"mode\":\"pyramid\""),
+        )
+
+        val loaded = assertIs<VariantLoad.Loaded>(loadOnlyEntry()).variant
+        assertEquals(BuildMode.PYRAMID, loaded.mode)
+    }
+
+    @Test
+    fun folderWithPaintedPerZoomMode_isLoaded() {
+        variantFolder(
+            name = "trial-painted-per-zoom-01234567",
+            metadata = validMetadata.replace(
+                "\"variant\":\"painted\"",
+                "\"variant\":\"painted\",\"mode\":\"per-zoom\"",
+            ),
+        )
+
+        val loaded = assertIs<VariantLoad.Loaded>(loadOnlyEntry()).variant
+        assertEquals(Variant.PAINTED, loaded.variant)
+        assertEquals(BuildMode.PER_ZOOM, loaded.mode)
+    }
+
+    @Test
+    fun folderWithUnknownMode_isSkippedWithReason() {
+        variantFolder(
+            metadata = validMetadata.replace("\"variant\":\"painted\"", "\"variant\":\"painted\",\"mode\":\"hybrid\""),
+        )
+
+        val skipped = assertIs<VariantLoad.Skipped>(loadOnlyEntry())
+        assertTrue(skipped.reason.contains("mode", ignoreCase = true), "reason was: ${skipped.reason}")
+        assertTrue(skipped.reason.contains("hybrid", ignoreCase = true), "reason was: ${skipped.reason}")
+    }
+
+    @Test
+    fun folderWithNullOrEmptyMode_isSkippedWithReason() {
+        variantFolder(
+            name = "a-null-mode",
+            metadata = validMetadata.replace("\"variant\":\"painted\"", "\"variant\":\"painted\",\"mode\":null"),
+        )
+        variantFolder(
+            name = "b-empty-mode",
+            metadata = validMetadata.replace("\"variant\":\"painted\"", "\"variant\":\"painted\",\"mode\":\"\""),
+        )
+
+        val loads = loadVariants(temporaryFolder.root)
+        val nullSkipped = assertIs<VariantLoad.Skipped>(loads[0])
+        val emptySkipped = assertIs<VariantLoad.Skipped>(loads[1])
+        assertTrue(nullSkipped.reason.contains("mode", ignoreCase = true), "reason was: ${nullSkipped.reason}")
+        assertTrue(emptySkipped.reason.contains("mode", ignoreCase = true), "reason was: ${emptySkipped.reason}")
+    }
+
+    @Test
+    fun folderWithValuePerZoomMode_isSkippedWithReason() {
+        variantFolder(
+            metadata = validMetadata.replace("\"variant\":\"painted\"", "\"variant\":\"value\",\"mode\":\"per-zoom\""),
+        )
+
+        val skipped = assertIs<VariantLoad.Skipped>(loadOnlyEntry())
+        assertTrue(skipped.reason.contains("per-zoom", ignoreCase = true), "reason was: ${skipped.reason}")
+        assertTrue(skipped.reason.contains("painted", ignoreCase = true), "reason was: ${skipped.reason}")
     }
 
     @Test

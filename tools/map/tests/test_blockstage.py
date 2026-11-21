@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 from osgeo import gdal, osr
 from seerah_map import blockstage
-from seerah_map.config import Bounds, Cell, FileRef, Lock, Profile, StyleSettings
-from seerah_map.grid import blocks, border_px
+from seerah_map.config import Bounds, Cell, Edit, FileRef, Lock, Profile, StyleSettings
+from seerah_map.grid import BASE_ZOOM, Window, blocks, border_px
 from seerah_map.workarea import open_area
 
 _CELL_PX = 500
@@ -80,7 +80,12 @@ def _hill_at_west_edge() -> np.ndarray:
     return _FLAT_M + _HILL_M * np.exp(-r2 / (2 * _HILL_SIGMA_DEG**2))
 
 
-def _profile(folder: Path, fade_deg: float = _FADE_DEG) -> Profile:
+def _profile(
+    folder: Path,
+    fade_deg: float = _FADE_DEG,
+    max_zoom: int = _BLOCK_ZOOM,
+    block_zoom: int = _BLOCK_ZOOM,
+) -> Profile:
     return Profile(
         name="t",
         folder=folder,
@@ -88,8 +93,8 @@ def _profile(folder: Path, fade_deg: float = _FADE_DEG) -> Profile:
         camera_bounds=_EXTENT,
         margin_deg=0,
         fade_deg=fade_deg,
-        max_zoom=_BLOCK_ZOOM,
-        block_zoom=_BLOCK_ZOOM,
+        max_zoom=max_zoom,
+        block_zoom=block_zoom,
         webp_quality=80,
         style=StyleSettings(),
         peninsula_outline=folder / "o.geojson",
@@ -97,7 +102,7 @@ def _profile(folder: Path, fade_deg: float = _FADE_DEG) -> Profile:
 
 
 def _pixel_lonlat(window) -> tuple[np.ndarray, np.ndarray]:
-    """Pixel-centre longitudes and latitudes of a zoom-12 window (degrees)."""
+    """Pixel-centre longitudes and latitudes of ``window`` (degrees)."""
     west, south, east, north = window.bounds_3857()
     xs = west + (np.arange(window.cols) + 0.5) * (east - west) / window.cols
     ys = north - (np.arange(window.rows) + 0.5) * (north - south) / window.rows
@@ -109,7 +114,10 @@ def _pixel_lonlat(window) -> tuple[np.ndarray, np.ndarray]:
 
 def _read(path: Path) -> np.ndarray:
     ds = gdal.Open(str(path))
-    return ds.ReadAsArray()
+    try:
+        return ds.ReadAsArray()
+    finally:
+        ds.Close()
 
 
 def test_absent_area_reads_as_sea(tmp_path):
@@ -228,3 +236,224 @@ def test_no_dark_rim_at_extent_edge(tmp_path):
     just_inside = alpha[rows, first_inside + _RIM_PX : first_inside + _INNER_PX]
     assert alpha[rows, first_inside:].max() > 0
     assert rim.max() <= just_inside.max()
+
+
+def test_column_longitudes_uses_window_zoom():
+    lons = blockstage._column_longitudes(Window(0, 0, 256, 256, zoom=0))
+    assert lons.shape == (256,)
+    assert lons[0] == pytest.approx(-180 + 360 / 512)
+    assert lons[-1] == pytest.approx(180 - 360 / 512)
+
+
+def test_crop_pads_handles_zero_sides():
+    arr = np.arange(2 * 6 * 8).reshape(2, 6, 8)
+    np.testing.assert_array_equal(blockstage._crop_pads(arr, (0, 0, 0, 0)), arr)
+    np.testing.assert_array_equal(blockstage._crop_pads(arr, (0, 0, 2, 1)), arr[:, :5, :6])
+    np.testing.assert_array_equal(blockstage._crop_pads(arr, (2, 1, 0, 0)), arr[:, 1:, 2:])
+    np.testing.assert_array_equal(blockstage._crop_pads(arr, (1, 2, 2, 1)), arr[:, 2:5, 1:6])
+
+
+def test_render_block_rejects_non_base_zoom(tmp_path):
+    profile, lock, cache, work = _setup(tmp_path)
+    vrts = blockstage.source_vrts(lock, cache, _EXTENT, work)
+    coarse_block = blocks(_EXTENT, 8, zoom=8)[0]
+    with pytest.raises(ValueError, match="zoom"):
+        blockstage.render_block(coarse_block, profile, [], "painted", vrts, work)
+
+
+def test_run_block_stage_validates_variant_mode_and_zoom(tmp_path):
+    profile, lock, cache, work = _setup(tmp_path)
+    with pytest.raises(ValueError, match="variant"):
+        blockstage.run_block_stage(profile, [], "bad", lock, cache, work, 1, lambda _m: None)
+    with pytest.raises(ValueError, match="mode"):
+        blockstage.run_block_stage(
+            profile, [], "painted", lock, cache, work, 1, lambda _m: None, mode="bad"
+        )
+    over_profile = _profile(tmp_path, max_zoom=BASE_ZOOM + 1, block_zoom=BASE_ZOOM)
+    with pytest.raises(ValueError, match="max_zoom"):
+        blockstage.run_block_stage(
+            over_profile,
+            [],
+            "painted",
+            lock,
+            cache,
+            work,
+            1,
+            lambda _m: None,
+            mode=blockstage.PER_ZOOM,
+        )
+    assert not (work.path / "dem.vrt").exists()
+
+
+def test_per_zoom_sub12_renders_mask_and_coarse_zooms_and_resumes(tmp_path):
+    profile = _profile(tmp_path, max_zoom=10, block_zoom=9)
+    cache = tmp_path / "cache"
+    lock = _make_cache(cache, _hill_at_west_edge())
+    work = open_area(tmp_path / "work", "fp")
+    logged: list[str] = []
+
+    first = blockstage.run_block_stage(
+        profile, [], "painted", lock, cache, work, 2, logged.append, mode=blockstage.PER_ZOOM
+    )
+    assert first
+    assert len(logged) == len(first)
+    assert any(line.startswith("block mask/") for line in logged)
+    assert any(line.startswith("block z10/") for line in logged)
+    assert (work.path / "mask.vrt").is_file()
+    assert not (work.path / "style.vrt").exists()
+    assert not (work.path / f"style_z{BASE_ZOOM}.vrt").exists()
+    for block in blocks(profile.data_extent, profile.block_zoom):
+        assert (work.mask_dir / f"{block.id}.tif").is_file()
+    for z in range(profile.max_zoom + 1):
+        assert (work.path / f"style_z{z}.vrt").is_file()
+        z_blocks = blocks(profile.data_extent, min(profile.block_zoom, z), zoom=z)
+        for block in z_blocks:
+            tif = work.style_dir / f"z{z}" / f"{block.id}.tif"
+            assert tif.is_file()
+            arr = _read(tif)
+            assert arr.shape == (4, block.window.rows, block.window.cols)
+    assert _read(work.style_dir / "z0" / "z0-x0-y0.tif").shape == (4, 256, 256)
+
+    z10_blocks = blocks(profile.data_extent, min(profile.block_zoom, 10), zoom=10)
+    z10_block = z10_blocks[0]
+    z10_arr = _read(work.style_dir / "z10" / f"{z10_block.id}.tif")
+    lons, lats = _pixel_lonlat(z10_block.window)
+    outside = (
+        (lons < _EXTENT.west)
+        | (lons > _EXTENT.east)
+        | (lats < _EXTENT.south)
+        | (lats > _EXTENT.north)
+    )
+    assert z10_arr[3][outside].max() == 0
+    assert z10_arr[3][~outside].max() > 0
+
+    mtimes = {p: p.stat().st_mtime_ns for p in work.path.rglob("*.tif")}
+    logged_before = len(logged)
+    second = blockstage.run_block_stage(
+        profile, [], "painted", lock, cache, work, 2, logged.append, mode=blockstage.PER_ZOOM
+    )
+    assert second == []
+    assert len(logged) == logged_before
+    assert {p: p.stat().st_mtime_ns for p in work.path.rglob("*.tif")} == mtimes
+
+    target = next((work.style_dir / "z1").glob("*.tif"))
+    target.unlink()
+    third = blockstage.run_block_stage(
+        profile, [], "painted", lock, cache, work, 2, logged.append, mode=blockstage.PER_ZOOM
+    )
+    assert len(third) == 1
+    assert target.is_file()
+
+    edit = Edit(
+        id="e1",
+        geometry={
+            "type": "Polygon",
+            "coordinates": [
+                [[58.96, 20.46], [59.02, 20.46], [59.02, 20.52], [58.96, 20.52], [58.96, 20.46]]
+            ],
+        },
+        operation="raise",
+        amount_m=120.0,
+        height_m=None,
+        width_m=None,
+        feather_m=500.0,
+        review="approved",
+    )
+    work_edited = open_area(tmp_path / "work", "edited")
+    blockstage.run_block_stage(
+        profile,
+        [edit],
+        "painted",
+        lock,
+        cache,
+        work_edited,
+        2,
+        lambda _m: None,
+        mode=blockstage.PER_ZOOM,
+    )
+    z10_edited = _read(work_edited.style_dir / "z10" / f"{z10_block.id}.tif")
+    assert not np.array_equal(z10_edited, z10_arr)
+
+
+def test_per_zoom_z12_matches_pyramid_pixels_and_builds_all_zooms(tmp_path):
+    profile = _profile(tmp_path)
+    cache = tmp_path / "cache"
+    lock = _make_cache(cache, _hill_at_west_edge())
+    edit = Edit(
+        id="e1",
+        geometry={
+            "type": "Polygon",
+            "coordinates": [
+                [[58.97, 20.47], [59.01, 20.47], [59.01, 20.51], [58.97, 20.51], [58.97, 20.47]]
+            ],
+        },
+        operation="raise",
+        amount_m=50.0,
+        height_m=None,
+        width_m=None,
+        feather_m=200.0,
+        review="approved",
+    )
+
+    work_pyr = open_area(tmp_path / "work", "pyr")
+    work_pz = open_area(tmp_path / "work", "pz")
+    blockstage.run_block_stage(
+        profile, [edit], "painted", lock, cache, work_pyr, 2, lambda _m: None
+    )
+    rendered = blockstage.run_block_stage(
+        profile,
+        [edit],
+        "painted",
+        lock,
+        cache,
+        work_pz,
+        2,
+        lambda _m: None,
+        mode=blockstage.PER_ZOOM,
+    )
+    assert rendered
+    assert (work_pz.path / "mask.vrt").is_file()
+    for z in range(BASE_ZOOM + 1):
+        assert (work_pz.path / f"style_z{z}.vrt").is_file()
+
+    z12_blocks = blocks(profile.data_extent, profile.block_zoom)
+    for block in z12_blocks:
+        np.testing.assert_array_equal(
+            _read(work_pz.style_dir / f"z{BASE_ZOOM}" / f"{block.id}.tif"),
+            _read(work_pyr.style_dir / f"{block.id}.tif"),
+        )
+        np.testing.assert_array_equal(
+            _read(work_pz.mask_dir / f"{block.id}.tif"),
+            _read(work_pyr.mask_dir / f"{block.id}.tif"),
+        )
+
+    assert (
+        blockstage.run_block_stage(
+            profile,
+            [edit],
+            "painted",
+            lock,
+            cache,
+            work_pz,
+            2,
+            lambda _m: None,
+            mode=blockstage.PER_ZOOM,
+        )
+        == []
+    )
+
+    z12_style = work_pz.style_dir / f"z{BASE_ZOOM}" / f"{z12_blocks[0].id}.tif"
+    z12_style.unlink()
+    resumed = blockstage.run_block_stage(
+        profile,
+        [edit],
+        "painted",
+        lock,
+        cache,
+        work_pz,
+        2,
+        lambda _m: None,
+        mode=blockstage.PER_ZOOM,
+    )
+    assert resumed == [f"z{BASE_ZOOM}/{z12_blocks[0].id}"]
+    assert z12_style.is_file()
