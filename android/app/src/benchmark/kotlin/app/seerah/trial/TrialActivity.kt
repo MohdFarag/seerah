@@ -155,7 +155,7 @@ private fun Picker(loads: List<VariantLoad>, onPick: (TrialSelection) -> Unit, m
     ) {
         loads.forEach { load ->
             when (load) {
-                is VariantLoad.Loaded -> viewsFor(load.variant.variant).forEach { view ->
+                is VariantLoad.Loaded -> viewsFor(load.variant.variant, load.variant.mode).forEach { view ->
                     val choice = TrialSelection(load.variant, view)
                     Button(onClick = { onPick(choice) }) { Text(choice.key) }
                 }
