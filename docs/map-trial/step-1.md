@@ -119,3 +119,24 @@ Observations:
 - **Memory:** 116 to 117 MB after a path; 139 MB in the cancelled-path screenshot.
 
 Evidence (screenshots before and after each path, and the copied results text): [step-1-results/samsung-a54/](step-1-results/samsung-a54/). The first option (c) run is in `option-c/first-run/`; the second run's files are directly in `option-c/`.
+
+## Valley probe (trial item 7)
+
+Run on 2026-11-21 (UTC 2026-11-20–21) to test whether `WhiteboxTools` fits within the 8,192 MiB container memory cap over the full trial data extent (`33..61° E, 11..33° N`) using unedited Copernicus GLO-90 (`copernicus-dem-90m`), before deciding whether to specify a valley layer ([docs/design/map-trial-build.md](../design/map-trial-build.md#valleys)).
+
+- **Workstation:** AMD Ryzen 5 5600H (12 threads), 13 GiB host RAM.
+- **Image:** `ghcr.io/mohdfarag/seerah-map:5498b0a66ee99ccb@sha256:91de3a5133dfce734608223a425cbef9ec9389cbbf8e819dcfe64a2237a69230` (`GDAL` 3.13.3, `WhiteboxTools` v2.4.0).
+- **Source mosaic:** 529 present GLO-90 cells of 616 whole-degree slots over `33..61° E, 11..33° N` (`tileList.txt` SHA-256 `e5a5efe088e70506bc1007d22006bdcb09b0ec03177b62f9652363c13f49ed97`, `2,195,932,817` bytes), combined into `/work/valley-probe/glo90/glo90.vrt`.
+- **Warp (`gdalwarp -overwrite -t_srs EPSG:3857 -tr <res> <res> -r bilinear` under `--network none --memory 8192m --memory-swap 8192m`):**
+  - `180 m`: `17,316 × 14,796` px (`Float32`, `1,024,948,875` bytes) in `45.13 s`.
+  - `90 m`: `34,633 × 29,591` px (`Float32`, `4,099,537,503` bytes) in `105.15 s`.
+  - Container peak across the sequential warps: `5,128,536,064` bytes (`4,891 MiB`), `oom_kill 0`, `exit 0`.
+
+Each `whitebox_tools` run executed in its own fresh container under `--network none --memory 8192m --memory-swap 8192m`: `BreachDepressionsLeastCost --dist=100` followed on exit `0` by `D8FlowAccumulation`:
+
+| Resolution | Input size (px / bytes) | Breach wall time | D8 wall time | Container peak (`memory.peak`) | `oom_kill` (`memory.events`) | Exit / OOMKilled | Outputs written | Fits 8,192 MiB cap |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `180 m` | `17,316 × 14,796` (`1,024,948,875` B) | `13.36 s` (`rc=-9`) | Not reached | `8,589,934,592` B (`8,192 MiB`) | `1` | `247` / `true` | None (`breached_180m.tif` and `accum_180m.tif` not created) | **No** (OOM-killed) |
+| `90 m` | `34,633 × 29,591` (`4,099,537,503` B) | `9.87 s` (`rc=-9`) | Not reached | `8,589,934,592` B (`8,192 MiB`) | `1` | `247` / `true` | None (`breached_90m.tif` and `accum_90m.tif` not created) | **No** (OOM-killed) |
+
+**Result:** Neither `180 m` nor `90 m` fits within the `8,192 MiB` memory limit with whole-extent `WhiteboxTools` `BreachDepressionsLeastCost` (`oom_kill 1` at `8,589,934,592` bytes during depression breaching before reaching `D8FlowAccumulation`). Per the trial specification, no valley layer is specified in v1 under this approach and Step 5 is not triggered unless a different method is proposed later. `/work/valley-probe` was removed from `seerah-map-work` after the runs.
