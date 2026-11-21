@@ -11,7 +11,7 @@ import numpy as np
 from scipy import ndimage
 
 from seerah_map.config import StyleSettings
-from seerah_map.grid import BAND_BLUR_RADIUS_PX
+from seerah_map.grid import band_blur_radius_px
 
 _BLUR_TRUNCATE = 3.0
 
@@ -53,10 +53,9 @@ def darkness(
     d = np.clip((np.sin(alt) - shade) / np.sin(alt) * s.contrast, 0, 1)
     if banded:
         d = np.round(d * s.bands) / s.bands
-        if s.band_blur_px > 0:
-            d = ndimage.gaussian_filter(
-                d, sigma=s.band_blur_px, radius=BAND_BLUR_RADIUS_PX, mode="nearest"
-            )
+        radius = band_blur_radius_px(s.band_blur_px)
+        if s.band_blur_px > 0 and radius > 0:
+            d = ndimage.gaussian_filter(d, sigma=s.band_blur_px, radius=radius, mode="nearest")
     d[~land] = 0
     return d.astype(np.float32)
 

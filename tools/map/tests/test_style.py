@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from seerah_map.config import StyleSettings
-from seerah_map.grid import pixel_m
+from seerah_map.grid import band_blur_radius_px, pixel_m, scale_style
 from seerah_map.style import darkness, edge_fade
 
 _SIZE = 64
@@ -76,3 +76,15 @@ def test_edge_fade():
     d = np.ones(5, dtype=np.float32)
     dist = np.array([0, _FADE_DEG / 4, _FADE_DEG / 2, _FADE_DEG, 2 * _FADE_DEG])
     np.testing.assert_allclose(edge_fade(d, dist, _FADE_DEG), [0, 0.25, 0.5, 1, 1])
+
+
+def test_banded_skips_blur_when_radius_zero():
+    rng = np.random.default_rng(2)
+    z = (rng.random((_SIZE, _SIZE)) * 2000).astype(np.float32)
+    s = scale_style(StyleSettings(bands=3), 9)
+    assert band_blur_radius_px(s.band_blur_px) == 0
+    d = darkness(z, _land(), _lat(0), pixel_m(9), s, banded=True)
+    assert d.dtype == np.float32
+    assert ((d >= 0) & (d <= 1)).all()
+    levels = np.array([0, 1 / 3, 2 / 3, 1], dtype=np.float32)
+    assert np.isin(d, levels).all()

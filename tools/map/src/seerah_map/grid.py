@@ -1,12 +1,12 @@
 """The global pixel grid and the block layout every build stage shares.
 
-All pixel windows are in zoom-12 Web Mercator pixels (``BASE_ZOOM``, 256-pixel
-tiles) and use integer arithmetic, so blocks and tiles line up exactly.
-Lengths are metres unless a name says otherwise; angles are degrees.
+Pixel windows are on Web Mercator integer pixel coordinates at a build zoom
+(default ``BASE_ZOOM``, 256-pixel tiles), so blocks and tiles line up
+exactly. Lengths are metres unless a name says otherwise; angles are degrees.
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import morecantile
 import numpy as np
@@ -31,49 +31,98 @@ _M_PER_KM = 1000.0
 _TMS = morecantile.tms.get("WebMercatorQuad")
 
 
-def pixel_m() -> float:
-    """Ground size of one zoom-12 pixel at the equator (metres)."""
-    return _EQUATOR_M / TILE_PX / 2**BASE_ZOOM
+def pixel_m(zoom: int = BASE_ZOOM) -> float:
+    """Ground size of one pixel at ``zoom`` at the equator (metres)."""
+    return _EQUATOR_M / TILE_PX / 2**zoom
+
+
+def band_blur_radius_px(band_blur_px: float) -> int:
+    """Kernel radius in pixels for a band blur of ``band_blur_px`` sigma."""
+    return int(band_blur_px * _BLUR_SIGMAS)
+
+
+def scale_style(style: StyleSettings, zoom: int) -> StyleSettings:
+    """Return ``style`` with pixel-unit blurs scaled from ``BASE_ZOOM`` to ``zoom``."""
+    scale = 2 ** (zoom - BASE_ZOOM)
+    return replace(
+        style,
+        blur_px=style.blur_px * scale,
+        band_blur_px=style.band_blur_px * scale,
+    )
 
 
 @dataclass(frozen=True)
 class Window:
-    """A rectangle of zoom-12 global pixels: top-left ``col0``/``row0``, size ``cols``/``rows``."""
+    """A rectangle of global pixels at ``zoom``.
+
+    Top-left is ``col0``/``row0`` and size is ``cols``/``rows``.
+    """
 
     col0: int
     row0: int
     cols: int
     rows: int
+    zoom: int = BASE_ZOOM
+
+    def pixel_m(self) -> float:
+        """Ground size of one pixel of this window at the equator (metres)."""
+        return pixel_m(self.zoom)
 
     def bounds_3857(self) -> tuple[float, float, float, float]:
         """The window as (west, south, east, north) in EPSG:3857 metres."""
         west, north = self._origin_3857()
+        px_m = self.pixel_m()
         return (
             west,
-            north - self.rows * pixel_m(),
-            west + self.cols * pixel_m(),
+            north - self.rows * px_m,
+            west + self.cols * px_m,
             north,
         )
 
     def geotransform(self) -> tuple[float, float, float, float, float, float]:
-        """The GDAL geotransform: north-up, square pixels of ``pixel_m()`` metres."""
+        """The GDAL geotransform: north-up, square pixels of ``self.pixel_m()`` metres."""
         west, north = self._origin_3857()
-        return (west, pixel_m(), 0.0, north, 0.0, -pixel_m())
+        px_m = self.pixel_m()
+        return (west, px_m, 0.0, north, 0.0, -px_m)
 
     def pad(self, n: int) -> "Window":
         """The window grown by ``n`` pixels on every side."""
-        return Window(self.col0 - n, self.row0 - n, self.cols + 2 * n, self.rows + 2 * n)
+        return Window(self.col0 - n, self.row0 - n, self.cols + 2 * n, self.rows + 2 * n, self.zoom)
+
+    def pad_clamped(self, n: int) -> tuple["Window", tuple[int, int, int, int]]:
+        """The window grown by up to ``n`` pixels per side, clamped to the grid at ``zoom``.
+
+        Returns:
+            ``(padded_window, (left, top, right, bottom))`` where the second
+            element gives the actual pixel padding added on each side.
+        """
+        if n < 0:
+            raise ValueError(f"pad width {n} must be non-negative")
+        max_px = TILE_PX * 2**self.zoom
+        left_col = max(0, self.col0 - n)
+        top_row = max(0, self.row0 - n)
+        right_col = min(max_px, self.col0 + self.cols + n)
+        bottom_row = min(max_px, self.row0 + self.rows + n)
+        padded = Window(left_col, top_row, right_col - left_col, bottom_row - top_row, self.zoom)
+        pads = (
+            self.col0 - left_col,
+            self.row0 - top_row,
+            right_col - (self.col0 + self.cols),
+            bottom_row - (self.row0 + self.rows),
+        )
+        return padded, pads
 
     def _origin_3857(self) -> tuple[float, float]:
+        px_m = self.pixel_m()
         return (
-            -_ORIGIN_M + self.col0 * pixel_m(),
-            _ORIGIN_M - self.row0 * pixel_m(),
+            -_ORIGIN_M + self.col0 * px_m,
+            _ORIGIN_M - self.row0 * px_m,
         )
 
 
 @dataclass(frozen=True)
 class Block:
-    """One XYZ tile at the block zoom, with its zoom-12 pixel window."""
+    """One XYZ tile at the block zoom, with its pixel window."""
 
     z: int
     x: int
@@ -86,12 +135,17 @@ class Block:
         return f"z{self.z}-x{self.x}-y{self.y}"
 
 
-def blocks(extent: Bounds, block_zoom: int) -> list[Block]:
-    """Every tile at ``block_zoom`` that intersects ``extent`` (degrees), sorted by (y, x)."""
-    side_px = TILE_PX * 2 ** (BASE_ZOOM - block_zoom)
+def blocks(extent: Bounds, block_zoom: int, zoom: int = BASE_ZOOM) -> list[Block]:
+    """Every tile at ``block_zoom`` that intersects ``extent`` (degrees), sorted by (y, x).
+
+    Each block's window uses pixels at ``zoom`` (which must be at least ``block_zoom``).
+    """
+    if block_zoom > zoom:
+        raise ValueError(f"block_zoom {block_zoom} cannot exceed zoom {zoom}")
+    side_px = TILE_PX * 2 ** (zoom - block_zoom)
     tiles = _TMS.tiles(extent.west, extent.south, extent.east, extent.north, [block_zoom])
     return [
-        Block(t.z, t.x, t.y, Window(t.x * side_px, t.y * side_px, side_px, side_px))
+        Block(t.z, t.x, t.y, Window(t.x * side_px, t.y * side_px, side_px, side_px, zoom))
         for t in sorted(tiles, key=lambda t: (t.y, t.x))
     ]
 
@@ -105,18 +159,23 @@ def _poleward_latitude(block: Block) -> float:
 def border_px(style: StyleSettings, edits: list[Edit], block: Block) -> int:
     """Pixels of context to read around ``block`` so no filter or edit is cut at its edge.
 
-    Covers the relief blur, the band blur, the land-mask blur and one spare pixel,
-    plus the widest edit reach (``feather_m`` plus half of a carve's ``width_m``),
-    converted to pixels at the block's poleward edge, where pixels are shortest.
+    Covers the relief blur, the band blur, the land-mask blur and one spare pixel
+    (scaled to ``block.window.zoom``), plus the widest edit reach (``feather_m``
+    plus half of a carve's ``width_m``), converted to pixels at the block's
+    poleward edge, where pixels are shortest.
     """
+    zoom = block.window.zoom
+    scaled = scale_style(style, zoom)
+    scale = 2 ** (zoom - BASE_ZOOM)
+    mask_sigma = MASK_SIGMA_PX * scale
     filters_px = (
-        math.ceil(_BLUR_SIGMAS * style.blur_px)
-        + BAND_BLUR_RADIUS_PX
-        + math.ceil(_BLUR_SIGMAS * MASK_SIGMA_PX)
+        math.ceil(_BLUR_SIGMAS * scaled.blur_px)
+        + band_blur_radius_px(scaled.band_blur_px)
+        + math.ceil(_BLUR_SIGMAS * mask_sigma)
         + 1
     )
     reach_m = max((edit_reach_m(e) for e in edits), default=0.0)
-    ground_per_px = pixel_m() * math.cos(math.radians(_poleward_latitude(block)))
+    ground_per_px = block.window.pixel_m() * math.cos(math.radians(_poleward_latitude(block)))
     return filters_px + math.ceil(reach_m / ground_per_px)
 
 
@@ -132,7 +191,7 @@ def edit_reach_m(edit: Edit) -> float:
 def row_latitudes(window: Window) -> np.ndarray:
     """Latitude of each pixel-row centre of ``window`` (degrees), north to south."""
     centres = window.row0 + 0.5 + np.arange(window.rows)
-    northing_m = _ORIGIN_M - centres * pixel_m()
+    northing_m = _ORIGIN_M - centres * window.pixel_m()
     return np.degrees(2 * np.arctan(np.exp(northing_m / _EARTH_RADIUS_M)) - math.pi / 2)
 
 

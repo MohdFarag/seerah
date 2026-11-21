@@ -27,11 +27,18 @@ def test_fingerprint_changes_with_each_input(tmp_path):
         "tool_commit": "def456",
         "image_digest": "sha256:beef",
         "variant": "lite",
+        "mode": "per-zoom",
     }
     seen = {base}
     for name, value in changes.items():
         seen.add(_fp(tmp_path, **{name: value}))
     assert len(seen) == len(changes) + 1
+
+
+def test_fingerprint_defaults_to_pyramid_and_tracks_mode(tmp_path):
+    default = _fp(tmp_path)
+    assert default == _fp(tmp_path, mode="pyramid")
+    assert default != _fp(tmp_path, mode="per-zoom")
 
 
 def test_fingerprint_without_provenance_tracks_code(tmp_path):
