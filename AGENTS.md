@@ -103,8 +103,7 @@ EGM artifact directory: docs/design
 - **Write replies in simple, clear English** so the owner can understand easily (owner, 2026-11-22):
   - Use short sentences, everyday words, and clear bullet points or numbered steps.
   - Avoid rare idioms, heavy jargon, and long walls of text.
-  - When a hard or technical word is needed, add its short Arabic meaning in parentheses on first use, for example: schema (مخطط البيانات) or cache (ذاكرة مؤقتة).
-  - Keep code, commands, file paths, and identifiers in English.
+  - If a hard or technical word is needed, explain it briefly in plain English (do not add Arabic translations in replies).
 - Ask before product decisions, content choices, anything outward-facing (publishing, posting, emailing) and anything hard to undo. Technical choices inside an accepted ADR don't need asking; make them, then report.
 - Report results honestly: what was verified, what was not, what failed.
 - Keep the owner's personal details out of commits, code and outside services.
