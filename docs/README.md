@@ -42,6 +42,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | [map-trial/step-1.md](map-trial/step-1.md) | Step 1 foundation check results (workstation checks, Galaxy A54 phase-2 run and GLO-90 valley probe; Oppo A55 and MatePad 11.5 pending). |
 | [map-trial/step-2.md](map-trial/step-2.md) | Step 2 small-window builds (`window-najd`, `window-spike`, `window-yemen`), Galaxy A54 runs and owner decisions. |
 | [map-trial/step-3.md](map-trial/step-3.md) | Step 3 10%-band builds (`band-10pct`) and full-extent time, disk and `2 GiB` size extrapolations. |
+| [map-trial/step-4.md](map-trial/step-4.md) | Step 4 full-extent builds (`full`), Galaxy A54 runs, modern-feature audit and Step 4 decisions. |
 
 ## Research and spike
 
