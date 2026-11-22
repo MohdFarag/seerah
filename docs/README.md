@@ -39,7 +39,9 @@ Where every document lives and what it is for. If you add a document, list it he
 | Document | Purpose |
 | --- | --- |
 | [map-trial/README.md](map-trial/README.md) | Status tracker for ADR 0009 decision 13's eleven trial items, device deferrals and step reports. |
-| [map-trial/step-1.md](map-trial/step-1.md) | Step 1 foundation check results (workstation checks and Galaxy A54 phase-2 run; Oppo A55, MatePad 11.5 and valley probe pending). |
+| [map-trial/step-1.md](map-trial/step-1.md) | Step 1 foundation check results (workstation checks, Galaxy A54 phase-2 run and GLO-90 valley probe; Oppo A55 and MatePad 11.5 pending). |
+| [map-trial/step-2.md](map-trial/step-2.md) | Step 2 small-window builds (`window-najd`, `window-spike`, `window-yemen`), Galaxy A54 runs and owner decisions. |
+| [map-trial/step-3.md](map-trial/step-3.md) | Step 3 10%-band builds (`band-10pct`) and full-extent time, disk and `2 GiB` size extrapolations. |
 
 ## Research and spike
 
