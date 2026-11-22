@@ -1,6 +1,6 @@
 # 0009. Map data pipeline for v1
 
-**Status:** Accepted by the owner on 2026-11-14. Amended by the owner on 2026-11-14: Natural Earth fills the view beyond the tiled extent, because the camera bounds limit only the view's centre, and the coverage check is split between the data extent and the base layer (decisions 3, 6 and 7; [trial specification](../design/map-trial-build.md)). Proposed on 2026-11-13, then revised after two EGM design reviews ([first](../design/egm-review-0009/intermediate_zoom_out_report.md), [second](../design/egm-review-0009-r2/consolidated_review_report.md)) and the owner's decisions of 2026-11-13 and 2026-11-14 (marked "owner" below, and recorded in [pull request 14](https://github.com/MohdFarag/seerah/pull/14)).
+**Status:** Accepted by the owner on 2026-11-14. Amended by the owner on 2026-11-14: Natural Earth fills the view beyond the tiled extent, because the camera bounds limit only the view's centre, and the coverage check is split between the data extent and the base layer (decisions 3, 6 and 7; [trial specification](../design/map-trial-build.md)). Proposed on 2026-11-13, then revised after two EGM design reviews ([first](../design/egm-review-0009/intermediate_zoom_out_report.md), [second](../design/egm-review-0009-r2/consolidated_review_report.md)) and the owner's decisions of 2026-11-13 and 2026-11-14 (marked "owner" below, and recorded in [pull request 14](https://github.com/al-seerah/seerah/pull/14)).
 
 ## Context
 
