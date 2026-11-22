@@ -1,6 +1,6 @@
 # 0008. Update hosting and the update index
 
-**Status:** Accepted by the owner on 2026-11-13, after two revisions that day: with the owner's answers on hosting and the update check, and after an [EGM design review](../design/egm-review-0008/consolidated_review_report.md) whose recommendations the owner approved. The owner's decisions marked "(owner, 2026-11-13)" below are recorded in [pull request #12](https://github.com/MohdFarag/seerah/pull/12).
+**Status:** Accepted by the owner on 2026-11-13, after two revisions that day: with the owner's answers on hosting and the update check, and after an [EGM design review](../design/egm-review-0008/consolidated_review_report.md) whose recommendations the owner approved. The owner's decisions marked "(owner, 2026-11-13)" below are recorded in [pull request #12](https://github.com/al-seerah/seerah/pull/12).
 
 ## Context
 
