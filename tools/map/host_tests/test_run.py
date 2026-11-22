@@ -92,7 +92,7 @@ class ImageTest(unittest.TestCase):
         with mock.patch("builtins.print") as printed:
             self.assertEqual(run.main(["--print-tag"]), 0)
         text = printed.call_args.args[0]
-        self.assertRegex(text, r"^ghcr\.io/mohdfarag/seerah-map:[0-9a-f]{16}$")
+        self.assertRegex(text, r"^ghcr\.io/al-seerah/seerah-map:[0-9a-f]{16}$")
 
     def test_local_image_digest(self):
         inspected = [{"Id": "sha256:" + "d" * 64, "RepoDigests": []}]

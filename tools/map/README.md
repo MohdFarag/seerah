@@ -136,7 +136,7 @@ The [`map` workflow](../../.github/workflows/map.yml) runs on changes to `tools/
 - **`image`:** checks that `IMAGE_REPO` in `run.py` names the repository owner's namespace, computes the tag with `run.py --print-tag`, and builds the image if the tag is not in the registry. It pushes it to GHCR only from `main`.
 - **`test`:** pulls the image (or builds it, on a pull request that changes it), restores the example's downloads from a cache keyed on `example.lock`, runs every test in the image with `--memory 6g`, then runs the launcher's tests on the host.
 
-The image name, `ghcr.io/mohdfarag/seerah-map`, is the one constant `IMAGE_REPO` in `run.py`.
+The image name, `ghcr.io/al-seerah/seerah-map`, is the one constant `IMAGE_REPO` in `run.py`.
 
 The image package is public (made so by the owner on 2026-11-16), so pulling it needs no login. Both jobs still log in to GHCR: `image` to push, and `test` so CI keeps working if the package is ever made private again.
 
