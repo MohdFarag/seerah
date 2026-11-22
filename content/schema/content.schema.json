@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/MohdFarag/seerah/content/schema/content.schema.json",
+  "$id": "https://github.com/al-seerah/seerah/content/schema/content.schema.json",
   "title": "Seerah content",
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
