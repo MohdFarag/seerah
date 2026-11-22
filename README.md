@@ -4,8 +4,8 @@
 
 **Explore the Prophet's ﷺ biography through place, time and the original texts.**
 
-[![CI](https://github.com/MohdFarag/seerah/actions/workflows/ci.yml/badge.svg)](https://github.com/MohdFarag/seerah/actions/workflows/ci.yml)
-[![Android](https://github.com/MohdFarag/seerah/actions/workflows/android.yml/badge.svg)](https://github.com/MohdFarag/seerah/actions/workflows/android.yml)
+[![CI](https://github.com/al-seerah/seerah/actions/workflows/ci.yml/badge.svg)](https://github.com/al-seerah/seerah/actions/workflows/ci.yml)
+[![Android](https://github.com/al-seerah/seerah/actions/workflows/android.yml/badge.svg)](https://github.com/al-seerah/seerah/actions/workflows/android.yml)
 ![Status](https://img.shields.io/badge/status-in%20development-blue)
 ![Platform](https://img.shields.io/badge/platform-Android-3DDC84)
 ![Language](https://img.shields.io/badge/language-العربية-blue)
@@ -46,7 +46,7 @@ The first release covers one continuous period, **from the journey to Taif to th
 **Requirements:** Git, Python 3.11+. For the app: JDK 21 and the Android SDK with platform 37 (Android Studio includes both); see [android/README.md](android/README.md).
 
 ```sh
-git clone https://github.com/MohdFarag/seerah.git
+git clone https://github.com/al-seerah/seerah.git
 cd seerah
 
 python3 -m venv .venv
