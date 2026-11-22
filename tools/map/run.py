@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-IMAGE_REPO = "ghcr.io/mohdfarag/seerah-map"
+IMAGE_REPO = "ghcr.io/al-seerah/seerah-map"
 PUBLIC_ROOT = Path(__file__).resolve().parents[2]
 TOOL_DIR = Path(__file__).resolve().parent
 TAG_HEX_CHARS = 16
