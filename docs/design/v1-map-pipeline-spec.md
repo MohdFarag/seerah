@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # v1 map pipeline: coastal cleanup, map.json and signed packaging
 
 - **Author:** MohdFaragDev
-- **Status:** Revised after [Elephant-Goldfish Model (EGM) review](egm-review-v1-map-pipeline/consolidated_review_report.md); pending owner approval of decisions D1–D7
+- **Status:** Approved by the owner on 2026-11-23 (all recommended choices for D1–D7). Revised after [Elephant-Goldfish Model (EGM) review](egm-review-v1-map-pipeline/consolidated_review_report.md).
 - **Date:** 2026-11-23
 
 ## Overview
@@ -20,9 +20,13 @@ It specifies four connected deliverables across the existing map build tool (`to
 3. **Shared host-side manifest, deterministic packaging, and offline Ed25519 signing** (`tools/packages/`), shared with future content packaging (ADR 0009 decision 8), enforcing [map-trial-build.md Goal 9](map-trial-build.md#goals) (refusing trial outputs) and isolated single-key verify-before-parse signature checks compatible with Google Tink `NO_PREFIX` on Android.
 4. **Private coastal cleanup drafts (`seerah-content/map/cleanup.yaml`)** for the Priority 1 Hijaz and Priority 2 Gulf modern coastal artifacts identified during the Step 4 visual audit.
 
-## Owner Decisions Needed Before Coding
+**Changes to accepted ADRs made with this specification:**
 
-These seven design choices (`D1–D7`) sit within [ADR 0007](../adr/0007-content-formats-compatibility-and-signing.md) and [ADR 0009](../adr/0009-map-data-pipeline.md) and require owner confirmation before implementation starts.
+- **ADR 0009, decision 3 (and decision 6 table):** Coastal cleanup edits include both `remove-land` (removing reclaimed land, artificial islands, and piers) and `fill-water` (infilling modern excavated ocean port basins `wbm == 1` to flat `0.0 m` sea-level plain with zero added relief shape) — D1 Option B (owner, 2026-11-23).
+
+## Owner Decisions (Approved 2026-11-23)
+
+All recommended options for these seven design choices (`D1–D7`), sitting within [ADR 0007](../adr/0007-content-formats-compatibility-and-signing.md) and [ADR 0009](../adr/0009-map-data-pipeline.md), were approved by the owner on 2026-11-23 before implementation.
 
 | ID | Topic | Recommended option | Alternative |
 | --- | --- | --- | --- |
@@ -31,7 +35,7 @@ These seven design choices (`D1–D7`) sit within [ADR 0007](../adr/0007-content
 | **D3** | Production build config, staging & `report.json` | **Dedicated `coverage.schema.json` + CLI `--coverage` flag:** clean break from `purpose: trial` profiles; stages `/out/map-staging-<fp8>/data/{base.pmtiles,relief.pmtiles,map.json}` + extended `report.json` (`purpose: production`); omits `metadata.json` and `trial` keys completely | Reuse `profile.schema.json`, risking trial/production ambiguity and colliding with [Goal 9](map-trial-build.md#goals) separation |
 | **D4** | Package building & Ed25519 signing | **Shared host Python package `tools/packages/` (3 modules: `signing.py`, `archive.py`, `cli.py`):** keeps private Ed25519 keys outside Docker, shares manifest/signing/zipping with content packages, reuses `pmtiles==3.8.1`, puts `manifest.json` + `manifest.sig` first in ZIP | Put signing inside `tools/map` Docker image (forces key mounts into containers and ties content signing to a GIS image) |
 | **D5** | Cleanup evidence `sources[].kind` enum | **Cleanup-specific `["imagery", "dated-data"]`:** matches ADR 0009 decision 2's Cleanup evidence rule (*"Modern imagery or dated data"*), keeping `"atlas"` reserved for future historical reconstruction | Allow `"atlas"` alongside `["imagery", "dated-data"]` if a historical atlas is cited as negative evidence for removing a modern coastal change |
-| **D6** | Data margin & screen-width defaults in `coverage.yaml` | **No schema defaults (`1.0°` / `550.0 dp`):** keep `widest_half_screen_dp > 0` required (no default until MatePad 11.5 is measured); enforce a positive production `min_data_margin_deg` (either fixed constant in `tools/map` or required positive config field) and allow `0` margin *only* via CLI `--allow-zero-margin` for CI examples | Keep `1.0` and `550.0` as schema defaults (conflicts with [open-decisions.md](../open-decisions.md) and lets a config file weaken ADR 0009 decision 7) |
+| **D6** | Data margin & screen-width defaults in `coverage.yaml` | **No schema defaults (`1.0°` / `550.0 dp`):** keep `widest_half_screen_dp > 0` required (no default until MatePad 11.5 is measured); require `min_data_margin_deg` as a positive required field (`> 0`) in production `coverage.yaml` (avoiding hard-coding `1.0°` in code per [open-decisions.md](../open-decisions.md)), allowing `0` *only* via CLI `--allow-zero-margin` for CI fixtures | Keep `1.0` and `550.0` as schema defaults (conflicts with [open-decisions.md](../open-decisions.md) and lets a config file weaken ADR 0009 decision 7) |
 | **D7** | `coverage.schema.json` `schema: 1` & `map.schema.json` bounds scope | **Defer Option (b) / `valley` from `coverage.schema.json` `schema: 1` and remove Northern/Eastern quadrant lock from `map.schema.json`:** scope `schema: 1` to single-archive `relief.pmtiles` (relying on ADR 0009 decision 10 additive evolution if revisited); document optional `valley` & `relief-detail.pmtiles` in `tile_schema: 1`; keep `0..180`/`0..~85.0511` check in `tools/map` only | Wait to finalize `coverage.schema.json` until Oppo A55 & MatePad 11.5 close the trial, or include optional Option (b) / `valley` fields in `schema: 1` now |
 
 ---
