@@ -33,6 +33,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | [design/map-trial-phase-2-plan.md](design/map-trial-phase-2-plan.md) | Phase 2 plan: `:core:map`, `benchmark` build type and `app.seerah.trial` ([consolidated EGM review](design/egm-review-map-trial-phase-2/consolidated_review_report.md)). |
 | [design/map-trial-phase-3-plan.md](design/map-trial-phase-3-plan.md) | Phase 3 plan: vector base layer (`base.pmtiles`), `tippecanoe` and `WhiteboxTools`, `:core:map` base-layer wiring, private trial inputs and documentation ([consolidated EGM review](design/egm-review-map-trial-phase-3/consolidated_review_report.md)). |
 | [design/map-profile-validation-plan.md](design/map-profile-validation-plan.md) | Coordinate bounds, outline paths and strict YAML regression test plan ([consolidated EGM review](design/egm-review-map-profile-validation/consolidated_review_report.md)). |
+| [design/v1-map-pipeline-spec.md](design/v1-map-pipeline-spec.md) | Production v1 map pipeline: coastal cleanup edits, `coverage.yaml`, `map.json` (`tile_schema: 1`) and shared host-side Ed25519 signing/packaging ([consolidated EGM review](design/egm-review-v1-map-pipeline/consolidated_review_report.md)). |
 
 ## Map trial
 
