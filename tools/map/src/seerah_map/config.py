@@ -1,8 +1,9 @@
-"""Profiles, terrain edits and the download lock: loaders and dataclasses.
+"""Profiles, terrain edits, coastal cleanup edits and the download lock: loaders and dataclasses.
 
 A profile says what area to build and how to style it; an edits file lists
-hand edits to the terrain; a lock pins every downloaded file by SHA-256.
-All angles are degrees, all lengths in edits are metres.
+hand edits to the terrain; a cleanup file lists production coastal cleanup
+edits to the Water Body Mask and elevation; a lock pins every downloaded file
+by SHA-256. All angles are degrees, all lengths in edits are metres.
 """
 
 import contextlib
@@ -97,6 +98,29 @@ class Edit:
     width_m: float | None
     feather_m: float
     review: str
+
+
+@dataclass(frozen=True)
+class CleanupSource:
+    """Citation supporting a production coastal cleanup edit (imagery or dated data)."""
+
+    kind: str
+    work: str
+    locator: str
+    edition: str | None = None
+    url: str | None = None
+
+
+@dataclass(frozen=True)
+class CleanupEdit:
+    """One production coastal cleanup edit applied to the WBM and coincident elevation."""
+
+    id: str
+    geometry: dict
+    operation: str
+    reason: str
+    review: str
+    sources: tuple[CleanupSource, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -343,6 +367,92 @@ def load_edits(path: Path) -> list[Edit]:
             )
         )
     return edits
+
+
+def _check_cleanup_geometry(geometry: dict, path: Path, key: str) -> None:
+    """Check WebMercatorQuad bounds and explicit ring closure for Polygon/MultiPolygon."""
+    polygons = (
+        [geometry["coordinates"]] if geometry["type"] == "Polygon" else geometry["coordinates"]
+    )
+    min_lon, max_lon = _TILE_GRID.bbox.left, _TILE_GRID.bbox.right
+    min_lat, max_lat = _TILE_GRID.bbox.bottom, _TILE_GRID.bbox.top
+    for poly_idx, polygon in enumerate(polygons):
+        poly_key = key if geometry["type"] == "Polygon" else f"{key}[{poly_idx}]"
+        for ring_idx, ring in enumerate(polygon):
+            for pt_idx, (lon, lat) in enumerate(ring):
+                if not min_lon <= lon <= max_lon:
+                    raise _fail(
+                        path,
+                        f"{poly_key}[{ring_idx}][{pt_idx}][0]",
+                        f"longitude in {min_lon}..{max_lon}",
+                        lon,
+                    )
+                if not min_lat <= lat <= max_lat:
+                    raise _fail(
+                        path,
+                        f"{poly_key}[{ring_idx}][{pt_idx}][1]",
+                        f"latitude in {min_lat}..{max_lat}",
+                        lat,
+                    )
+            if ring[0] != ring[-1]:
+                raise _fail(
+                    path,
+                    f"{poly_key}[{ring_idx}]",
+                    "a closed ring whose first and last points match",
+                    (ring[0], ring[-1]),
+                )
+
+
+def load_cleanup(path: Path) -> list[CleanupEdit]:
+    """Load and validate a production cleanup edits file; approved and others are all returned.
+
+    Performs JSON Schema validation, finite-number checks, unique ID checks,
+    WebMercatorQuad coordinate range checks, and explicit polygon ring closure
+    without importing GDAL/OGR (geometric validity and overlap checks live in
+    ``seerah_map.edits.validate_cleanups``).
+
+    Args:
+        path: The cleanup YAML file.
+
+    Returns:
+        Every cleanup edit declared in the file, in file order.
+
+    Raises:
+        ConfigError: The file breaks the schema, repeats an ID, contains
+            non-finite numbers, leaves a ring unclosed, or exits WebMercatorQuad.
+    """
+    path = Path(path)
+    data = strict_yaml.load(path)
+    _validate(data, "cleanup.schema.json", path)
+    _check_finite(data, path)
+    seen: set[str] = set()
+    cleanups = []
+    for i, raw in enumerate(data["edits"]):
+        if raw["id"] in seen:
+            raise _fail(path, "edits.id", "unique ids", raw["id"])
+        seen.add(raw["id"])
+        _check_cleanup_geometry(raw["geometry"], path, f"edits[{i}].geometry")
+        sources = tuple(
+            CleanupSource(
+                kind=src["kind"],
+                work=src["work"],
+                locator=src["locator"],
+                edition=src.get("edition"),
+                url=src.get("url"),
+            )
+            for src in raw.get("sources", [])
+        )
+        cleanups.append(
+            CleanupEdit(
+                id=raw["id"],
+                geometry=raw["geometry"],
+                operation=raw["operation"],
+                reason=raw["reason"],
+                review=raw["review"],
+                sources=sources,
+            )
+        )
+    return cleanups
 
 
 def _file_ref(raw: object, path: Path, key: str) -> FileRef:

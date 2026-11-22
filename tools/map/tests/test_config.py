@@ -1,5 +1,6 @@
 """Tests for strict YAML loading and the profile, edits and lock loaders."""
 
+import ast
 import copy
 import datetime
 import math
@@ -407,3 +408,203 @@ def test_lock_rejects_bad_types(tmp_path, cells, key):
     )
     with pytest.raises(ConfigError, match=key.replace("[", r"\[").replace("]", r"\]")):
         config.load_lock(path)
+
+
+def _cleanup_doc(**overrides):
+    data = strict_yaml.load(FIXTURES / "cleanup_ok.yaml")
+    data.update(overrides)
+    return data
+
+
+def _write_cleanup(tmp_path, data, name="cleanup.yaml"):
+    path = tmp_path / name
+    strict_yaml.dump(data, path)
+    return path
+
+
+def _cleanup_with_edit(tmp_path, index=0, **edit_changes):
+    data = _cleanup_doc()
+    edit = copy.deepcopy(data["edits"][index])
+    for k, v in edit_changes.items():
+        if v is None:
+            edit.pop(k, None)
+        else:
+            edit[k] = v
+    data["edits"] = [edit]
+    return _write_cleanup(tmp_path, data)
+
+
+def test_cleanup_loads_valid_fixture_and_empty_edits(tmp_path):
+    cleanups = config.load_cleanup(FIXTURES / "cleanup_ok.yaml")
+    assert [e.id for e in cleanups] == [
+        "remove-synthetic-pier",
+        "fill-synthetic-basin",
+        "draft-synthetic-spit",
+    ]
+    assert cleanups[0].operation == "remove-land"
+    assert cleanups[0].geometry["type"] == "Polygon"
+    assert cleanups[0].sources[0].kind == "imagery"
+    assert cleanups[1].operation == "fill-water"
+    assert cleanups[1].geometry["type"] == "MultiPolygon"
+    assert cleanups[1].sources[0].edition == "2020"
+    assert cleanups[2].review == "draft"
+    assert cleanups[2].sources == ()
+
+    empty = _write_cleanup(tmp_path, {"schema": 1, "purpose": "production", "edits": []})
+    assert config.load_cleanup(empty) == []
+
+
+@pytest.mark.parametrize("review", ["draft", "in-review", "title-approved"])
+@pytest.mark.parametrize("sources", [None, []])
+def test_cleanup_allows_unapproved_without_sources(tmp_path, review, sources):
+    path = _cleanup_with_edit(tmp_path, review=review, sources=sources)
+    loaded = config.load_cleanup(path)
+    assert loaded[0].review == review
+    assert loaded[0].sources == ()
+
+
+def test_cleanup_accepts_grid_edges(tmp_path):
+    ring = [
+        [-180, -GRID_TOP],
+        [180, -GRID_TOP],
+        [180, GRID_TOP],
+        [-180, GRID_TOP],
+        [-180, -GRID_TOP],
+    ]
+    path = _cleanup_with_edit(tmp_path, geometry={"type": "Polygon", "coordinates": [ring]})
+    assert len(config.load_cleanup(path)) == 1
+
+
+@pytest.mark.parametrize("schema", ["1", 2, True])
+def test_cleanup_rejects_bad_schema(tmp_path, schema):
+    path = _write_cleanup(tmp_path, _cleanup_doc(schema=schema))
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+@pytest.mark.parametrize("purpose", ["trial", "staging"])
+def test_cleanup_rejects_non_production_purpose(tmp_path, purpose):
+    path = _write_cleanup(tmp_path, _cleanup_doc(purpose=purpose))
+    with pytest.raises(ConfigError, match="purpose"):
+        config.load_cleanup(path)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"class": "reconstruction"},
+        {"class": None},
+        {"operation": "raise"},
+        {"operation": "lower"},
+        {"id": "Upper_Case"},
+        {"id": "-leading"},
+        {"id": "trailing-"},
+        {"id": "double--dash"},
+        {"id": ""},
+        {"reason": "   "},
+        {"reason": "\t\n"},
+        {"feather_m": 10},
+        {
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [[58.1, 20.1], [58.2, 20.2]],
+            }
+        },
+        {
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[58.1, 20.1], [58.2, 20.1], [58.1, 20.1]]],
+            }
+        },
+        {
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [[58.1, 20.1], [58.2, 20.1], [58.2, 20.2], [58.1, 20.2], [58.1, 20.19]]
+                ],
+            }
+        },
+        {
+            "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                    [[[58.1, 20.1], [58.2, 20.1], [58.2, 20.2], [58.1, 20.2], [58.1, 20.1]]],
+                    [[[58.3, 20.3], [58.4, 20.3], [58.4, 20.4], [58.3, 20.4], [58.3, 20.39]]],
+                ],
+            }
+        },
+    ],
+)
+def test_cleanup_rejects_invalid_edit_fields(tmp_path, changes):
+    path = _cleanup_with_edit(tmp_path, **changes)
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+def test_cleanup_rejects_duplicate_ids(tmp_path):
+    data = _cleanup_doc()
+    second = copy.deepcopy(data["edits"][0])
+    data["edits"] = [data["edits"][0], second]
+    with pytest.raises(ConfigError, match="edits.id"):
+        config.load_cleanup(_write_cleanup(tmp_path, data))
+
+
+@pytest.mark.parametrize(
+    ("lon", "lat"),
+    [
+        (180.1, 20.0),
+        (-180.1, 20.0),
+        (58.0, math.nextafter(GRID_TOP, math.inf)),
+        (58.0, math.nextafter(-GRID_TOP, -math.inf)),
+        (58.0, -86.0),
+    ],
+)
+def test_cleanup_rejects_out_of_range_coordinates(tmp_path, lon, lat):
+    ring = [[58.1, 20.1], [lon, lat], [58.2, 20.2], [58.1, 20.2], [58.1, 20.1]]
+    path = _cleanup_with_edit(tmp_path, geometry={"type": "Polygon", "coordinates": [ring]})
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+@pytest.mark.parametrize("scalar", [".nan", ".inf", "-.inf"])
+def test_cleanup_rejects_non_finite_coordinates(tmp_path, scalar):
+    raw = (FIXTURES / "cleanup_ok.yaml").read_text(encoding="utf-8")
+    bad = raw.replace("[58.2, 20.1]", f"[{scalar}, 20.1]", 1)
+    assert bad != raw
+    with pytest.raises(ConfigError) as caught:
+        config.load_cleanup(_write(tmp_path, bad, "bad.yaml"))
+    if scalar == ".nan":
+        assert "finite" in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "sources",
+    [
+        None,
+        [],
+        [{"kind": "atlas", "work": "Atlas", "locator": "p. 1"}],
+        [{"kind": "quran", "work": "Quran", "locator": "2:1"}],
+        [{"kind": "imagery", "work": "  ", "locator": "scene-1"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "   "}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "edition": "   "}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "url": "ftp://example.invalid/x"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "url": "not a url"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "url": "https://bad url"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "extra": "bad"}],
+    ],
+)
+def test_cleanup_rejects_invalid_approved_sources(tmp_path, sources):
+    path = _cleanup_with_edit(tmp_path, review="approved", sources=sources)
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+def test_config_module_does_not_import_osgeo():
+    tree = ast.parse(Path(config.__file__).read_text(encoding="utf-8"))
+    imported = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.append(node.module)
+    assert not any(name == "osgeo" or name.startswith("osgeo.") for name in imported)

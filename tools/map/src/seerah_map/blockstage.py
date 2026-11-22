@@ -13,7 +13,7 @@ interrupted run resumes. Elevations are metres, extents and distances degrees.
 """
 
 import multiprocessing
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 from pathlib import Path
 
@@ -21,8 +21,8 @@ import numpy as np
 from osgeo import gdal, osr
 
 from . import encode, mask, style
-from .config import Bounds, Edit, Lock, Profile
-from .edits import apply, touches
+from .config import Bounds, CleanupEdit, Edit, Lock, Profile
+from .edits import apply, apply_cleanup, apply_wbm_cleanup, touches
 from .fetch import check_lock_matches
 from .grid import BASE_ZOOM, Block, Window, blocks, border_px, row_latitudes, scale_style
 from .workarea import WorkArea, atomic_write
@@ -252,17 +252,20 @@ def render_block(
     vrts: tuple[Path, Path],
     work: WorkArea,
     style_dir: Path | None = None,
+    cleanups: Sequence[CleanupEdit] = (),
 ) -> None:
     """Render one zoom-12 block's styled relief and land mask.
 
     Args:
         block: the zoom-12 block to render.
         profile: the build profile (style, data extent, fade width).
-        edits: the approved edits; those that cannot touch the block are skipped.
+        edits: the approved terrain edits; those that cannot touch the block are skipped.
         variant: ``painted`` (banded, RGBA ink) or ``value`` (RGB Terrarium).
         vrts: the elevation and Water Body Mask VRTs from ``source_vrts``.
         work: the work area.
         style_dir: directory for the styled GeoTIFF; defaults to ``work.style_dir``.
+        cleanups: approved coastal cleanup edits applied to WBM and coincident
+            elevation pixels before invalid-pixel fill and land-mask smoothing.
 
     Raises:
         ValueError: if ``variant`` is unknown or ``block.window.zoom != BASE_ZOOM``.
@@ -279,6 +282,8 @@ def render_block(
     border = border_px(profile.style, edits, block)
     window = block.window.pad(border)
     elevation, wbm, valid = read_block(block, border, *vrts, extent)
+    if cleanups:
+        elevation, wbm = apply_cleanup(elevation, wbm, valid, cleanups, window)
     if valid.any():
         elevation = mask.fill_invalid(elevation, valid)
     land_values = _land_mask_from_wbm(wbm, valid)
@@ -297,12 +302,20 @@ def render_block(
     )
 
 
-def _render_mask_block(block: Block, profile: Profile, wbm_vrt: Path, work: WorkArea) -> None:
+def _render_mask_block(
+    block: Block,
+    profile: Profile,
+    wbm_vrt: Path,
+    work: WorkArea,
+    cleanups: Sequence[CleanupEdit] = (),
+) -> None:
     extent = profile.data_extent
     border = border_px(profile.style, [], block)
     window = block.window.pad(border)
     wbm = _warp(wbm_vrt, window, "near")
     valid = _distance_to_edge_deg(window, extent) >= 0
+    if cleanups:
+        wbm = apply_wbm_cleanup(wbm, valid, cleanups, window)
     land_values = _land_mask_from_wbm(wbm, valid)
     _write_mask_block(work.mask_dir / f"{block.id}.tif", land_values, valid, block.window, border)
 
@@ -496,12 +509,13 @@ def run_block_stage(
     workers: int,
     log: Callable[[str], None],
     mode: str = PYRAMID,
+    cleanups: Sequence[CleanupEdit] = (),
 ) -> list[str]:
     """Render every unfinished block in parallel, then write the mosaics.
 
     Args:
         profile: the build profile.
-        edits: the approved edits.
+        edits: the approved terrain edits.
         variant: ``painted`` or ``value``.
         lock: the pinned download set; it must match the profile.
         cache: the cache directory the lock's paths are relative to.
@@ -509,29 +523,35 @@ def run_block_stage(
         workers: the number of worker processes.
         log: receives progress lines as each block finishes.
         mode: ``pyramid`` (default) or ``per-zoom``.
+        cleanups: approved coastal cleanup edits (``pyramid`` mode only).
 
     Returns:
         The identifiers of the blocks rendered in this run, in completion order.
 
     Raises:
-        ValueError: if ``variant`` or ``mode`` is unknown, or if ``max_zoom > BASE_ZOOM``
-            in ``per-zoom`` mode.
+        ValueError: if ``variant`` or ``mode`` is unknown, ``max_zoom > BASE_ZOOM``
+            in ``per-zoom`` mode, or ``cleanups`` is passed in ``per-zoom`` mode.
     """
     if variant not in VARIANTS:
         raise ValueError(f"unknown variant {variant!r}; expected one of {VARIANTS}")
     if mode not in MODES:
         raise ValueError(f"unknown mode {mode!r}; expected one of {MODES}")
+    if mode == PER_ZOOM and cleanups:
+        raise ValueError("cleanup edits are only supported in pyramid mode")
     if mode == PER_ZOOM and profile.max_zoom > BASE_ZOOM:
         raise ValueError(f"max_zoom {profile.max_zoom} is above the base zoom {BASE_ZOOM}")
     check_lock_matches(lock, profile)
     vrts = source_vrts(lock, cache, profile.data_extent, work)
     if mode == PER_ZOOM:
         return _run_per_zoom(profile, edits, variant, vrts, work, workers, log)
+    cleanup_tuple = tuple(cleanups)
     block_list = blocks(profile.data_extent, profile.block_zoom)
     pending = [b for b in block_list if not _finished(b, work)]
     rendered = _run_pool(
         pending,
-        lambda pool, b: pool.submit(render_block, b, profile, edits, variant, vrts, work),
+        lambda pool, b: pool.submit(
+            render_block, b, profile, edits, variant, vrts, work, None, cleanup_tuple
+        ),
         lambda b: b.id,
         workers,
         log,

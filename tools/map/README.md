@@ -29,7 +29,7 @@ A profile's `camera_bounds` are the box the app's camera may show. Its data exte
 
 `peninsula_outline` must be a relative path resolved from the profile's folder; absolute paths are rejected. Its canonical target (after following symlinks) must stay inside the configured `--data` root (`/data` in the container, or the profile's folder when `load_profile` is called directly without `data_root`), so profiles can share an outline in a sibling folder under the data root such as `../shared/outline.geojson`. Parent escapes, the root directory itself, outside symlinks and symlink loops fail with exit code 2 before `fetch` or `build` starts work. The outline file is still opened only when `build` writes the size report.
 
-The schemas are in [src/seerah_map/schema/](src/seerah_map/schema/). A new lock is made by the first `fetch`, which writes it to `/out` and prints the copy command. Review it, copy it beside the profile (for the trial, `seerah-content/map/trial/`) and commit it there. `build` refuses to run without a committed lock.
+The schemas are in [src/seerah_map/schema/](src/seerah_map/schema/). Production coastal cleanup edits (`cleanup.schema.json`: discrete `remove-land` and `fill-water` masks on the Water Body Mask and coincident elevation) are supported in `seerah_map.config`, `seerah_map.edits`, and `seerah_map.blockstage` ahead of the `--coverage` CLI ([v1 pipeline specification](../../docs/design/v1-map-pipeline-spec.md)). A new lock is made by the first `fetch`, which writes it to `/out` and prints the copy command. Review it, copy it beside the profile (for the trial, `seerah-content/map/trial/`) and commit it there. `build` refuses to run without a committed lock.
 
 ## Running it: `run.py`
 

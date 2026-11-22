@@ -1,0 +1,57 @@
+schema: 1
+purpose: production
+edits:
+  - id: remove-synthetic-pier
+    class: cleanup
+    operation: remove-land
+    geometry:
+      type: Polygon
+      coordinates:
+        - - [58.1, 20.1]
+          - [58.2, 20.1]
+          - [58.2, 20.2]
+          - [58.1, 20.2]
+          - [58.1, 20.1]
+    reason: Remove synthetic reclaimed jetty protruding into ocean
+    review: approved
+    sources:
+      - kind: imagery
+        work: Synthetic Satellite Survey
+        locator: scene-001
+  - id: fill-synthetic-basin
+    class: cleanup
+    operation: fill-water
+    geometry:
+      type: MultiPolygon
+      coordinates:
+        - - - [58.3, 20.3]
+            - [58.35, 20.3]
+            - [58.35, 20.35]
+            - [58.3, 20.35]
+            - [58.3, 20.3]
+        - - - [58.4, 20.4]
+            - [58.45, 20.4]
+            - [58.45, 20.45]
+            - [58.4, 20.45]
+            - [58.4, 20.4]
+    reason: Infill synthetic excavated industrial port basin
+    review: approved
+    sources:
+      - kind: dated-data
+        work: Synthetic Harbour Construction Ledger
+        locator: plate-12
+        edition: "2020"
+        url: https://example.invalid/ledger/plate-12
+  - id: draft-synthetic-spit
+    class: cleanup
+    operation: remove-land
+    geometry:
+      type: Polygon
+      coordinates:
+        - - [58.5, 20.5]
+          - [58.6, 20.5]
+          - [58.6, 20.6]
+          - [58.5, 20.6]
+          - [58.5, 20.5]
+    reason: Draft removal of synthetic coastal spit pending review
+    review: draft
