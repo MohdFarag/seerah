@@ -40,7 +40,7 @@ RUN mkdir -p /tmp/tippecanoe \
 # entries, and assert via awk + comm -23 that every remaining [[package]]
 # record (name, version, source, checksum) is an exact verbatim match in the
 # saved upstream Cargo.lock before building whitebox_tools with `--locked`.
-FROM rust:1.99.1-bookworm@sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c AS whitebox-build
+FROM rust:1.100.0-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea AS whitebox-build
 
 ADD --checksum=sha256:898e24b73c5a5145071029c558f465f58b1742d0e15f55f77cd5fe112c347951 \
     https://codeload.github.com/jblindsay/whitebox-tools/tar.gz/28ed01f506f2024cfb52db85348b887f2ded4e5d \

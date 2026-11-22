@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please **do not** open a public issue for a security problem. Report it privately through GitHub's [private vulnerability reporting](https://github.com/MohdFarag/seerah/security/advisories/new). You should get a reply within 7 days.
+Please **do not** open a public issue for a security problem. Report it privately through GitHub's [private vulnerability reporting](https://github.com/al-seerah/seerah/security/advisories/new). You should get a reply within 7 days.
 
 Useful to include: what is affected (the app, a content package, a workflow), how to reproduce it, and what an attacker could do with it.
 

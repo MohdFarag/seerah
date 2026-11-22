@@ -3,9 +3,9 @@
 
 [versions]
 # Build
-androidGradlePlugin = "9.5.1"
+androidGradlePlugin = "9.5.2"
 kotlin = "2.4.21"
-ksp = "2.3.13"
+ksp = "2.3.14"
 # Android SDK levels (ADR 0003)
 compileSdk = "37"
 targetSdk = "37"
@@ -22,10 +22,10 @@ junit4 = "4.13.2"
 kotlinxCoroutines = "1.11.0"
 leakcanary = "2.14"
 maplibre = "13.7.1"
-robolectric = "4.17"
+robolectric = "4.18"
 # Quality tooling
 composeRules = "0.6.8"
-dependencyAnalysis = "3.20.2"
+dependencyAnalysis = "3.20.3"
 ktlint = "1.8.0"
 licensee = "1.14.1"
 moduleGraphAssert = "2.9.1"
