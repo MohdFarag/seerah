@@ -17,7 +17,7 @@ content/
 
 - Only items with `review: approved` ever ship; the content build refuses `draft`, `in-review` and `title-approved` ([ADR 0007](../docs/adr/0007-content-formats-compatibility-and-signing.md)). Only the owner sets `approved`.
 
-- A date carries its **precision** (`year`, `month`, `day`). An unknown part is never filled in.
+- A date uses the canonical Hijri / pre-Hijra axis (no year zero) and carries its **precision** (`year`, `month`, `day`, or `unknown`). An unknown part is never filled in. Pre-Hijra dates may include an explicit, owner-reviewed `prophethood_year` when given by a source, never computed by formula.
 - A place carries its **accuracy** (`exact`, `general`, `unknown`). With `general`, the event links to the city or region, so the app must say the exact spot is unknown. `unknown` means no marker at all.
 - A route line exists only when `route.documented` is true. Distances say whether they come from a `source` or are an `estimate`.
 - Each text records its source. Excerpts are marked and point to the full narration.

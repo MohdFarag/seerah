@@ -13,11 +13,12 @@
       "type": "object",
       "required": ["precision"],
       "properties": {
-        "calendar": { "enum": ["hijri", "pre-hijra", "gregorian"], "description": "Pre-Hijra reference and Gregorian conversion are still open decisions." },
-        "year": { "type": "integer" },
+        "calendar": { "enum": ["hijri", "pre-hijra", "gregorian"], "description": "Hijri (1 AH onward) or pre-Hijra (1 BH, 2 BH… with no year zero) (owner, 2026-11-22). Gregorian conversion is still an open decision." },
+        "year": { "type": "integer", "not": { "const": 0 } },
         "month": { "type": "integer", "minimum": 1, "maximum": 12 },
         "day": { "type": "integer", "minimum": 1, "maximum": 31 },
         "precision": { "enum": ["year", "month", "day", "unknown"] },
+        "prophethood_year": { "type": "integer", "minimum": 1, "description": "Optional owner-reviewed year of Prophethood (السنة من البعثة) for pre-Hijra dates when given by a source. Never computed by formula." },
         "approximate": { "type": "boolean", "default": false },
         "note": { "type": "string" }
       },
@@ -25,7 +26,8 @@
         { "if": { "properties": { "precision": { "const": "year" } } }, "then": { "required": ["year"], "not": { "anyOf": [{ "required": ["month"] }, { "required": ["day"] }] } } },
         { "if": { "properties": { "precision": { "const": "month" } } }, "then": { "required": ["year", "month"], "not": { "required": ["day"] } } },
         { "if": { "properties": { "precision": { "const": "day" } } }, "then": { "required": ["year", "month", "day"] } },
-        { "if": { "properties": { "precision": { "const": "unknown" } } }, "then": { "not": { "anyOf": [{ "required": ["year"] }, { "required": ["month"] }, { "required": ["day"] }] } } }
+        { "if": { "properties": { "precision": { "const": "unknown" } } }, "then": { "not": { "anyOf": [{ "required": ["year"] }, { "required": ["month"] }, { "required": ["day"] }] } } },
+        { "if": { "required": ["prophethood_year"] }, "then": { "required": ["calendar"], "properties": { "calendar": { "const": "pre-hijra" } } } }
       ]
     },
     "placeRef": {

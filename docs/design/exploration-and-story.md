@@ -56,7 +56,7 @@ A place has one identity and a history. Yathrib and al-Madinah are one place wit
 | `id`, `title` | Stable ID; Arabic title |
 | `parent` | The larger event it belongs to, if any. Nesting has no fixed depth |
 | `kind` | A primary category (see below), for icons and filters |
-| `date` | The single display date with its precision (year, month or day) and an approximation flag; a dispute note if there is one |
+| `date` | The single display date (canonical Hijri/pre-Hijra axis, no year zero) with its precision (year, month or day), an optional owner-reviewed `prophethood_year` for pre-Hijra dates when sourced, an approximation flag, and a dispute note if there is one |
 | `order` | Position among events with the same date, because many events share a year |
 | `where` | One place, several places (for example the positions of two sides), an area, or a route |
 | `shown` | `always` or `in-context`; see *Visibility* below |
@@ -109,7 +109,7 @@ Tested against the 26 draft v1 events: every one fits a kind.
 
 ### Time
 
-- **Years are counted from the Hijra:** 1 AH onward, and before it 1 BH, 2 BH… with no year zero. Display can also give the year of prophethood when the source dates it that way.
+- **Years are counted from the Hijra (owner, 2026-11-22):** 1 AH onward, and before it 1 BH, 2 BH… with no year zero. This is the single canonical axis for storage, ordering, year-by-year authoring, and the timeline bar. For pre-Hijra dates, any year of Prophethood (السنة من البعثة) given by a source is stored explicitly as an optional, owner-reviewed `prophethood_year` — never calculated by formula, because Hijri years start in Muharram while Prophethood began in Ramadan. In v1, pre-Hijra headers and event cards show both labels together when sourced (`٣ ق.هـ · السنة ١٠ من البعثة`) without a settings toggle; a future release may add a display-priority toggle (Hijri default) over the same fixed Hijri buckets.
 - **Precision is part of the date:** year, month or day. An unknown part is never filled in.
 - **Months where sourced (owner, 2026-11-13):** the v1 period is only about five Hijri years, and 1 AH alone holds the Hijra, Quba, the mosque and the brotherhood, so years alone are too coarse. Time moves by year, and by month where a source gives the month. An event dated only to its year stays at year level; it is never placed in a guessed month. Events with the same date keep their `order`.
 
@@ -233,6 +233,7 @@ steps:
 | Point | Status |
 | --- | --- |
 | Time | Decided: by year, and by month where sourced |
+| Pre-Hijra dating | Decided (2026-11-22): canonical Hijri axis (no year zero) plus explicit sourced `prophethood_year` shown alongside pre-Hijra dates in v1; optional display-priority toggle (Hijri default) deferred to a future release |
 | Map extent | Decided: the whole Arabian Peninsula, most detailed where the events happen; no world view |
 | Where content is written | Decided: files in the repository, checked by the build, with a preview build |
 | Visibility | Decided: `always` and `in-context`; no fact is story-only |
