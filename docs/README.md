@@ -19,6 +19,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | [../.agents/skills/](../.agents/skills/) | Project skills for AI agents (`prd-sync`: re-snapshot the PRD from Notion), linked from `.claude/skills/` for Claude Code. |
 | [engineering.md](engineering.md) | Architecture, code, UI, testing, performance and documentation standards. |
 | [adr/](adr/) | Architecture Decision Records. |
+| [signing-runbook.md](signing-runbook.md) | Offline Ed25519 key generation, storage, planned dual-key rotation and compromise recovery for `content` and `map` packages. |
 | [maintaining.md](maintaining.md) | Repository settings (rulesets, Actions, security, labels) and releases. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Branches, commit messages, content rules, pull requests. |
 

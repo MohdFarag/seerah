@@ -133,7 +133,7 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
    | Layer | Source | Licence |
    | --- | --- | --- |
    | Relief and valleys | Copernicus GLO-30, with approved edits | Copernicus DEM licence |
-   | Land and coastline | Copernicus GLO-30 Water Body Mask (ocean class), smoothed, with "remove land" edits | Copernicus DEM licence |
+   | Land and coastline | Copernicus GLO-30 Water Body Mask (ocean class), smoothed, with `"remove-land"` and `"fill-water"` cleanup edits (amended by the owner, 2026-11-23; [specification](../design/v1-map-pipeline-spec.md)) | Copernicus DEM licence |
    | Land and coastline beyond the tiled extent, at every zoom where the view reaches past it; inside it, the widest zooms only if the trial picks it | Natural Earth | Public domain |
 
 4. **Relief.**
@@ -147,12 +147,12 @@ An open MapLibre issue reports that MapLibre Android draws nothing for a tile mi
 
      The tile split, edge softening and fade schedule go in the implementation specification.
 5. **No missing tiles.** Every file covers its whole extent at each of its zooms; empty areas are written as explicit transparent tiles, which PMTiles stores once. No design depends on how the engine treats a missing tile.
-6. **One terrain dataset feeds every layer:** the relief, the valleys and the coast use the same land mask (the Water Body Mask's ocean class after "remove land" edits) and the same edited elevation. Natural Earth is the one exception: it fills the view beyond the tiled extent, and inside it only at the widest zooms if the trial picks it.
+6. **One terrain dataset feeds every layer:** the relief, the valleys and the coast use the same land mask (the Water Body Mask's ocean class after `"remove-land"` and `"fill-water"` cleanup edits; amended by the owner, 2026-11-23) and the same edited elevation. Natural Earth is the one exception: it fills the view beyond the tiled extent, and inside it only at the widest zooms if the trial picks it.
 
    | Source | Step | Output |
    | --- | --- | --- |
    | GLO-30 elevation | approved edits; land mask; style C | `relief.pmtiles` and, under option (b), `relief-detail.pmtiles` |
-   | GLO-30 Water Body Mask | "remove land" edits; smooth; turn into polygons; generalise for each zoom | `base.pmtiles`: land, coast |
+   | GLO-30 Water Body Mask | `"remove-land"` and `"fill-water"` cleanup edits; smooth; turn into polygons; generalise for each zoom | `base.pmtiles`: land, coast |
    | Natural Earth | one tileset per scale, clipped to outside the tiled extent (and, if picked, inside it at the widest zooms), joined | `base.pmtiles` |
    | Edited elevation | flow routing; stream order | `base.pmtiles`: valley (optional) |
    | `map/coverage.yaml`; source citations from `content/`; approved reconstruction edits | validate; generate the list of reconstructed areas | `map.json` |

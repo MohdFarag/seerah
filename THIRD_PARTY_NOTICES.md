@@ -35,6 +35,19 @@ Used in the containerised map build toolchain (`tools/map/`); none of these tool
 | `pytest` (container test suite) | MIT |
 | `WhiteboxTools` (`whitebox_tools`) | MIT |
 
+## Package signing and verification tools (`tools/packages/`)
+
+Used on the host to build, sign and verify `content` and `map` packages (`tools/packages/`); none of these tools ships in any app build. Exact pinned Python package versions and hashes are recorded in [tools/packages/requirements.txt](tools/packages/requirements.txt).
+
+| Tool | Licence |
+| --- | --- |
+| `cryptography` | Apache-2.0 OR BSD-3-Clause |
+| `cffi` | MIT |
+| `pycparser` | BSD-3-Clause |
+| Protomaps `pmtiles` | BSD-3-Clause |
+| `jsonschema` | MIT |
+| `pytest` (host test suite) | MIT |
+
 ## Map rendering (spike, `:core:map` and `benchmark`)
 
 | Material | Used by | Licence |
