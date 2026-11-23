@@ -212,3 +212,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (PackageError, SigningError) as exc:
         _err(str(exc))
         return EXIT_FAILED
+    except OSError as exc:
+        _err(f"I/O error: {exc}")
+        return EXIT_FAILED

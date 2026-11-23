@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://seerah.app/schema/manifest.schema.json",
+  "$id": "https://github.com/al-seerah/seerah/content/schema/manifest.schema.json",
   "title": "Seerah Signed Package Manifest (manifest.json)",
   "$comment": "Strict producer and host-verifier schema (additionalProperties: false). Android package readers ignore unknown fields for forward compatibility per ADR 0008 decision 4.",
   "type": "object",

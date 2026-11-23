@@ -21,6 +21,9 @@ KEY_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 HEX_PUB_RE = re.compile(r"^[0-9a-f]{64}$")
 RAW_PUBLIC_KEY_BYTES = 32
 RAW_SIGNATURE_BYTES = 64
+KEY_DIR_MODE = 0o700
+PRIVATE_KEY_MODE = 0o600
+PUBLIC_KEY_MODE = 0o644
 ALGORITHM = "Ed25519"
 TINK_VARIANT = "NO_PREFIX"
 MAX_TRUSTED_KEYS = 2
@@ -92,12 +95,15 @@ def read_passphrase(passphrase_fd: int | None = None, *, confirm: bool = False) 
 
 
 def generate_keypair(key_id: str, out_dir: Path, passphrase: bytes) -> tuple[Path, Path]:
-    """Generate an encrypted PKCS#8 Ed25519 private key and a Tink NO_PREFIX public key JSON."""
+    """Generate an encrypted PKCS#8 Ed25519 private key and a Tink NO_PREFIX public key JSON.
+
+    A missing ``out_dir`` is created with mode ``0700``; an existing one keeps its mode.
+    """
     validate_key_id(key_id)
     if not passphrase:
         raise SigningError("passphrase must not be empty")
     out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(mode=KEY_DIR_MODE, parents=True, exist_ok=True)
     key_path = out_dir / f"{key_id}.key.pem"
     pub_path = out_dir / f"{key_id}.pub.json"
     if key_path.exists():
@@ -121,7 +127,7 @@ def generate_keypair(key_id: str, out_dir: Path, passphrase: bytes) -> tuple[Pat
     pub_bytes = (json.dumps(pub_doc, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
     try:
-        key_fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        key_fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, PRIVATE_KEY_MODE)
     except FileExistsError as exc:
         raise SigningError(f"refusing to overwrite existing private key {key_path}") from exc
     try:
@@ -132,7 +138,7 @@ def generate_keypair(key_id: str, out_dir: Path, passphrase: bytes) -> tuple[Pat
         raise
 
     try:
-        pub_fd = os.open(pub_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        pub_fd = os.open(pub_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, PUBLIC_KEY_MODE)
     except FileExistsError as exc:
         key_path.unlink(missing_ok=True)
         raise SigningError(f"refusing to overwrite existing public key {pub_path}") from exc

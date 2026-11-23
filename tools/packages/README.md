@@ -19,9 +19,9 @@ PYTHONPATH=tools/packages/src python3 -m seerah_packages <command> [args]
 
 | Command | What it does |
 | --- | --- |
-| `keygen --key-id <id> --out-dir <dir> [--passphrase-fd <fd>]` | Generates `<out-dir>/<id>.key.pem` (PKCS#8 encrypted Ed25519 private key, mode `0600`) and `<out-dir>/<id>.pub.json` (Tink `NO_PREFIX` raw 32-byte Base64 public key, mode `0644`). Refuses to overwrite existing files. |
+| `keygen --key-id <id> --out-dir <dir> [--passphrase-fd <fd>]` | Generates (creating a missing `<out-dir>` with mode `0700`) `<out-dir>/<id>.key.pem` (PKCS#8 encrypted Ed25519 private key, mode `0600`) and `<out-dir>/<id>.pub.json` (Tink `NO_PREFIX` raw 32-byte Base64 public key, mode `0644`). Refuses to overwrite existing files. |
 | `pack-map --staging <dir> --version <int> --min-app-version <int> --key <pem> --key-id <id> --out <dir> [--created <iso>] [--passphrase-fd <fd>] [--previous-manifest <json>] [--allow-local-provenance] [--force]` | Validates a `dist/map-staging-<fp8>/` staging directory, builds `manifest.json` ([content/schema/manifest.schema.json](../../content/schema/manifest.schema.json)), signs `manifest.sig`, streams `<out>/seerah-map-<version>.zip`, and self-verifies the archive before publishing. |
-| `verify --package <zip> --public-keys <json_or_dir> [--expected-kind {content,map}] [--allow-local-provenance]` | Hardens the ZIP container (LFH vs Central Directory, no encryption/symlinks/traversal), verifies `manifest.sig` before parsing `manifest.json`, checks `key_id` binding, verifies every `data/*` entry's size and SHA-256, and (for `map` packages) validates `data/map.json` and both PMTiles v3 headers and metadata in-place. |
+| `verify --package <zip> --public-keys <json_or_dir> [--expected-kind {content,map}] [--allow-local-provenance]` | Hardens the ZIP container (LFH vs Central Directory, no encryption/symlinks/traversal, and a layout a streaming reader can follow: entries contiguous from byte 0 with no data descriptors, extra fields, gaps or trailing bytes), verifies `manifest.sig` before parsing `manifest.json`, checks `key_id` binding, verifies every `data/*` entry's size and SHA-256, and (for `map` packages) validates `data/map.json` and both PMTiles v3 headers and metadata in-place. |
 
 Exit codes: `0` for success, `1` when a packaging or verification check fails, `2` for a usage or argument error.
 

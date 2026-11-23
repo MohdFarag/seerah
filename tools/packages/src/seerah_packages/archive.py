@@ -49,7 +49,10 @@ ZIP_CREATE_SYSTEM_UNIX = 3
 ZIP_REGULAR_FILE_ATTR = 0o100644 << 16
 _LFH_STRUCT = struct.Struct("<4sHHHHHIIIHH")
 _LFH_MAGIC = b"PK\x03\x04"
-_ZIP64_SENTINEL = 0xFFFFFFFF
+_EOCD_STRUCT = struct.Struct("<4sHHHHIIH")
+_EOCD_MAGIC = b"PK\x05\x06"
+_FLAG_ENCRYPTED = 0x01
+_FLAG_DATA_DESCRIPTOR = 0x08
 
 _DATA_PATH_RE = re.compile(r"^data/[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$")
 _COMMIT_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
@@ -703,6 +706,36 @@ def pack_map_staging(
     )
 
 
+def _check_end_record(raw_handle, total_zip_size: int, entry_count: int) -> int:
+    """Check the archive ends with a plain end-of-central-directory record; return the CD offset.
+
+    The record must be the last 22 bytes (no comment, no trailing bytes, one disk, no ZIP64),
+    and the central directory must end exactly where the record starts.
+    """
+    if total_zip_size < _EOCD_STRUCT.size:
+        raise PackageError("ZIP archive is too small to hold an end-of-central-directory record")
+    raw_handle.seek(total_zip_size - _EOCD_STRUCT.size)
+    (
+        magic,
+        disk,
+        cd_disk,
+        disk_entries,
+        total_entries,
+        cd_size,
+        cd_offset,
+        comment_len,
+    ) = _EOCD_STRUCT.unpack(raw_handle.read(_EOCD_STRUCT.size))
+    if magic != _EOCD_MAGIC or comment_len != 0:
+        raise PackageError(
+            "ZIP archive must end with an end-of-central-directory record and no trailing bytes"
+        )
+    if (disk, cd_disk) != (0, 0) or disk_entries != total_entries or total_entries != entry_count:
+        raise PackageError("ZIP archive must be a single-disk archive without ZIP64 records")
+    if cd_offset + cd_size != total_zip_size - _EOCD_STRUCT.size:
+        raise PackageError("ZIP central directory must end where the end record starts")
+    return cd_offset
+
+
 def _check_zip_container_and_lfh(
     zf: zipfile.ZipFile,
     raw_handle,
@@ -710,7 +743,13 @@ def _check_zip_container_and_lfh(
     *,
     require_all_stored: bool,
 ) -> dict[str, int]:
-    """Harden the ZIP container and return ``{filename: data_offset}`` for every entry."""
+    """Harden the ZIP container and return ``{filename: data_offset}`` for every entry.
+
+    Besides each entry's own checks, the layout must be readable front to back by a
+    streaming reader: the first entry starts at byte 0, every entry starts where the
+    previous one's data ends (no data descriptors, no extra fields, no gaps), and the
+    central directory starts right after the last entry.
+    """
     if zf.comment:
         raise PackageError("ZIP archive comment must be empty")
     infolist = zf.infolist()
@@ -723,8 +762,12 @@ def _check_zip_container_and_lfh(
     data_offsets: dict[str, int] = {}
     for info in infolist:
         validate_entry_path(info.filename, allow_root_manifest=True)
-        if info.flag_bits & 0x1:
+        if info.flag_bits & _FLAG_ENCRYPTED:
             raise PackageError(f"ZIP entry {info.filename!r} is encrypted")
+        if info.flag_bits & _FLAG_DATA_DESCRIPTOR:
+            raise PackageError(f"ZIP entry {info.filename!r} uses a data descriptor")
+        if info.extra:
+            raise PackageError(f"ZIP entry {info.filename!r} has Central Directory extra fields")
         if info.is_dir() or (info.external_attr & 0x10):
             raise PackageError(f"ZIP directory entry refused: {info.filename!r}")
         unix_mode = info.external_attr >> 16
@@ -771,8 +814,12 @@ def _check_zip_container_and_lfh(
         ) = _LFH_STRUCT.unpack(lfh_raw)
         if lfh_magic != _LFH_MAGIC:
             raise PackageError(f"ZIP entry {info.filename!r}: invalid Local File Header magic")
-        if lfh_flags & 0x1:
+        if lfh_flags & _FLAG_ENCRYPTED:
             raise PackageError(f"ZIP entry {info.filename!r}: LFH encryption flag set")
+        if lfh_flags & _FLAG_DATA_DESCRIPTOR:
+            raise PackageError(f"ZIP entry {info.filename!r}: LFH data descriptor flag set")
+        if lfh_extra_len != 0:
+            raise PackageError(f"ZIP entry {info.filename!r}: LFH has extra fields")
         if lfh_compress != info.compress_type:
             raise PackageError(
                 f"ZIP entry {info.filename!r}: LFH compression ({lfh_compress}) disagrees "
@@ -784,18 +831,17 @@ def _check_zip_container_and_lfh(
                 f"ZIP entry {info.filename!r}: LFH filename {lfh_name!r} disagrees with "
                 f"Central Directory"
             )
-        if (lfh_flags & 0x08) == 0:
-            if lfh_comp_size != _ZIP64_SENTINEL and lfh_comp_size != info.compress_size:
-                raise PackageError(
-                    f"ZIP entry {info.filename!r}: LFH compressed size ({lfh_comp_size}) "
-                    f"disagrees with Central Directory ({info.compress_size})"
-                )
-            if lfh_uncomp_size != _ZIP64_SENTINEL and lfh_uncomp_size != info.file_size:
-                raise PackageError(
-                    f"ZIP entry {info.filename!r}: LFH uncompressed size ({lfh_uncomp_size}) "
-                    f"disagrees with Central Directory ({info.file_size})"
-                )
-        data_offset = info.header_offset + _LFH_STRUCT.size + lfh_name_len + lfh_extra_len
+        if lfh_comp_size != info.compress_size:
+            raise PackageError(
+                f"ZIP entry {info.filename!r}: LFH compressed size ({lfh_comp_size}) "
+                f"disagrees with Central Directory ({info.compress_size})"
+            )
+        if lfh_uncomp_size != info.file_size:
+            raise PackageError(
+                f"ZIP entry {info.filename!r}: LFH uncompressed size ({lfh_uncomp_size}) "
+                f"disagrees with Central Directory ({info.file_size})"
+            )
+        data_offset = info.header_offset + _LFH_STRUCT.size + lfh_name_len
         if data_offset + info.compress_size > total_zip_size:
             raise PackageError(f"ZIP entry {info.filename!r}: data slice exceeds archive bounds")
         data_offsets[info.filename] = data_offset
@@ -806,6 +852,16 @@ def _check_zip_container_and_lfh(
             f"for streaming verification, found {infolist[0].filename!r} "
             f"and {infolist[1].filename!r}"
         )
+    next_offset = 0
+    for info in infolist:
+        if info.header_offset != next_offset:
+            raise PackageError(
+                f"ZIP entry {info.filename!r} starts at byte {info.header_offset}, expected "
+                f"{next_offset}: entries must be contiguous from the start of the file"
+            )
+        next_offset = data_offsets[info.filename] + info.compress_size
+    if next_offset != _check_end_record(raw_handle, total_zip_size, len(infolist)):
+        raise PackageError("ZIP central directory must start right after the last entry")
     return data_offsets
 
 

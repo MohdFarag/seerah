@@ -145,3 +145,11 @@ def test_read_passphrase_from_fd():
         if w_fd >= 0:
             os.close(w_fd)
         os.close(r_fd)
+
+
+def test_generate_keypair_creates_missing_key_folder_private(tmp_path: Path):
+    key_dir = tmp_path / "new" / "keys"
+
+    signing.generate_keypair("seerah-2026-02", key_dir, b"pass")
+
+    assert stat.S_IMODE(key_dir.stat().st_mode) == signing.KEY_DIR_MODE

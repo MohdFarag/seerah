@@ -7,7 +7,9 @@ import shutil
 import stat
 import struct
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 from pmtiles.tile import Compression, TileType, zxy_to_tileid
@@ -19,6 +21,9 @@ SOURCE_COMMIT = "a" * 40
 TOOL_COMMIT = "b" * 40
 IMAGE_DIGEST = "sha256:" + "c" * 64
 FINGERPRINT = "d" * 64
+CREATED = "2026-11-23T12:00:00Z"
+PASSPHRASE = b"test-passphrase"
+DATA_EXTENT = (33.0, 11.0, 61.0, 33.0)
 
 COPERNICUS_ATTRIBUTION = (
     "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence "
@@ -32,13 +37,55 @@ COPERNICUS_LIABILITY = (
 NATURAL_EARTH_ATTRIBUTION = "Made with Natural Earth. Public domain."
 
 
+class Keypair(NamedTuple):
+    key_id: str
+    private_key: object
+    trusted: tuple[signing.TrustedKey, ...]
+    pem: Path
+    pub: Path
+
+
+class ContentPackage(NamedTuple):
+    path: Path
+    raw_manifest: bytes
+    raw_sig: bytes
+
+
+@pytest.fixture
+def keypair(tmp_path: Path) -> Keypair:
+    pem, pub = signing.generate_keypair("k1", tmp_path / "keys", PASSPHRASE)
+    return Keypair(
+        "k1", signing.load_private_key(pem, PASSPHRASE), signing.load_trusted_keys(pub), pem, pub
+    )
+
+
+@pytest.fixture
+def content_package(tmp_path: Path, keypair: Keypair) -> ContentPackage:
+    data = tmp_path / "content-data"
+    data.mkdir()
+    (data / "ok.json").write_bytes(b"{}")
+    path = archive.build_package(
+        kind="content",
+        data_dir=data,
+        version=1,
+        min_app_version=1,
+        key_id=keypair.key_id,
+        private_key=keypair.private_key,
+        source_commit=SOURCE_COMMIT,
+        out_path=tmp_path / "good.zip",
+        created=CREATED,
+    )
+    with zipfile.ZipFile(path) as zf:
+        return ContentPackage(path, zf.read("manifest.json"), zf.read("manifest.sig"))
+
+
 def _write_minimal_pmtiles(
     path: Path,
     *,
     tile_type: TileType,
     tile_compression: Compression,
     max_zoom: int = 12,
-    bounds: tuple[float, float, float, float] = (33.0, 11.0, 61.0, 33.0),
+    bounds: tuple[float, float, float, float] = DATA_EXTENT,
     metadata: dict,
 ) -> None:
     """Create a valid PMTiles v3 archive in pure Python using ``pmtiles.writer``."""
@@ -103,20 +150,8 @@ def _valid_map_json(encoding: str = "terrarium-value") -> dict:
     }
 
 
-def _make_staging(
-    root: Path,
-    *,
-    encoding: str = "terrarium-value",
-    image: str = IMAGE_DIGEST,
-    purpose: str = "production",
-    base_meta_overrides: dict | None = None,
-    relief_meta_overrides: dict | None = None,
-) -> Path:
-    staging = root / "map-staging-dddddddd"
-    data_dir = staging / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-
-    base_meta = {
+def _base_meta(image: str = IMAGE_DIGEST) -> dict:
+    return {
         "name": "seerah-map",
         "tile_schema": 1,
         "attribution": f"{COPERNICUS_ATTRIBUTION} {NATURAL_EARTH_ATTRIBUTION}",
@@ -129,10 +164,10 @@ def _make_staging(
             {"id": "land", "fields": {}, "minzoom": 0, "maxzoom": 12},
         ],
     }
-    if base_meta_overrides:
-        base_meta.update(base_meta_overrides)
 
-    relief_meta = {
+
+def _relief_meta(encoding: str = "terrarium-value", image: str = IMAGE_DIGEST) -> dict:
+    return {
         "name": "seerah-map",
         "tile_schema": 1,
         "attribution": COPERNICUS_ATTRIBUTION,
@@ -142,42 +177,93 @@ def _make_staging(
         "data_commit": SOURCE_COMMIT,
         "image": image,
     }
-    if relief_meta_overrides:
-        relief_meta.update(relief_meta_overrides)
 
+
+def _write_base(staging: Path, meta: dict) -> None:
     _write_minimal_pmtiles(
-        data_dir / "base.pmtiles",
+        staging / "data" / "base.pmtiles",
         tile_type=TileType.MVT,
         tile_compression=Compression.GZIP,
-        metadata=base_meta,
+        metadata=meta,
     )
+
+
+def _write_relief(
+    staging: Path,
+    meta: dict,
+    *,
+    tile_type: TileType = TileType.PNG,
+    bounds: tuple[float, float, float, float] = DATA_EXTENT,
+) -> None:
     _write_minimal_pmtiles(
-        data_dir / "relief.pmtiles",
-        tile_type=TileType.PNG if encoding == "terrarium-value" else TileType.WEBP,
+        staging / "data" / "relief.pmtiles",
+        tile_type=tile_type,
         tile_compression=Compression.NONE,
-        metadata=relief_meta,
+        bounds=bounds,
+        metadata=meta,
     )
-    (data_dir / "map.json").write_text(
-        json.dumps(_valid_map_json(encoding), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+
+
+def _write_map_json(staging: Path, doc: dict) -> None:
+    (staging / "data" / "map.json").write_text(
+        json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    report = {
-        "purpose": purpose,
-        "provenance": {
-            "tool_commit": TOOL_COMMIT,
-            "data_commit": SOURCE_COMMIT,
-            "image": image,
-            "fingerprint": FINGERPRINT,
-        },
-    }
+
+
+def _write_report(staging: Path, *, purpose: str = "production", **provenance: str) -> None:
+    prov = {
+        "tool_commit": TOOL_COMMIT,
+        "data_commit": SOURCE_COMMIT,
+        "image": IMAGE_DIGEST,
+        "fingerprint": FINGERPRINT,
+    } | provenance
     (staging / "report.json").write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        json.dumps({"purpose": purpose, "provenance": prov}, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def _make_staging(
+    root: Path, *, encoding: str = "terrarium-value", image: str = IMAGE_DIGEST
+) -> Path:
+    staging = root / "map-staging-dddddddd"
+    (staging / "data").mkdir(parents=True)
+    _write_base(staging, _base_meta(image))
+    _write_relief(
+        staging,
+        _relief_meta(encoding, image),
+        tile_type=TileType.PNG if encoding == "terrarium-value" else TileType.WEBP,
+    )
+    _write_map_json(staging, _valid_map_json(encoding))
+    _write_report(staging, image=image)
     return staging
 
 
-def _run_with_passphrase(argv: list[str], passphrase: bytes = b"test-passphrase") -> int:
+def _pack(staging: Path, keypair: Keypair, out_dir: Path, **kwargs) -> Path:
+    return archive.pack_map_staging(
+        staging_dir=staging,
+        version=kwargs.pop("version", 1),
+        min_app_version=1,
+        key_id=keypair.key_id,
+        private_key=keypair.private_key,
+        out_dir=out_dir,
+        created=CREATED,
+        **kwargs,
+    )
+
+
+def _write_zip(path: Path, entries: list[tuple[str, bytes]], **zinfo_overrides) -> Path:
+    """Write ``entries`` in order; ``zinfo_overrides`` maps an entry name to ZipInfo changes."""
+    with zipfile.ZipFile(path, "w") as zf:
+        for name, payload in entries:
+            zinfo = archive._make_zip_info(name, zipfile.ZIP_STORED)
+            for attr, value in zinfo_overrides.get(name, {}).items():
+                setattr(zinfo, attr, value)
+            zf.writestr(zinfo, payload)
+    return path
+
+
+def _run_with_passphrase(argv: list[str], passphrase: bytes = PASSPHRASE) -> int:
     r_fd, w_fd = os.pipe()
     try:
         os.write(w_fd, passphrase + b"\n")
@@ -190,47 +276,64 @@ def _run_with_passphrase(argv: list[str], passphrase: bytes = b"test-passphrase"
         os.close(r_fd)
 
 
+def _pack_map_argv(staging: Path, keypair: Keypair, out_dir: Path) -> list[str]:
+    return [
+        "pack-map",
+        "--staging",
+        str(staging),
+        "--version",
+        "1",
+        "--min-app-version",
+        "100",
+        "--key",
+        str(keypair.pem),
+        "--key-id",
+        keypair.key_id,
+        "--out",
+        str(out_dir),
+        "--created",
+        CREATED,
+    ]
+
+
+# --- CLI round trip and determinism -------------------------------------------------------
+
+
 @pytest.mark.parametrize("encoding", ["terrarium-value", "painted-rgba"])
-def test_cli_keygen_pack_map_verify_and_determinism(tmp_path: Path, encoding: str):
+def test_cli_pack_map_then_verify_succeeds(tmp_path: Path, keypair: Keypair, encoding: str):
+    staging = _make_staging(tmp_path / "stage", encoding=encoding)
+
+    assert _run_with_passphrase(_pack_map_argv(staging, keypair, tmp_path / "out")) == 0
+    zip_path = tmp_path / "out" / "seerah-map-1.zip"
+    verify_argv = ["verify", "--package", str(zip_path), "--public-keys", str(keypair.pub)]
+    assert cli.main([*verify_argv, "--expected-kind", "map"]) == 0
+
+
+def test_cli_keygen_writes_loadable_keys(tmp_path: Path):
     keys_dir = tmp_path / "keys"
+
     assert (
         _run_with_passphrase(["keygen", "--key-id", "map-2026-01", "--out-dir", str(keys_dir)]) == 0
     )
-    key_pem = keys_dir / "map-2026-01.key.pem"
-    pub_json = keys_dir / "map-2026-01.pub.json"
+    signing.load_private_key(keys_dir / "map-2026-01.key.pem", PASSPHRASE)
+    assert [k.key_id for k in signing.load_trusted_keys(keys_dir / "map-2026-01.pub.json")] == [
+        "map-2026-01"
+    ]
 
-    staging = _make_staging(tmp_path / "stage", encoding=encoding)
-    out_a = tmp_path / "out_a"
-    out_b = tmp_path / "out_b"
-    created = "2026-11-23T12:00:00Z"
 
-    for out_dir in (out_a, out_b):
-        code = _run_with_passphrase(
-            [
-                "pack-map",
-                "--staging",
-                str(staging),
-                "--version",
-                "1",
-                "--min-app-version",
-                "100",
-                "--key",
-                str(key_pem),
-                "--key-id",
-                "map-2026-01",
-                "--out",
-                str(out_dir),
-                "--created",
-                created,
-            ]
-        )
-        assert code == 0
+def test_pack_map_with_pinned_created_is_byte_identical(tmp_path: Path, keypair: Keypair):
+    staging = _make_staging(tmp_path / "stage")
 
-    zip_a = out_a / "seerah-map-1.zip"
-    zip_b = out_b / "seerah-map-1.zip"
+    zip_a = _pack(staging, keypair, tmp_path / "out_a")
+    zip_b = _pack(staging, keypair, tmp_path / "out_b")
+
     assert zip_a.read_bytes() == zip_b.read_bytes()
 
-    with zipfile.ZipFile(zip_a, "r") as zf:
+
+def test_map_package_entries_are_stored_in_streaming_order(tmp_path: Path, keypair: Keypair):
+    zip_path = _pack(_make_staging(tmp_path / "stage"), keypair, tmp_path / "out")
+
+    with zipfile.ZipFile(zip_path) as zf:
         assert zf.namelist() == [
             "manifest.json",
             "manifest.sig",
@@ -238,406 +341,554 @@ def test_cli_keygen_pack_map_verify_and_determinism(tmp_path: Path, encoding: st
             "data/map.json",
             "data/relief.pmtiles",
         ]
+        assert zf.infolist()[0].header_offset == 0
         for info in zf.infolist():
             assert info.compress_type == zipfile.ZIP_STORED
             assert info.date_time == archive.ZIP_DATE_TIME
 
-    assert (
-        cli.main(
-            [
-                "verify",
-                "--package",
-                str(zip_a),
-                "--public-keys",
-                str(pub_json),
-                "--expected-kind",
-                "map",
-            ]
-        )
-        == 0
-    )
+
+def test_cli_rejects_out_of_range_version_as_usage_error(tmp_path: Path, keypair: Keypair):
+    argv = _pack_map_argv(_make_staging(tmp_path / "stage"), keypair, tmp_path / "out")
+    argv[argv.index("--version") + 1] = "0"
+
+    assert _run_with_passphrase(argv) == cli.EXIT_USAGE
 
 
-def test_goal_9_refusals_and_provenance_guards(tmp_path: Path):
-    key_pem, pub_json = signing.generate_keypair("k1", tmp_path / "keys", b"pass")
-    priv = signing.load_private_key(key_pem, b"pass")
+def test_cli_reports_io_error_as_failed_check(
+    tmp_path: Path, keypair: Keypair, capsys: pytest.CaptureFixture[str]
+):
+    staging = _make_staging(tmp_path / "stage")
+    map_json = staging / "data" / "map.json"
+    map_json.chmod(0)
+    try:
+        code = _run_with_passphrase(_pack_map_argv(staging, keypair, tmp_path / "out"))
+    finally:
+        map_json.chmod(0o644)
 
-    # 1. Stray metadata.json in staging root or data/
-    st_meta = _make_staging(tmp_path / "s_meta")
-    (st_meta / "metadata.json").write_text('{"trial": true}', encoding="utf-8")
-    with pytest.raises(PackageError, match="metadata.json refused"):
-        archive.pack_map_staging(
-            staging_dir=st_meta,
-            version=1,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=tmp_path / "out",
-        )
+    assert code == cli.EXIT_FAILED
+    assert "I/O error" in capsys.readouterr().err
 
-    # 2. report.json purpose != production
-    st_trial_rep = _make_staging(tmp_path / "s_trep", purpose="trial")
-    with pytest.raises(PackageError, match="purpose must be 'production'"):
-        archive.pack_map_staging(
-            staging_dir=st_trial_rep,
-            version=1,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=tmp_path / "out",
-        )
 
-    # 3. "trial" present in base.pmtiles or relief.pmtiles
-    st_trial_pm = _make_staging(tmp_path / "s_tpm", relief_meta_overrides={"trial": True})
-    with pytest.raises(PackageError, match="trial archive refused"):
-        archive.pack_map_staging(
-            staging_dir=st_trial_pm,
-            version=1,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=tmp_path / "out",
-        )
+# --- Goal 9 trial isolation and provenance ------------------------------------------------
 
-    # 4. Missing tile_schema: 1
-    st_no_schema = _make_staging(tmp_path / "s_noschema", base_meta_overrides={"tile_schema": 2})
-    with pytest.raises(PackageError, match="tile_schema"):
-        archive.pack_map_staging(
-            staging_dir=st_no_schema,
-            version=1,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=tmp_path / "out",
-        )
 
-    # 5. "unknown" provenance refused
-    st_unknown = _make_staging(tmp_path / "s_unk", base_meta_overrides={"tool_commit": "unknown"})
-    with pytest.raises(PackageError, match="known provenance"):
-        archive.pack_map_staging(
-            staging_dir=st_unknown,
-            version=1,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=tmp_path / "out",
-        )
+def _add_root_metadata(staging: Path) -> None:
+    (staging / "metadata.json").write_text('{"trial": true}', encoding="utf-8")
 
-    # 6. local:* image provenance refused unless allow_local_provenance=True
-    st_local = _make_staging(tmp_path / "s_local", image="local:seerah-map:dev")
+
+def _add_data_metadata(staging: Path) -> None:
+    (staging / "data" / "metadata.json").write_text('{"trial": true}', encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (_add_root_metadata, "metadata.json refused"),
+        (_add_data_metadata, "metadata.json refused"),
+        (lambda s: _write_report(s, purpose="trial"), "purpose must be 'production'"),
+        (lambda s: _write_relief(s, _relief_meta() | {"trial": True}), "trial archive refused"),
+        (lambda s: _write_relief(s, _relief_meta() | {"variant": "value"}), "'variant'/'mode'"),
+        (lambda s: _write_base(s, _base_meta() | {"tile_schema": 2}), "tile_schema"),
+        (lambda s: _write_base(s, _base_meta() | {"tool_commit": "unknown"}), "known provenance"),
+        (lambda s: _write_report(s, data_commit="unknown"), "provenance.data_commit"),
+    ],
+    ids=[
+        "metadata-json-in-staging",
+        "metadata-json-in-data",
+        "trial-report",
+        "trial-key-in-pmtiles",
+        "variant-key-in-pmtiles",
+        "wrong-tile-schema",
+        "unknown-pmtiles-provenance",
+        "unknown-report-provenance",
+    ],
+)
+def test_pack_map_refuses_trial_or_unknown_staging(
+    tmp_path: Path, keypair: Keypair, mutate: Callable[[Path], None], message: str
+):
+    staging = _make_staging(tmp_path / "stage")
+    mutate(staging)
+
+    with pytest.raises(PackageError, match=message):
+        _pack(staging, keypair, tmp_path / "out")
+
+
+def test_local_image_provenance_needs_explicit_flag(tmp_path: Path, keypair: Keypair):
+    staging = _make_staging(tmp_path / "stage", image="local:seerah-map:dev")
+
     with pytest.raises(PackageError, match="--allow-local-provenance"):
-        archive.pack_map_staging(
-            staging_dir=st_local,
-            version=1,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=tmp_path / "out",
-        )
-    local_zip = archive.pack_map_staging(
-        staging_dir=st_local,
-        version=1,
-        min_app_version=1,
-        key_id="k1",
-        private_key=priv,
-        out_dir=tmp_path / "out_local",
-        allow_local_provenance=True,
-    )
-    keys = signing.load_trusted_keys(pub_json)
+        _pack(staging, keypair, tmp_path / "out")
+    local_zip = _pack(staging, keypair, tmp_path / "out", allow_local_provenance=True)
+
     with pytest.raises(PackageError, match="--allow-local-provenance"):
-        archive.verify_package(local_zip, trusted_keys=keys, expected_kind="map")
+        archive.verify_package(local_zip, trusted_keys=keypair.trusted, expected_kind="map")
     archive.verify_package(
-        local_zip, trusted_keys=keys, expected_kind="map", allow_local_provenance=True
+        local_zip, trusted_keys=keypair.trusted, expected_kind="map", allow_local_provenance=True
     )
 
 
-def test_verify_before_parse_and_key_id_binding(tmp_path: Path, monkeypatch):
-    key_a_pem, pub_a_json = signing.generate_keypair("key-a", tmp_path / "ka", b"pass")
-    key_b_pem, pub_b_json = signing.generate_keypair("key-b", tmp_path / "kb", b"pass")
-    priv_a = signing.load_private_key(key_a_pem, b"pass")
-    _ = signing.load_private_key(key_b_pem, b"pass")
-    trusted = [
-        *signing.load_trusted_keys(pub_a_json),
-        *signing.load_trusted_keys(pub_b_json),
-    ]
+# --- Staging layout and map payload consistency -------------------------------------------
 
-    # Build a ZIP with corrupt non-JSON manifest.json and invalid 64-byte signature
-    bad_zip = tmp_path / "corrupt_unverified.zip"
-    with zipfile.ZipFile(bad_zip, "w") as zf:
-        zf.writestr(
-            archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), b"{not valid json!!!"
-        )
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), b"\x00" * 64)
-        zf.writestr(archive._make_zip_info("data/item.json", zipfile.ZIP_STORED), b"{}")
 
-    json_loads_calls = []
-    real_loads = json.loads
+def _add_extra_data_file(staging: Path) -> None:
+    (staging / "data" / "notes.txt").write_text("extra", encoding="utf-8")
 
-    def spy_loads(*args, **kwargs):
-        json_loads_calls.append(args[0])
-        return real_loads(*args, **kwargs)
 
-    monkeypatch.setattr(archive.json, "loads", spy_loads)
-    with pytest.raises(PackageError, match="failed Ed25519 signature verification"):
-        archive.verify_package(bad_zip, trusted_keys=trusted)
-    # Critical invariant: json.loads was NEVER called before signature check failed!
-    assert json_loads_calls == []
-    monkeypatch.setattr(archive.json, "loads", real_loads)
+def _replace_map_json_with_symlink(staging: Path) -> None:
+    real = staging / "map.json.real"
+    (staging / "data" / "map.json").rename(real)
+    (staging / "data" / "map.json").symlink_to(real)
 
-    # Key confusion attack: manifest claims key_id="key-b", but signed by priv_a!
-    # Both key-a and key-b are in the trusted keyring.
-    confused_manifest = {
-        "created": "2026-11-23T00:00:00Z",
-        "files": [
-            {
-                "path": "data/item.json",
-                "size": 2,
-                "sha256": hashlib.sha256(b"{}").hexdigest(),
-            }
+
+def _with_map_json(change: Callable[[dict], None]) -> Callable[[Path], None]:
+    def mutate(staging: Path) -> None:
+        doc = _valid_map_json()
+        change(doc)
+        _write_map_json(staging, doc)
+
+    return mutate
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (_add_extra_data_file, "expected exact files"),
+        (_replace_map_json_with_symlink, "non-regular file refused"),
+        (
+            _with_map_json(lambda d: d["reconstructed_areas"].append({})),
+            "data/map.json: key reconstructed_areas",
+        ),
+        (
+            _with_map_json(lambda d: d["sources"]["base"].update(max_zoom=11)),
+            "base.pmtiles: header max_zoom",
+        ),
+        (
+            lambda s: _write_base(s, _base_meta() | {"vector_layers": [{"id": "land"}]}),
+            "must include 'land' and 'coast'",
+        ),
+        (
+            lambda s: _write_relief(s, _relief_meta(), tile_type=TileType.WEBP),
+            "header tile_type",
+        ),
+        (
+            lambda s: _write_relief(s, _relief_meta("painted-rgba")),
+            "metadata encoding",
+        ),
+        (
+            lambda s: _write_relief(s, _relief_meta(), bounds=(34.0, 11.0, 61.0, 33.0)),
+            "header bounds",
+        ),
+        (
+            lambda s: _write_relief(s, _relief_meta() | {"fingerprint": "e" * 64}),
+            "fingerprint mismatch",
+        ),
+        (lambda s: _write_report(s, fingerprint="e" * 64), "report.json fingerprint"),
+        (
+            lambda s: _write_report(s, data_commit="f" * 40),
+            "data_commit .* disagrees with source_commit",
+        ),
+    ],
+    ids=[
+        "extra-data-file",
+        "symlinked-map-json",
+        "map-json-schema",
+        "base-max-zoom",
+        "missing-coast-layer",
+        "relief-tile-type",
+        "relief-encoding",
+        "relief-bounds",
+        "pmtiles-fingerprints-differ",
+        "report-fingerprint",
+        "report-data-commit",
+    ],
+)
+def test_pack_map_refuses_inconsistent_staging(
+    tmp_path: Path, keypair: Keypair, mutate: Callable[[Path], None], message: str
+):
+    staging = _make_staging(tmp_path / "stage")
+    mutate(staging)
+
+    with pytest.raises(PackageError, match=message):
+        _pack(staging, keypair, tmp_path / "out")
+
+
+# --- Verify-before-parse and key binding ----------------------------------------------------
+
+
+def test_bad_signature_fails_before_manifest_is_parsed(
+    tmp_path: Path, keypair: Keypair, monkeypatch: pytest.MonkeyPatch
+):
+    bad_zip = _write_zip(
+        tmp_path / "corrupt.zip",
+        [
+            ("manifest.json", b"{not valid json!!!"),
+            ("manifest.sig", b"\x00" * 64),
+            ("data/item.json", b"{}"),
         ],
-        "key_id": "key-b",
+    )
+    parsed: list[object] = []
+    real_loads = json.loads
+    monkeypatch.setattr(
+        archive.json, "loads", lambda *a, **kw: (parsed.append(a[0]), real_loads(*a, **kw))[1]
+    )
+
+    with pytest.raises(PackageError, match="failed Ed25519 signature verification"):
+        archive.verify_package(bad_zip, trusted_keys=keypair.trusted)
+    assert parsed == []
+
+
+def _content_manifest(key_id: str) -> dict:
+    return {
+        "created": CREATED,
+        "files": [
+            {"path": "data/item.json", "size": 2, "sha256": hashlib.sha256(b"{}").hexdigest()}
+        ],
+        "key_id": key_id,
         "kind": "content",
         "min_app_version": 1,
         "source_commit": SOURCE_COMMIT,
         "version": 1,
     }
-    raw_m = archive.canonical_manifest_bytes(confused_manifest)
-    sig_by_a = signing.sign_bytes(priv_a, raw_m)
-    confused_zip = tmp_path / "confused.zip"
-    with zipfile.ZipFile(confused_zip, "w") as zf:
-        zf.writestr(archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), raw_m)
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), sig_by_a)
-        zf.writestr(archive._make_zip_info("data/item.json", zipfile.ZIP_STORED), b"{}")
+
+
+def _two_key_ring(tmp_path: Path) -> tuple[object, object, list[signing.TrustedKey]]:
+    pem_a, pub_a = signing.generate_keypair("key-a", tmp_path / "ka", PASSPHRASE)
+    pem_b, pub_b = signing.generate_keypair("key-b", tmp_path / "kb", PASSPHRASE)
+    ring = [*signing.load_trusted_keys(pub_a), *signing.load_trusted_keys(pub_b)]
+    return (
+        signing.load_private_key(pem_a, PASSPHRASE),
+        signing.load_private_key(pem_b, PASSPHRASE),
+        ring,
+    )
+
+
+def _signed_content_zip(path: Path, manifest: dict, private_key) -> Path:
+    raw = archive.canonical_manifest_bytes(manifest)
+    return _write_zip(
+        path,
+        [
+            ("manifest.json", raw),
+            ("manifest.sig", signing.sign_bytes(private_key, raw)),
+            ("data/item.json", b"{}"),
+        ],
+    )
+
+
+def test_manifest_naming_another_trusted_key_is_rejected(tmp_path: Path):
+    priv_a, _, ring = _two_key_ring(tmp_path)
+    confused = _signed_content_zip(tmp_path / "confused.zip", _content_manifest("key-b"), priv_a)
 
     with pytest.raises(PackageError, match="key_id binding mismatch"):
-        archive.verify_package(confused_zip, trusted_keys=trusted)
+        archive.verify_package(confused, trusted_keys=ring)
 
 
-def test_cross_kind_replay_and_monotonic_version_and_size_limit(tmp_path: Path, monkeypatch):
-    key_pem, pub_json = signing.generate_keypair("k1", tmp_path / "keys", b"pass")
-    priv = signing.load_private_key(key_pem, b"pass")
-    trusted = signing.load_trusted_keys(pub_json)
+def test_package_signed_by_second_trusted_key_verifies(tmp_path: Path):
+    _, priv_b, ring = _two_key_ring(tmp_path)
+    rotated = _signed_content_zip(tmp_path / "rotated.zip", _content_manifest("key-b"), priv_b)
 
-    # Build a content package (ZIP_DEFLATED allowed for content)
-    content_data = tmp_path / "content_data"
-    content_data.mkdir()
-    (content_data / "content.db").write_bytes(b"sqlite-content" * 100)
-    content_zip = archive.build_package(
+    assert archive.verify_package(rotated, trusted_keys=ring)["key_id"] == "key-b"
+
+
+def test_oversized_signature_is_rejected(tmp_path: Path, keypair: Keypair, content_package):
+    zip_path = _write_zip(
+        tmp_path / "long-sig.zip",
+        [
+            ("manifest.json", content_package.raw_manifest),
+            ("manifest.sig", content_package.raw_sig + b"\x00"),
+            ("data/ok.json", b"{}"),
+        ],
+    )
+
+    with pytest.raises(PackageError, match="manifest.sig must be 64 bytes"):
+        archive.verify_package(zip_path, trusted_keys=keypair.trusted)
+
+
+def test_oversized_map_manifest_is_rejected_before_signature_check(
+    tmp_path: Path, keypair: Keypair
+):
+    zip_path = _write_zip(
+        tmp_path / "huge-manifest.zip",
+        [
+            ("manifest.json", b" " * (archive.MAX_MAP_MANIFEST_BYTES + 1)),
+            ("manifest.sig", b"\x00" * 64),
+            ("data/ok.json", b"{}"),
+        ],
+    )
+
+    with pytest.raises(PackageError, match="manifest.json size"):
+        archive.verify_package(zip_path, trusted_keys=keypair.trusted, expected_kind="map")
+
+
+# --- Kinds, versions and size limits ------------------------------------------------------
+
+
+def _content_zip(tmp_path: Path, keypair: Keypair, compress_type: int) -> Path:
+    data = tmp_path / f"content-{compress_type}"
+    data.mkdir()
+    (data / "content.db").write_bytes(b"sqlite-content" * 100)
+    return archive.build_package(
         kind="content",
-        data_dir=content_data,
+        data_dir=data,
         version=1,
         min_app_version=1,
-        key_id="k1",
-        private_key=priv,
+        key_id=keypair.key_id,
+        private_key=keypair.private_key,
         source_commit=SOURCE_COMMIT,
-        out_path=tmp_path / "seerah-content-1.zip",
-        created="2026-11-23T00:00:00Z",
-        compress_type=zipfile.ZIP_DEFLATED,
+        out_path=tmp_path / f"seerah-content-{compress_type}.zip",
+        created=CREATED,
+        compress_type=compress_type,
     )
-    archive.verify_package(content_zip, trusted_keys=trusted, expected_kind="content")
+
+
+def test_deflated_content_package_verifies_as_content(tmp_path: Path, keypair: Keypair):
+    zip_path = _content_zip(tmp_path, keypair, zipfile.ZIP_DEFLATED)
+
+    assert archive.verify_package(zip_path, trusted_keys=keypair.trusted, expected_kind="content")
+
+
+def test_deflated_package_is_refused_as_map(tmp_path: Path, keypair: Keypair):
+    zip_path = _content_zip(tmp_path, keypair, zipfile.ZIP_DEFLATED)
+
     with pytest.raises(PackageError, match="ZIP_STORED"):
-        archive.verify_package(content_zip, trusted_keys=trusted, expected_kind="map")
+        archive.verify_package(zip_path, trusted_keys=keypair.trusted, expected_kind="map")
 
-    # Build a stored content package and test kind mismatch against expected_kind="map"
-    content_stored_zip = archive.build_package(
-        kind="content",
-        data_dir=content_data,
-        version=1,
-        min_app_version=1,
-        key_id="k1",
-        private_key=priv,
-        source_commit=SOURCE_COMMIT,
-        out_path=tmp_path / "seerah-content-stored-1.zip",
-        created="2026-11-23T00:00:00Z",
-        compress_type=zipfile.ZIP_STORED,
-    )
+
+def test_content_package_cannot_be_replayed_as_map(tmp_path: Path, keypair: Keypair):
+    zip_path = _content_zip(tmp_path, keypair, zipfile.ZIP_STORED)
+
     with pytest.raises(PackageError, match="expected 'map'"):
-        archive.verify_package(content_stored_zip, trusted_keys=trusted, expected_kind="map")
+        archive.verify_package(zip_path, trusted_keys=keypair.trusted, expected_kind="map")
 
-    # Immutability (--force) and --previous-manifest monotonic check
-    staging = _make_staging(tmp_path / "s1")
-    out_dir = tmp_path / "out_map"
-    map_zip = archive.pack_map_staging(
-        staging_dir=staging,
-        version=2,
-        min_app_version=1,
-        key_id="k1",
-        private_key=priv,
-        out_dir=out_dir,
-    )
+
+def test_pack_map_refuses_to_overwrite_without_force(tmp_path: Path, keypair: Keypair):
+    staging = _make_staging(tmp_path / "stage")
+    _pack(staging, keypair, tmp_path / "out")
+
     with pytest.raises(PackageError, match="refusing to overwrite"):
-        archive.pack_map_staging(
-            staging_dir=staging,
-            version=2,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=out_dir,
-        )
+        _pack(staging, keypair, tmp_path / "out")
+    assert _pack(staging, keypair, tmp_path / "out", force=True).is_file()
 
-    prev_manifest = tmp_path / "prev_manifest.json"
-    with zipfile.ZipFile(map_zip, "r") as zf:
-        prev_manifest.write_bytes(zf.read("manifest.json"))
+
+def test_pack_map_requires_version_above_previous(tmp_path: Path, keypair: Keypair):
+    staging = _make_staging(tmp_path / "stage")
+    first = _pack(staging, keypair, tmp_path / "out", version=2)
+    previous = tmp_path / "previous-manifest.json"
+    with zipfile.ZipFile(first) as zf:
+        previous.write_bytes(zf.read("manifest.json"))
 
     with pytest.raises(PackageError, match="strictly greater than previous version"):
-        archive.pack_map_staging(
-            staging_dir=staging,
-            version=2,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=tmp_path / "out_map2",
-            previous_manifest_path=prev_manifest,
-        )
+        _pack(staging, keypair, tmp_path / "out2", version=2, previous_manifest_path=previous)
+    assert _pack(staging, keypair, tmp_path / "out3", version=3, previous_manifest_path=previous)
 
-    # Size limit failure (> MAX_RELEASE_FILE_BYTES) cleans up temporary zip
+
+def test_pack_map_refuses_previous_manifest_of_other_kind(
+    tmp_path: Path, keypair: Keypair, content_package: ContentPackage
+):
+    previous = tmp_path / "previous-manifest.json"
+    previous.write_bytes(content_package.raw_manifest)
+
+    with pytest.raises(PackageError, match="previous manifest kind"):
+        _pack(_make_staging(tmp_path / "stage"), keypair, tmp_path / "out", version=2,
+              previous_manifest_path=previous)  # fmt: skip
+
+
+def test_package_over_release_limit_fails_and_leaves_nothing(
+    tmp_path: Path, keypair: Keypair, monkeypatch: pytest.MonkeyPatch
+):
+    staging = _make_staging(tmp_path / "stage")
     monkeypatch.setattr(archive, "MAX_RELEASE_FILE_BYTES", 50)
-    out_small = tmp_path / "out_small"
+
     with pytest.raises(PackageError, match="MAX_RELEASE_FILE_BYTES"):
-        archive.pack_map_staging(
-            staging_dir=staging,
-            version=3,
-            min_app_version=1,
-            key_id="k1",
-            private_key=priv,
-            out_dir=out_small,
-        )
-    assert list(out_small.glob("*")) == []
+        _pack(staging, keypair, tmp_path / "out")
+    assert list((tmp_path / "out").glob("*")) == []
 
 
-def test_zip_container_security_hardening(tmp_path: Path):
-    key_pem, pub_json = signing.generate_keypair("k1", tmp_path / "keys", b"pass")
-    priv = signing.load_private_key(key_pem, b"pass")
-    trusted = signing.load_trusted_keys(pub_json)
+# --- ZIP container hardening ----------------------------------------------------------------
 
-    content_data = tmp_path / "cdata"
-    content_data.mkdir()
-    (content_data / "ok.json").write_bytes(b"{}")
-    good_zip = archive.build_package(
-        kind="content",
-        data_dir=content_data,
-        version=1,
-        min_app_version=1,
-        key_id="k1",
-        private_key=priv,
-        source_commit=SOURCE_COMMIT,
-        out_path=tmp_path / "good.zip",
-        created="2026-11-23T00:00:00Z",
-    )
-    with zipfile.ZipFile(good_zip, "r") as zf:
-        raw_manifest = zf.read("manifest.json")
-        raw_sig = zf.read("manifest.sig")
 
-    # 1. Non-empty zip comment
-    comment_zip = tmp_path / "comment.zip"
-    shutil.copyfile(good_zip, comment_zip)
-    with zipfile.ZipFile(comment_zip, "a") as zf:
+def _append_comment(src: Path, dst: Path) -> None:
+    shutil.copyfile(src, dst)
+    with zipfile.ZipFile(dst, "a") as zf:
         zf.comment = b"non-empty comment"
-    with pytest.raises(PackageError, match="comment must be empty"):
-        archive.verify_package(comment_zip, trusted_keys=trusted)
 
-    # 2. Wrong entry order (data/ok.json before manifest.json)
-    order_zip = tmp_path / "order.zip"
-    with zipfile.ZipFile(order_zip, "w") as zf:
-        zf.writestr(archive._make_zip_info("data/ok.json", zipfile.ZIP_STORED), b"{}")
-        zf.writestr(archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), raw_manifest)
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), raw_sig)
-    with pytest.raises(PackageError, match="must place 'manifest.json' first"):
-        archive.verify_package(order_zip, trusted_keys=trusted)
 
-    # 3. Symlink Unix mode in external_attr
-    symlink_zip = tmp_path / "symlink.zip"
-    with zipfile.ZipFile(symlink_zip, "w") as zf:
-        zf.writestr(archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), raw_manifest)
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), raw_sig)
-        zinfo = archive._make_zip_info("data/ok.json", zipfile.ZIP_STORED)
-        zinfo.external_attr = (stat.S_IFLNK | 0o777) << 16
-        zf.writestr(zinfo, b"{}")
-    with pytest.raises(PackageError, match="non-regular Unix file mode"):
-        archive.verify_package(symlink_zip, trusted_keys=trusted)
+def _patch_bytes(src: Path, dst: Path, patch: Callable[[bytearray], None]) -> None:
+    raw = bytearray(src.read_bytes())
+    patch(raw)
+    dst.write_bytes(bytes(raw))
 
-    # 4. DOS directory flag (0x10) in external_attr
-    dosdir_zip = tmp_path / "dosdir.zip"
-    with zipfile.ZipFile(dosdir_zip, "w") as zf:
-        zf.writestr(archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), raw_manifest)
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), raw_sig)
-        zinfo = archive._make_zip_info("data/ok.json", zipfile.ZIP_STORED)
-        zinfo.external_attr |= 0x10
-        zf.writestr(zinfo, b"{}")
-    with pytest.raises(PackageError, match="directory entry refused"):
-        archive.verify_package(dosdir_zip, trusted_keys=trusted)
 
-    # 5. Encrypted flag bit (flag_bits & 0x1) in LFH
-    enc_zip = tmp_path / "enc.zip"
-    shutil.copyfile(good_zip, enc_zip)
-    raw = bytearray(enc_zip.read_bytes())
-    # Set bit 0 of LFH general purpose bit flag at offset 6 of first LFH
+def _set_lfh_encryption_flag(raw: bytearray) -> None:
     raw[6] |= 0x1
-    enc_zip.write_bytes(bytes(raw))
-    with pytest.raises(PackageError, match="encryption flag"):
-        archive.verify_package(enc_zip, trusted_keys=trusted)
 
-    # 6. LFH vs CD filename mismatch
-    lfh_mismatch = tmp_path / "lfh_mismatch.zip"
-    shutil.copyfile(good_zip, lfh_mismatch)
-    raw = bytearray(lfh_mismatch.read_bytes())
-    # First LFH filename starts at offset 30 ("manifest.json") -> mutate first char to "X"
+
+def _rename_first_lfh(raw: bytearray) -> None:
     assert raw[30:43] == b"manifest.json"
     raw[30] = ord("X")
-    lfh_mismatch.write_bytes(bytes(raw))
-    with pytest.raises(PackageError, match="LFH filename"):
-        archive.verify_package(lfh_mismatch, trusted_keys=trusted)
 
-    # 7. LFH vs CD compressed size mismatch
-    lfh_size_mismatch = tmp_path / "lfh_size_mismatch.zip"
-    shutil.copyfile(good_zip, lfh_size_mismatch)
-    raw = bytearray(lfh_size_mismatch.read_bytes())
-    # Compressed size in first LFH is uint32 at offset 18..22
+
+def _resize_first_lfh(raw: bytearray) -> None:
     struct.pack_into("<I", raw, 18, 999999)
-    lfh_size_mismatch.write_bytes(bytes(raw))
-    with pytest.raises(PackageError, match="LFH compressed size"):
-        archive.verify_package(lfh_size_mismatch, trusted_keys=trusted)
 
-    # 8. Duplicate entry name in Central Directory
-    dup_zip = tmp_path / "dup.zip"
-    with pytest.warns(UserWarning), zipfile.ZipFile(dup_zip, "w") as zf:
-        zf.writestr(archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), raw_manifest)
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), raw_sig)
-        zf.writestr(archive._make_zip_info("data/ok.json", zipfile.ZIP_STORED), b"{}")
-        zf.writestr(archive._make_zip_info("data/ok.json", zipfile.ZIP_STORED), b"{}")
+
+class _Unseekable:
+    """A write-only stream, so ``zipfile`` writes data descriptors after each entry."""
+
+    def __init__(self, handle):
+        self._handle = handle
+
+    def write(self, data: bytes) -> int:
+        return self._handle.write(data)
+
+    def flush(self) -> None:
+        self._handle.flush()
+
+    def tell(self) -> int:
+        return self._handle.tell()
+
+
+def _write_with_data_descriptors(dst: Path, entries: list[tuple[str, bytes]]) -> None:
+    with dst.open("wb") as handle, zipfile.ZipFile(_Unseekable(handle), "w") as zf:
+        for name, payload in entries:
+            with zf.open(archive._make_zip_info(name, zipfile.ZIP_STORED), "w") as dest:
+                dest.write(payload)
+
+
+def _write_with_gap(dst: Path, entries: list[tuple[str, bytes]]) -> None:
+    with zipfile.ZipFile(dst, "w") as zf:
+        for index, (name, payload) in enumerate(entries):
+            if index == len(entries) - 1:
+                zf.fp.write(b"\x00" * 16)
+                zf.start_dir = zf.fp.tell()
+            zf.writestr(archive._make_zip_info(name, zipfile.ZIP_STORED), payload)
+
+
+def _case(name: str, build: Callable[[Path, ContentPackage], None], message: str):
+    return pytest.param(build, message, id=name)
+
+
+def _entries(pkg: ContentPackage, data: bytes = b"{}") -> list[tuple[str, bytes]]:
+    return [
+        ("manifest.json", pkg.raw_manifest),
+        ("manifest.sig", pkg.raw_sig),
+        ("data/ok.json", data),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("build", "message"),
+    [
+        _case("comment", lambda d, p: _append_comment(p.path, d), "comment must be empty"),
+        _case(
+            "data-first",
+            lambda d, p: _write_zip(d, [_entries(p)[2], *_entries(p)[:2]]),
+            "must place 'manifest.json' first",
+        ),
+        _case(
+            "symlink-mode",
+            lambda d, p: _write_zip(
+                d, _entries(p), **{"data/ok.json": {"external_attr": (stat.S_IFLNK | 0o777) << 16}}
+            ),
+            "non-regular Unix file mode",
+        ),
+        _case(
+            "fifo-mode",
+            lambda d, p: _write_zip(
+                d, _entries(p), **{"data/ok.json": {"external_attr": (stat.S_IFIFO | 0o600) << 16}}
+            ),
+            "non-regular Unix file mode",
+        ),
+        _case(
+            "dos-directory",
+            lambda d, p: _write_zip(
+                d,
+                _entries(p),
+                **{"data/ok.json": {"external_attr": archive.ZIP_REGULAR_FILE_ATTR | 0x10}},
+            ),
+            "directory entry refused",
+        ),
+        _case(
+            "extra-field",
+            lambda d, p: _write_zip(
+                d, _entries(p), **{"data/ok.json": {"extra": b"\x99\x99\x02\x00ab"}}
+            ),
+            "extra fields",
+        ),
+        _case(
+            "lfh-encrypted",
+            lambda d, p: _patch_bytes(p.path, d, _set_lfh_encryption_flag),
+            "encryption flag",
+        ),
+        _case("lfh-name", lambda d, p: _patch_bytes(p.path, d, _rename_first_lfh), "LFH filename"),
+        _case(
+            "lfh-size",
+            lambda d, p: _patch_bytes(p.path, d, _resize_first_lfh),
+            "LFH compressed size",
+        ),
+        _case(
+            "data-descriptor",
+            lambda d, p: _write_with_data_descriptors(d, _entries(p)),
+            "data descriptor",
+        ),
+        _case(
+            "prepended-bytes",
+            lambda d, p: d.write_bytes(b"\x00" * 4096 + p.path.read_bytes()),
+            "contiguous from the start",
+        ),
+        _case(
+            "trailing-bytes",
+            lambda d, p: d.write_bytes(p.path.read_bytes() + b"junk"),
+            "no trailing bytes",
+        ),
+        _case("gap-between-entries", lambda d, p: _write_with_gap(d, _entries(p)), "contiguous"),
+        _case(
+            "tampered-payload",
+            lambda d, p: _write_zip(d, _entries(p, data=b"[]")),
+            "SHA-256 mismatch",
+        ),
+    ],
+)
+def test_verify_rejects_hostile_container(
+    tmp_path: Path,
+    keypair: Keypair,
+    content_package: ContentPackage,
+    build: Callable[[Path, ContentPackage], None],
+    message: str,
+):
+    hostile = tmp_path / "hostile.zip"
+    build(hostile, content_package)
+
+    with pytest.raises(PackageError, match=message):
+        archive.verify_package(hostile, trusted_keys=keypair.trusted)
+
+
+def test_verify_rejects_duplicate_entry_names(
+    tmp_path: Path, keypair: Keypair, content_package: ContentPackage
+):
+    with pytest.warns(UserWarning, match="Duplicate name"):
+        dup = _write_zip(
+            tmp_path / "dup.zip", [*_entries(content_package), ("data/ok.json", b"{}")]
+        )
+
     with pytest.raises(PackageError, match="duplicate entry names"):
-        archive.verify_package(dup_zip, trusted_keys=trusted)
+        archive.verify_package(dup, trusted_keys=keypair.trusted)
 
-    # 9. Prefix collision in manifest files (data/a and data/a/b)
+
+# --- Manifest field rules -------------------------------------------------------------------
+
+
+def test_manifest_paths_must_be_prefix_free():
     with pytest.raises(PackageError, match="conflicting file/directory prefix"):
         archive.validate_data_paths(["data/a", "data/a/b"])
 
-    # 10. Impossible calendar date in created timestamp
+
+def test_created_timestamp_must_be_a_real_date():
     with pytest.raises(PackageError, match="invalid calendar date"):
         archive.validate_iso_timestamp("2026-02-30T00:00:00Z")
 
-    # 11. FIFO Unix mode in external_attr
-    fifo_zip = tmp_path / "fifo.zip"
-    with zipfile.ZipFile(fifo_zip, "w") as zf:
-        zf.writestr(archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), raw_manifest)
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), raw_sig)
-        zinfo = archive._make_zip_info("data/ok.json", zipfile.ZIP_STORED)
-        zinfo.external_attr = (stat.S_IFIFO | 0o600) << 16
-        zf.writestr(zinfo, b"{}")
-    with pytest.raises(PackageError, match="non-regular Unix file mode"):
-        archive.verify_package(fifo_zip, trusted_keys=trusted)
 
-    # 12. Tampered payload bytes (SHA-256 mismatch)
-    tampered_zip = tmp_path / "tampered.zip"
-    with zipfile.ZipFile(tampered_zip, "w") as zf:
-        zf.writestr(archive._make_zip_info("manifest.json", zipfile.ZIP_STORED), raw_manifest)
-        zf.writestr(archive._make_zip_info("manifest.sig", zipfile.ZIP_STORED), raw_sig)
-        zf.writestr(archive._make_zip_info("data/ok.json", zipfile.ZIP_STORED), b"[]")
-    with pytest.raises(PackageError, match="SHA-256 mismatch"):
-        archive.verify_package(tampered_zip, trusted_keys=trusted)
+def test_content_manifest_must_not_carry_map_provenance(content_package: ContentPackage):
+    manifest = json.loads(content_package.raw_manifest) | {"tool_commit": TOOL_COMMIT}
 
-    # 13. Content manifest must not contain tool_commit or image
-    bad_content_manifest = json.loads(raw_manifest.decode("utf-8"))
-    bad_content_manifest["tool_commit"] = TOOL_COMMIT
     with pytest.raises(PackageError, match="manifest.json"):
-        archive.validate_manifest_dict(bad_content_manifest)
+        archive.validate_manifest_dict(manifest)
