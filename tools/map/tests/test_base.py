@@ -20,7 +20,14 @@ from seerah_map import base
 from seerah_map.blockstage import _distance_to_edge_deg, _write_geotiff
 from seerah_map.config import Bounds, FileRef, Lock, load_profile
 from seerah_map.fetch import NE_FILES
-from seerah_map.grid import Window, blocks, row_latitudes, shrink_extent
+from seerah_map.grid import (
+    TRIAL_MIN_MAPLIBRE_ZOOM,
+    WIDEST_HALF_SCREEN_DP,
+    Window,
+    blocks,
+    row_latitudes,
+    shrink_extent,
+)
 from seerah_map.pack import Provenance
 from seerah_map.workarea import open_area
 
@@ -387,6 +394,8 @@ def test_base_production_metadata_and_verify_base(built, tmp_path):
         webp_quality=profile.webp_quality,
         style=profile.style,
         peninsula_outline=profile.peninsula_outline,
+        min_maplibre_zoom=TRIAL_MIN_MAPLIBRE_ZOOM,
+        widest_half_screen_dp=WIDEST_HALF_SCREEN_DP,
         trial=False,
     )
     base._write_metadata(prod_archive, target, Provenance(fingerprint="prod-fp"))

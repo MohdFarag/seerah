@@ -23,6 +23,8 @@ from osgeo import gdal, ogr, osr
 from .config import (
     COPERNICUS_ATTRIBUTION,
     NATURAL_EARTH_ATTRIBUTION,
+    PRODUCTION_MAP_NAME,
+    TILE_SCHEMA,
     Bounds,
     BuildTarget,
     Coverage,
@@ -455,10 +457,12 @@ def verify_base(
     else:
         if "trial" in meta:
             raise BaseError("Production base archive metadata must not contain 'trial'")
-        if meta.get("tile_schema") != 1:
-            raise BaseError("Production base archive metadata must say tile_schema: 1")
-        if meta.get("name") != "seerah-map":
-            raise BaseError("Production base archive metadata must say name: seerah-map")
+        if meta.get("tile_schema") != TILE_SCHEMA:
+            raise BaseError(f"Production base archive metadata must say tile_schema: {TILE_SCHEMA}")
+        if meta.get("name") != PRODUCTION_MAP_NAME:
+            raise BaseError(
+                f"Production base archive metadata must say name: {PRODUCTION_MAP_NAME}"
+            )
     if {layer.get("id") for layer in _vector_layers(meta)} != {LAND_LAYER, COAST_LAYER}:
         raise BaseError("Expected land and coast vector layers")
 
@@ -576,27 +580,20 @@ def _write_metadata(staged: Path, profile: Profile | BuildTarget, provenance: Pr
         ]
     except (KeyError, TypeError) as exc:
         raise BaseError("Incomplete vector layer metadata in joined archive") from exc
-    is_trial = getattr(profile, "trial", True)
-    if is_trial:
-        meta = {
-            "name": profile.name,
-            "trial": True,
-            "fingerprint": provenance.fingerprint,
-            "tool_commit": provenance.tool_commit,
-            "data_commit": provenance.data_commit,
-            "image": provenance.image,
-            "vector_layers": allowed,
-        }
+    meta = {
+        "fingerprint": provenance.fingerprint,
+        "tool_commit": provenance.tool_commit,
+        "data_commit": provenance.data_commit,
+        "image": provenance.image,
+        "vector_layers": allowed,
+    }
+    if getattr(profile, "trial", True):
+        meta |= {"name": profile.name, "trial": True}
     else:
-        meta = {
-            "name": "seerah-map",
-            "tile_schema": 1,
+        meta |= {
+            "name": PRODUCTION_MAP_NAME,
+            "tile_schema": TILE_SCHEMA,
             "attribution": f"{COPERNICUS_ATTRIBUTION} {NATURAL_EARTH_ATTRIBUTION}",
-            "fingerprint": provenance.fingerprint,
-            "tool_commit": provenance.tool_commit,
-            "data_commit": provenance.data_commit,
-            "image": provenance.image,
-            "vector_layers": allowed,
         }
     metadata = staged.parent / "metadata.json"
     metadata.write_text(json.dumps(meta, indent=2, sort_keys=True))

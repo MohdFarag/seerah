@@ -240,7 +240,8 @@ def test_apply_cleanup_remove_land_and_immutability():
     valid[:10, :] = False
 
     clean = _cleanup(_lonlat_box(window, 40, 40), "remove-land")
-    out_elev, out_wbm = apply_cleanup(elev, wbm, valid, [clean], window)
+    out_elev, out_wbm, changed = apply_cleanup(elev, wbm, valid, [clean], window)
+    assert changed == (clean.id,)
 
     # Inputs stay unchanged.
     assert (elev == 45.0).all()
@@ -257,7 +258,7 @@ def test_apply_cleanup_remove_land_and_immutability():
 
     # Overlapping invalid band: remove-land touching row 0..80 leaves ~valid rows untouched.
     spanning = _cleanup(_lonlat_box(window, 0, 50), "remove-land")
-    _, wbm_span = apply_cleanup(elev, wbm, valid, [spanning], window)
+    _, wbm_span, _ = apply_cleanup(elev, wbm, valid, [spanning], window)
     assert (wbm_span[:10, :50] == 0).all()
     assert (wbm_span[10:45, 5:45] == 1).all()
 
@@ -275,7 +276,7 @@ def test_remove_land_zeroes_elevation_to_prevent_coastal_blur_bleed():
     wbm[42:78, 42:78] = 0
 
     clean = _cleanup(_lonlat_box(window, 40, 40), "remove-land")
-    cleaned_elev, cleaned_wbm = apply_cleanup(elev, wbm, valid, [clean], window)
+    cleaned_elev, cleaned_wbm, _ = apply_cleanup(elev, wbm, valid, [clean], window)
     cleaned_land = land_mask(cleaned_wbm, valid) >= 128
 
     lats = row_latitudes(window)
@@ -303,7 +304,8 @@ def test_apply_cleanup_fill_water_only_infills_ocean_pixels():
     elev[wbm == 1] = -3.0  # synthetic negative DEM noise in basin; valid ocean pixels -> 0.0
 
     fill = _cleanup(_lonlat_box(window, 40, 40), "fill-water")
-    out_elev, out_wbm = apply_cleanup(elev, wbm, valid, [fill], window)
+    out_elev, out_wbm, changed = apply_cleanup(elev, wbm, valid, [fill], window)
+    assert changed == (fill.id,)
 
     # Pure ocean pixel inside polygon became wbm=0, elevation=0.0.
     assert out_wbm[70, 70] == 0
@@ -329,7 +331,7 @@ def test_apply_cleanup_supports_multipolygon_and_polygon_with_hole():
 
     wbm = np.zeros((window.rows, window.cols), dtype=np.uint8)
     elev = np.full((window.rows, window.cols), 30.0, dtype=np.float32)
-    out_elev, out_wbm = apply_cleanup(
+    out_elev, out_wbm, _ = apply_cleanup(
         elev, wbm, valid, [_cleanup(poly_with_hole, "remove-land")], window
     )
     assert out_wbm[25, 25] == 1 and out_elev[25, 25] == 0.0
@@ -343,6 +345,24 @@ def test_apply_cleanup_supports_multipolygon_and_polygon_with_hole():
     assert out_wbm_multi[25, 25] == 0
     assert out_wbm_multi[90, 90] == 0
     assert out_wbm_multi[60, 60] == 1
+
+
+def test_apply_cleanup_reports_edits_that_change_no_pixel():
+    window = _window_at(_LON, _LAT)
+    valid = _valid_mask(window)
+    sea = np.ones((window.rows, window.cols), dtype=np.uint8)
+    flat_sea = np.zeros((window.rows, window.cols), dtype=np.float32)
+    land = np.zeros((window.rows, window.cols), dtype=np.uint8)
+
+    remove = _cleanup(_lonlat_box(window, 40, 40), "remove-land")
+    fill = _cleanup(_lonlat_box(window, 40, 40), "fill-water")
+
+    # Removing land from flat sea and filling water on dry land change nothing.
+    assert apply_cleanup(flat_sea, sea, valid, [remove], window).changed_ids == ()
+    assert apply_cleanup(flat_sea, land, valid, [fill], window).changed_ids == ()
+    # Sea with non-zero elevation still changes: the elevation is zeroed.
+    noisy_sea = np.full((window.rows, window.cols), -2.0, dtype=np.float32)
+    assert apply_cleanup(noisy_sea, sea, valid, [remove], window).changed_ids == (remove.id,)
 
 
 def test_apply_cleanup_rejects_bad_operation_and_shape_mismatch():

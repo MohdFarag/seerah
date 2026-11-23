@@ -8,10 +8,10 @@ The tool runs in a toolchain image (GDAL, `tippecanoe`, `tile-join`, `go-pmtiles
 
 | Command | What it does |
 | --- | --- |
-| `fetch (--profile P \| --coverage C)` | Downloads P's or C's cells and the Natural Earth files into `/cache`. With no lock it writes `/out/<name>.lock` (or `/out/sources.lock` for `--coverage`) and says where to copy it; with a lock it verifies every cached file and refuses any mismatch. |
+| `fetch (--profile P \| --coverage C [--allow-zero-margin])` | Downloads P's or C's cells and the Natural Earth files into `/cache`. With no lock it writes `/out/<name>.lock` (or `/out/sources.lock` for `--coverage`) and says where to copy it; with a lock it verifies every cached file and refuses any mismatch. A coverage with `min_data_margin_deg: 0` needs `--allow-zero-margin`, as for `validate` and `build`. |
 | `validate --coverage C [--allow-zero-margin]` | Validates `coverage.yaml`, `cleanup.yaml`, `sources.lock`, optional `peninsula_outline`, and the generated `map.json` against `map-data/schema/map.schema.json` without reading `/cache` or writing `/work` or `/out`. |
 | `build --profile P --variant {painted,value} [--mode {pyramid,per-zoom}]` | Runs the trial block stage, tile stage, pack and base layer stage, and writes `/out/<name>-<variant>-<fp8>/` (or `/out/<name>-<variant>-per-zoom-<fp8>/` for `per-zoom`). Options: `--mode` (default `pyramid`; `per-zoom` is only supported with `--variant painted`), `--workers`, and `--per-worker-mib` (default 2048, `GDAL_CACHEMAX` included). |
-| `build --coverage C [--allow-zero-margin]` | Verifies cached sources against `sources.lock`, runs the production (`purpose: production`) block stage (`per-zoom` with `cleanup.yaml`), tile stage, `tile_schema: 1` pack and base layer stage, validates `data/map.json`, enforces the 2 GiB GitHub Release asset budget, and atomically stages `/out/map-staging-<fp8>/`. |
+| `build --coverage C [--allow-zero-margin]` | Verifies cached sources against `sources.lock`, runs the production (`purpose: production`) block stage (always `pyramid`, with the approved edits of `cleanup.yaml`; it fails if an approved edit changed no pixel), tile stage, `tile_schema: 1` pack and base layer stage, validates `data/map.json`, enforces the 2 GiB GitHub Release asset budget, and atomically stages `/out/map-staging-<fp8>/`. |
 | `clean [--fingerprint F \| --all]` | Lists work areas under `/work` with their sizes, or removes one or all. |
 
 Exit codes: 0 for success, 1 when a check fails, 2 for a usage or configuration error.
@@ -93,7 +93,7 @@ Run one full build at a time for each fingerprint. Different fingerprints have s
     base.pmtiles      the vector base archive (land and coast layers, tile_schema: 1)
     relief.pmtiles    the relief archive (tile_schema: 1)
     map.json          camera bounds, data extent, zooms, sources, credits and reconstructed_areas
-  report.json         purpose: production, provenance, stage times, memory, disk, tile counts, edits
+  report.json         purpose: production, provenance, stage times, memory, disk, tile counts, edits (applied: approved edits, each of which changed at least one pixel; skipped: unapproved)
 ```
 
 ## Valley probe

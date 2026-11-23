@@ -12,6 +12,7 @@ land mask at that zoom's pixel scale (building zoom-12 ``mask/<id>.tif`` and
 interrupted run resumes. Elevations are metres, extents and distances degrees.
 """
 
+import json
 import multiprocessing
 from collections.abc import Callable, Sequence
 from concurrent.futures import Future, ProcessPoolExecutor, as_completed
@@ -42,6 +43,7 @@ _WBM_ABSENT_CLASS = 1
 _MASK_VALID = 255
 _GTIFF_OPTIONS = ["TILED=YES", "COMPRESS=DEFLATE"]
 _START_METHOD = "forkserver"
+_CLEANUP_RECORD_SUFFIX = ".cleanup.json"
 
 
 def source_vrts(lock: Lock, cache: Path, extent: Bounds, work: WorkArea) -> tuple[Path, Path]:
@@ -272,7 +274,9 @@ def render_block(
 
     Writes ``<style_dir>/<id>.tif`` (the encoded darkness) and ``mask/<id>.tif``
     (the land mask, 0 to 255, with an internal mask that is 0 outside the data
-    extent), both on the block's window. Each file appears complete or not at all.
+    extent), both on the block's window. With ``cleanups``, it first writes
+    ``mask/<id>.cleanup.json``, the IDs of the cleanup edits that changed a pixel
+    of the bordered window. Each file appears complete or not at all.
     """
     if variant not in VARIANTS:
         raise ValueError(f"unknown variant {variant!r}; expected one of {VARIANTS}")
@@ -283,7 +287,8 @@ def render_block(
     window = block.window.pad(border)
     elevation, wbm, valid = read_block(block, border, *vrts, extent)
     if cleanups:
-        elevation, wbm = apply_cleanup(elevation, wbm, valid, cleanups, window)
+        elevation, wbm, changed = apply_cleanup(elevation, wbm, valid, cleanups, window)
+        _write_cleanup_record(block, work, changed)
     if valid.any():
         elevation = mask.fill_invalid(elevation, valid)
     land_values = _land_mask_from_wbm(wbm, valid)
@@ -358,6 +363,40 @@ def _render_coarse_block(
         edits,
         variant,
     )
+
+
+def _cleanup_record_path(block: Block, work: WorkArea) -> Path:
+    return work.mask_dir / f"{block.id}{_CLEANUP_RECORD_SUFFIX}"
+
+
+def _write_cleanup_record(block: Block, work: WorkArea, changed_ids: Sequence[str]) -> None:
+    with atomic_write(_cleanup_record_path(block, work)) as tmp:
+        tmp.write_text(json.dumps(sorted(changed_ids)))
+
+
+def changed_cleanup_ids(block_list: list[Block], work: WorkArea) -> set[str]:
+    """Collect the cleanup edits that changed at least one pixel in any block.
+
+    Reads the record ``render_block`` writes beside each block's mask when it is
+    given cleanup edits, so blocks finished by an earlier, interrupted run count too.
+
+    Args:
+        block_list: every block of the build.
+        work: the work area.
+
+    Returns:
+        The IDs of the cleanup edits that changed a pixel.
+
+    Raises:
+        FileNotFoundError: naming the first block that has no record.
+    """
+    changed: set[str] = set()
+    for block in block_list:
+        path = _cleanup_record_path(block, work)
+        if not path.is_file():
+            raise FileNotFoundError(f"block {block.id} has no cleanup record in {work.mask_dir}")
+        changed.update(json.loads(path.read_text()))
+    return changed
 
 
 def _finished(block: Block, work: WorkArea) -> bool:

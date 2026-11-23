@@ -22,7 +22,15 @@ from pmtiles.reader import MmapSource, Reader
 from pmtiles.tile import MagicNumberNotFound
 
 from .blockstage import PYRAMID
-from .config import COPERNICUS_ATTRIBUTION, Bounds, BuildTarget, Coverage, Profile
+from .config import (
+    COPERNICUS_ATTRIBUTION,
+    PRODUCTION_MAP_NAME,
+    TILE_SCHEMA,
+    Bounds,
+    BuildTarget,
+    Coverage,
+    Profile,
+)
 from .errors import ConfigError
 from .workarea import WorkArea, atomic_write
 
@@ -90,8 +98,8 @@ def metadata(
             "minzoom": 0,
             "maxzoom": profile.max_zoom,
             "bounds": _bounds_text(profile.data_extent),
-            "name": "seerah-map",
-            "tile_schema": 1,
+            "name": PRODUCTION_MAP_NAME,
+            "tile_schema": TILE_SCHEMA,
             "attribution": COPERNICUS_ATTRIBUTION,
             "encoding": encoding,
             "fingerprint": provenance.fingerprint,
@@ -227,10 +235,14 @@ def verify(
             raise PackError("production metadata must not contain 'trial'")
         if "variant" in meta or "mode" in meta:
             raise PackError("production metadata must not contain trial 'variant' or 'mode' keys")
-        if meta.get("tile_schema") != 1:
-            raise PackError(f"metadata tile_schema is {meta.get('tile_schema')!r}, expected 1")
-        if meta.get("name") != "seerah-map":
-            raise PackError(f"metadata name is {meta.get('name')!r}, expected 'seerah-map'")
+        if meta.get("tile_schema") != TILE_SCHEMA:
+            raise PackError(
+                f"metadata tile_schema is {meta.get('tile_schema')!r}, expected {TILE_SCHEMA}"
+            )
+        if meta.get("name") != PRODUCTION_MAP_NAME:
+            raise PackError(
+                f"metadata name is {meta.get('name')!r}, expected {PRODUCTION_MAP_NAME!r}"
+            )
 
 
 def _centre_lon_lat(z: int, x: int, y: int) -> tuple[float, float]:

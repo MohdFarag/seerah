@@ -593,6 +593,32 @@ def test_render_block_and_mask_block_apply_cleanup(tmp_path):
     np.testing.assert_array_equal(_read(work_mask.mask_dir / f"{block.id}.tif"), mask_clean)
 
 
+def test_changed_cleanup_ids_reads_each_blocks_record(tmp_path):
+    lock, cache, profile_z11, cleanups = _coastal_cleanup_fixture(tmp_path)
+    profile = replace(profile_z11, max_zoom=BASE_ZOOM, block_zoom=11)
+    block_list = blocks(profile.data_extent, profile.block_zoom)
+    work = open_area(tmp_path / "work", "records")
+    vrts = blockstage.source_vrts(lock, cache, profile.data_extent, work)
+
+    with pytest.raises(FileNotFoundError, match="cleanup record"):
+        blockstage.changed_cleanup_ids(block_list, work)
+
+    far_away = replace(
+        cleanups[0],
+        id="far-away",
+        geometry={
+            "type": "Polygon",
+            "coordinates": [[[10.0, 10.0], [10.1, 10.0], [10.1, 10.1], [10.0, 10.1], [10.0, 10.0]]],
+        },
+    )
+    for block in block_list:
+        blockstage.render_block(
+            block, profile, [], "painted", vrts, work, cleanups=[*cleanups, far_away]
+        )
+
+    assert blockstage.changed_cleanup_ids(block_list, work) == {c.id for c in cleanups}
+
+
 def test_per_zoom_rejects_cleanups(tmp_path):
     lock, cache, profile_z11, cleanups = _coastal_cleanup_fixture(tmp_path)
     work = open_area(tmp_path / "work", "pz")

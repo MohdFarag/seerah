@@ -41,6 +41,9 @@ COPERNICUS_LIABILITY = (
     "Copernicus WorldDEM-30."
 )
 NATURAL_EARTH_ATTRIBUTION = "Made with Natural Earth. Public domain."
+# The production map's PMTiles metadata name and tile contract version (map-data/README.md).
+PRODUCTION_MAP_NAME = "seerah-map"
+TILE_SCHEMA = 1
 # The same tile grid as grid.py, which imports this module and so cannot be imported here.
 _TILE_GRID = morecantile.tms.get("WebMercatorQuad")
 # The part of the grid a profile may cover: the N/E quadrant, up to the grid's northern edge.
@@ -122,9 +125,9 @@ class BuildTarget:
     webp_quality: int
     style: StyleSettings
     peninsula_outline: Path | None
-    min_maplibre_zoom: int = 4
-    widest_half_screen_dp: float = 550.0
-    trial: bool = True
+    min_maplibre_zoom: int
+    widest_half_screen_dp: float
+    trial: bool
 
 
 @dataclass(frozen=True)
@@ -157,7 +160,7 @@ class Coverage:
     def as_build_target(self) -> BuildTarget:
         """Adapt this production coverage config for the shared build stages."""
         return BuildTarget(
-            name="seerah-map",
+            name=PRODUCTION_MAP_NAME,
             folder=self.folder,
             purpose=self.purpose,
             camera_bounds=self.camera_bounds,
@@ -611,7 +614,7 @@ def build_map_json(coverage: Coverage) -> dict:
     """Build and schema-validate the ``data/map.json`` dict for ``coverage``."""
     tile_format = "png" if coverage.relief_encoding == "terrarium-value" else "webp"
     doc = {
-        "tile_schema": 1,
+        "tile_schema": TILE_SCHEMA,
         "camera_bounds": {
             "west": coverage.camera_bounds.west,
             "south": coverage.camera_bounds.south,

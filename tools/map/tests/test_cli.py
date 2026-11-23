@@ -404,6 +404,26 @@ def test_fetch_coverage_command(tmp_path, monkeypatch):
     assert seen == [("sources.lock", "sources.lock", "seerah-content/map/")]
 
 
+def test_fetch_coverage_refuses_zero_margin_without_flag(tmp_path, monkeypatch, capsys):
+    _coverage_data(tmp_path, margin=0.0)
+    monkeypatch.setattr(
+        cli,
+        "fetch",
+        lambda *a, **kw: SimpleNamespace(downloaded=0, verified=1, message="stub fetch"),
+    )
+
+    assert cli.main(["fetch", "--coverage", "prod", *_roots(tmp_path)]) == cli.EXIT_USAGE
+    assert "--allow-zero-margin" in capsys.readouterr().err
+    assert cli.main(["fetch", "--coverage", "prod", "--allow-zero-margin", *_roots(tmp_path)]) == 0
+
+
+def test_fetch_profile_rejects_allow_zero_margin(tmp_path, capsys):
+    _data(tmp_path)
+
+    assert cli.main([*_fetch(tmp_path), "--allow-zero-margin"]) == cli.EXIT_USAGE
+    assert "--allow-zero-margin" in capsys.readouterr().err
+
+
 def test_build_coverage_rejects_incompatible_flags(tmp_path, capsys):
     _coverage_data(tmp_path, margin=0.05)
     _data(tmp_path)
@@ -446,6 +466,7 @@ def test_build_coverage_stages_atomic_bundle_and_checks_cache_and_size(
         "run_block_stage",
         lambda *a, **kw: (calls.append("block"), [])[1],
     )
+    monkeypatch.setattr(cli, "changed_cleanup_ids", lambda blocks, area: {"remove-synthetic-pier"})
     monkeypatch.setattr(
         cli,
         "run_tile_stage",
@@ -513,4 +534,22 @@ def test_build_coverage_stages_atomic_bundle_and_checks_cache_and_size(
     shutil.rmtree(staged)
     assert cli.main(["build", "--coverage", "prod", *_roots(tmp_path)]) == 1
     assert "MAX_RELEASE_FILE_BYTES" in capsys.readouterr().err
+    assert list((tmp_path / "out").iterdir()) == []
+
+
+def test_build_coverage_refuses_approved_cleanup_that_changed_no_pixels(
+    tmp_path, monkeypatch, capsys
+):
+    _coverage_data(tmp_path, margin=0.05)
+    calls: list[str] = []
+    monkeypatch.setattr(cli, "verify_cached_sources", lambda *a, **kw: None)
+    monkeypatch.setattr(cli, "run_block_stage", lambda *a, **kw: [])
+    monkeypatch.setattr(cli, "changed_cleanup_ids", lambda blocks, area: set())
+    monkeypatch.setattr(cli, "run_tile_stage", lambda *a, **kw: calls.append("tile"))
+
+    assert cli.main(["build", "--coverage", "prod", *_roots(tmp_path)]) == cli.EXIT_USAGE
+    err = capsys.readouterr().err
+    assert "changed no pixels" in err
+    assert "remove-synthetic-pier" in err
+    assert calls == []
     assert list((tmp_path / "out").iterdir()) == []

@@ -10,7 +10,7 @@ elevations are metres.
 import json
 import math
 from collections.abc import Sequence
-from typing import TypeVar
+from typing import NamedTuple, TypeVar
 
 import numpy as np
 from osgeo import gdal, ogr, osr
@@ -32,6 +32,14 @@ _LAND_CLASS = 0
 _OCEAN_CLASS = 1
 
 _EditT = TypeVar("_EditT", Edit, CleanupEdit)
+
+
+class CleanupResult(NamedTuple):
+    """The arrays after coastal cleanup, and which edits changed at least one pixel."""
+
+    elevation: np.ndarray
+    wbm: np.ndarray
+    changed_ids: tuple[str, ...]
 
 
 def applicable(edits: Sequence[_EditT]) -> tuple[list[_EditT], list[str]]:
@@ -179,8 +187,12 @@ def _apply_cleanup_edits(
     window: Window,
     *,
     elevation: np.ndarray | None = None,
-) -> tuple[np.ndarray | None, np.ndarray]:
-    """Shared coastal cleanup rasterizer for ``apply_cleanup`` and ``apply_wbm_cleanup``."""
+) -> tuple[np.ndarray | None, np.ndarray, tuple[str, ...]]:
+    """Shared coastal cleanup rasterizer for ``apply_cleanup`` and ``apply_wbm_cleanup``.
+
+    Returns the new elevation (or None), the new WBM, and the IDs of the edits
+    that changed at least one WBM class or elevation value, in edit order.
+    """
     expected = (window.rows, window.cols)
     if wbm.shape != expected or valid.shape != expected:
         raise ValueError(
@@ -191,6 +203,7 @@ def _apply_cleanup_edits(
 
     wbm_out = wbm.astype(np.uint8, copy=True)
     elev_out = None if elevation is None else elevation.astype(np.float32, copy=True)
+    changed: list[str] = []
     for edit in cleanups:
         if edit.operation not in CLEANUP_OPERATIONS:
             raise ValueError(f"cleanup edit {edit.id}: unknown operation {edit.operation!r}")
@@ -200,15 +213,20 @@ def _apply_cleanup_edits(
         if not target.any():
             continue
         if edit.operation == CLEANUP_REMOVE_LAND:
+            changes = bool((wbm_out[target] != _OCEAN_CLASS).any())
             wbm_out[target] = _OCEAN_CLASS
             if elev_out is not None:
+                changes = changes or bool((elev_out[target] != 0.0).any())
                 elev_out[target] = 0.0
-        elif edit.operation == CLEANUP_FILL_WATER:
-            ocean_target = target & (wbm_out == _OCEAN_CLASS)
-            wbm_out[ocean_target] = _LAND_CLASS
+        else:
+            target &= wbm_out == _OCEAN_CLASS
+            changes = bool(target.any())
+            wbm_out[target] = _LAND_CLASS
             if elev_out is not None:
-                elev_out[ocean_target] = 0.0
-    return elev_out, wbm_out
+                elev_out[target] = 0.0
+        if changes:
+            changed.append(edit.id)
+    return elev_out, wbm_out, tuple(changed)
 
 
 def apply_cleanup(
@@ -217,7 +235,7 @@ def apply_cleanup(
     valid: np.ndarray,
     cleanups: Sequence[CleanupEdit],
     window: Window,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> CleanupResult:
     """Apply coastal cleanup edits to WBM and coincident elevation arrays.
 
     Args:
@@ -228,14 +246,17 @@ def apply_cleanup(
         window: the pixel window covered by the arrays.
 
     Returns:
-        ``(new_elevation, new_wbm)`` as ``float32`` and ``uint8`` copies.
+        The new ``float32`` elevation and ``uint8`` WBM copies, and the IDs of
+        the edits that changed at least one pixel of either.
 
     Raises:
         ValueError: on array shape mismatch or unknown cleanup operation.
     """
-    elev_out, wbm_out = _apply_cleanup_edits(wbm, valid, cleanups, window, elevation=elevation)
+    elev_out, wbm_out, changed = _apply_cleanup_edits(
+        wbm, valid, cleanups, window, elevation=elevation
+    )
     assert elev_out is not None
-    return elev_out, wbm_out
+    return CleanupResult(elev_out, wbm_out, changed)
 
 
 def apply_wbm_cleanup(
@@ -258,7 +279,7 @@ def apply_wbm_cleanup(
     Raises:
         ValueError: on array shape mismatch or unknown cleanup operation.
     """
-    _, wbm_out = _apply_cleanup_edits(wbm, valid, cleanups, window)
+    _, wbm_out, _ = _apply_cleanup_edits(wbm, valid, cleanups, window)
     return wbm_out
 
 

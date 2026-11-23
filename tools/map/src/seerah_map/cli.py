@@ -21,7 +21,15 @@ from pathlib import Path
 
 from . import config
 from .base import BaseError, build_base_layer
-from .blockstage import MODES, PAINTED, PER_ZOOM, PYRAMID, VARIANTS, run_block_stage
+from .blockstage import (
+    MODES,
+    PAINTED,
+    PER_ZOOM,
+    PYRAMID,
+    VARIANTS,
+    changed_cleanup_ids,
+    run_block_stage,
+)
 from .edits import applicable, validate_cleanups
 from .errors import ConfigError
 from .fetch import FetchError, check_lock_matches, fetch, verify_cached_sources
@@ -149,7 +157,7 @@ def _cmd_fetch(args: argparse.Namespace) -> int:
         coverage = config.load_coverage(
             coverage_path,
             data_root=args.data,
-            allow_zero_margin=True,
+            allow_zero_margin=args.allow_zero_margin,
         )
         lock_path = coverage_path.parent / SOURCES_LOCK_NAME
         result = fetch(
@@ -163,6 +171,8 @@ def _cmd_fetch(args: argparse.Namespace) -> int:
         _say(f"fetch: {result.downloaded} downloaded, {result.verified} verified")
         _say(result.message)
         return EXIT_OK
+    if args.allow_zero_margin:
+        raise _UsageError("--allow-zero-margin is only supported with --coverage")
     profile_path = _profile_path(args.data, args.profile)
     profile = config.load_profile(profile_path, data_root=args.data)
     lock_path = profile_path.with_suffix(".lock")
@@ -227,6 +237,22 @@ def _check_release_size(data_dir: Path) -> None:
             f"staged data total ({total} bytes) + ZIP_BUDGET_OVERHEAD ({ZIP_BUDGET_OVERHEAD} bytes)"
             f" exceeds MAX_RELEASE_FILE_BYTES ({MAX_RELEASE_FILE_BYTES})"
         )
+
+
+def _check_cleanups_changed_pixels(
+    target: config.BuildTarget, area: WorkArea, cleanups: list[config.CleanupEdit]
+) -> list[str]:
+    """Return the approved cleanup IDs in file order; refuse any that changed no pixel."""
+    if not cleanups:
+        return []
+    changed = changed_cleanup_ids(blocks(target.data_extent, target.block_zoom), area)
+    unchanged = [c.id for c in cleanups if c.id not in changed]
+    if unchanged:
+        raise ConfigError(
+            f"approved cleanup edits changed no pixels (check coordinates and operation): "
+            f"{', '.join(unchanged)}"
+        )
+    return [c.id for c in cleanups]
 
 
 def _cmd_build_coverage(args: argparse.Namespace) -> int:
@@ -316,6 +342,7 @@ def _cmd_build_coverage(args: argparse.Namespace) -> int:
                 cleanups=cleanups,
             ),
         )
+        applied = _check_cleanups_changed_pixels(target, area, cleanups)
         child_rss_kib = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
         _timed(
             seconds,
@@ -352,7 +379,7 @@ def _cmd_build_coverage(args: argparse.Namespace) -> int:
 
         report = _report(area, target, provenance, seconds, child_rss_kib, area_bytes, archive)
         report["purpose"] = "production"
-        report["edits"] = {"applied": [c.id for c in cleanups], "skipped": skipped}
+        report["edits"] = {"applied": applied, "skipped": skipped}
         report["workers"] = {
             "count": count,
             "reason": reason,
@@ -539,6 +566,11 @@ def _parser() -> argparse.ArgumentParser:
     fetch_target = fetch_cmd.add_mutually_exclusive_group(required=True)
     fetch_target.add_argument("--profile", help=profile_help)
     fetch_target.add_argument("--coverage", help=coverage_help)
+    fetch_cmd.add_argument(
+        "--allow-zero-margin",
+        action="store_true",
+        help="allow min_data_margin_deg: 0 on --coverage fetches (for synthetic CI fixtures only)",
+    )
     fetch_cmd.set_defaults(run=_cmd_fetch)
 
     validate_cmd = commands.add_parser(
