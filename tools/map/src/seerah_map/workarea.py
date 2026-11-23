@@ -9,7 +9,7 @@ inputs are unchanged. Sizes are in bytes.
 import hashlib
 import os
 import shutil
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib import metadata
@@ -71,12 +71,14 @@ def fingerprint(
     variant: str,
     src_root: Path,
     mode: str = "pyramid",
+    *,
+    extra_parts: Sequence[bytes] = (),
 ) -> str:
     """Name a build by everything that decides its output.
 
     Args:
-        profile: bytes of the profile file.
-        edits: bytes of the edits file.
+        profile: bytes of the profile or coverage file.
+        edits: bytes of the edits or cleanup file.
         lock: bytes of the lock file.
         tool_commit: commit of the tool; ``None`` uses ``code_hash(src_root)``.
         image_digest: digest of the image; ``None`` uses ``toolchain_id()``.
@@ -84,6 +86,8 @@ def fingerprint(
         src_root: the tool's source directory, hashed when ``tool_commit`` is
             ``None``.
         mode: the tiling mode's name (default ``"pyramid"``).
+        extra_parts: optional extra byte inputs (such as the ``"production"``
+            domain tag, ``data_commit`` and ``peninsula_outline`` bytes).
 
     Returns:
         SHA-256 hex digest of the parts joined with ``b"\\0"``.
@@ -96,6 +100,7 @@ def fingerprint(
         (image_digest if image_digest is not None else toolchain_id()).encode(),
         variant.encode(),
         mode.encode(),
+        *extra_parts,
     ]
     return hashlib.sha256(_PART_SEPARATOR.join(parts)).hexdigest()
 

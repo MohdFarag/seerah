@@ -85,3 +85,23 @@ def test_write_report_rejects_missing_base_stage(tmp_path: Path):
     del bad["stage_seconds"]["base"]
     with pytest.raises(ValueError, match="stage_seconds"):
         report.write_report(bad, tmp_path)
+
+
+def test_write_report_production_purpose_and_nullable_size_by_zoom(tmp_path: Path):
+    prod = _report()
+    prod["purpose"] = "production"
+    prod["size_by_zoom"] = None
+    path = report.write_report(prod, tmp_path)
+    written = json.loads(path.read_text())
+    assert written["purpose"] == "production"
+    assert written["size_by_zoom"] is None
+
+    bad_purpose = _report()
+    bad_purpose["purpose"] = "invalid"
+    with pytest.raises(ValueError, match="purpose"):
+        report.write_report(bad_purpose, tmp_path)
+
+    bad_size = _report()
+    bad_size["size_by_zoom"] = "not-a-list"
+    with pytest.raises(ValueError, match="size_by_zoom"):
+        report.write_report(bad_size, tmp_path)

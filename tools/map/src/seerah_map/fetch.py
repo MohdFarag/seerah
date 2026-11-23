@@ -17,7 +17,7 @@ from http.client import HTTPException
 from pathlib import Path
 
 from . import config
-from .config import Bounds, Cell, FileRef, Lock, Profile
+from .config import Bounds, BuildTarget, Cell, Coverage, FileRef, Lock, Profile
 from .workarea import atomic_write
 
 DEM_BASE = "https://copernicus-dem-30m.s3.amazonaws.com"
@@ -89,10 +89,61 @@ def cells_for(extent: Bounds) -> list[tuple[int, int]]:
     ]
 
 
-def check_lock_matches(lock: Lock, profile: Profile) -> None:
+def check_lock_matches(lock: Lock, profile: Profile | Coverage | BuildTarget) -> None:
     """Raise FetchError unless the lock's cells are exactly the profile's cells."""
     if {(c.lat, c.lon) for c in lock.cells} != set(cells_for(profile.data_extent)):
         raise FetchError("the lock does not match the profile; move the lock aside and run fetch")
+
+
+def verify_cached_sources(
+    lock: Lock, profile: Profile | Coverage | BuildTarget, cache: Path
+) -> None:
+    """Verify every locked DEM, WBM and Natural Earth file is inside ``cache`` and matches SHA-256.
+
+    Args:
+        lock: the committed download lock.
+        profile: the profile or coverage configuration.
+        cache: the cache root directory.
+
+    Raises:
+        FetchError: if the lock cells disagree with ``profile.data_extent``, a
+            required Natural Earth or non-absent cell ref is missing, a lock path
+            escapes ``cache``, a file is missing from ``cache``, or a file's size
+            or SHA-256 differs from ``lock``.
+    """
+    check_lock_matches(lock, profile)
+    root = cache.resolve()
+    refs: list[FileRef] = []
+    for cell in lock.cells:
+        if cell.absent:
+            continue
+        if cell.dem is None or cell.wbm is None:
+            raise FetchError(f"cell ({cell.lat}, {cell.lon}) is present but missing dem/wbm ref")
+        refs.extend((cell.dem, cell.wbm))
+
+    ne_names = {Path(ref.path).name for ref in lock.natural_earth}
+    missing_ne = [name for name in NE_FILES if name not in ne_names]
+    if missing_ne:
+        raise FetchError(f"Natural Earth file missing from lock: {missing_ne[0]}")
+    if len(ne_names) != len(lock.natural_earth):
+        raise FetchError("Duplicate Natural Earth file in lock")
+    refs.extend(lock.natural_earth)
+
+    for ref in refs:
+        rel = Path(ref.path)
+        if rel.is_absolute():
+            raise FetchError(f"lock path must be relative to cache: {ref.path}")
+        try:
+            resolved = (root / rel).resolve()
+        except (OSError, RuntimeError) as error:
+            raise FetchError(f"cannot resolve cached path {ref.path}: {error}") from error
+        if resolved == root or not resolved.is_relative_to(root):
+            raise FetchError(f"lock path escapes cache: {ref.path}")
+        if not resolved.is_file():
+            raise FetchError(f"cached file missing: {ref.path}; run fetch first")
+        size, sha = _sha256_file(resolved)
+        if (size, sha) != (ref.size, ref.sha256):
+            raise _mismatch(ref.path, ref, size, sha)
 
 
 def _sha256_file(path: Path) -> tuple[int, str]:
@@ -199,35 +250,43 @@ def _pinned_refs(lock: Lock | None) -> dict[str, FileRef]:
     return {r.path: r for r in (*refs, *lock.natural_earth)}
 
 
-def _new_message(lock_file: Path) -> str:
+def _new_message(lock_file: Path, lock_destination: str = _LOCK_DESTINATION) -> str:
     """Tell the owner how to keep a new lock."""
     return (
         f"Wrote a new lock to {lock_file}. Review it, then copy it into the private "
         f"content repository and commit it there: "
-        f"cp {lock_file} {_LOCK_DESTINATION}{lock_file.name}"
+        f"cp {lock_file} {lock_destination}{lock_file.name}"
     )
 
 
 def fetch(
-    profile: Profile,
+    profile: Profile | Coverage | BuildTarget,
     lock_path: Path | None,
     cache: Path,
     out: Path,
     dem_base: str = DEM_BASE,
     ne_base: str = NE_BASE,
+    *,
+    lock_name: str | None = None,
+    lock_destination: str = _LOCK_DESTINATION,
 ) -> FetchResult:
     """Download and pin the profile's source files.
 
     Args:
-        profile: decides the cells to fetch (``data_extent``) and the lock's name.
+        profile: decides the cells to fetch (``data_extent``) and default lock name.
         lock_path: an existing lock to verify against; None or a missing file
             means a first run.
         cache: the cache root; files go under ``copernicus/<cell>/`` and
             ``natural-earth/<commit>/``.
-        out: where a new lock is written, as ``<profile name>.lock``. Nothing is
-            ever written under the profile's own folder.
+        out: where a new lock is written, as ``<profile name>.lock`` (or
+            ``lock_name`` when specified). Nothing is ever written under the
+            profile's own folder.
         dem_base: base URL of the Copernicus bucket.
         ne_base: base URL of the Natural Earth GeoJSON folder.
+        lock_name: optional explicit output filename under ``out`` (e.g.
+            ``"sources.lock"`` for production ``--coverage``).
+        lock_destination: destination directory prefix printed in the ``cp``
+            hint when a new lock is written.
 
     Returns:
         The lock in force and what the run did.
@@ -292,8 +351,15 @@ def fetch(
         cells=tuple(cells),
         natural_earth=natural_earth,
     )
-    lock_file = out / f"{profile.name}.lock"
+    out_name = f"{profile.name}.lock" if lock_name is None else lock_name
+    lock_file = out / out_name
     out.mkdir(parents=True, exist_ok=True)
     with atomic_write(lock_file) as tmp:
         config.dump_lock(lock, tmp)
-    return FetchResult(lock, True, counts.downloaded, counts.verified, _new_message(lock_file))
+    return FetchResult(
+        lock,
+        True,
+        counts.downloaded,
+        counts.verified,
+        _new_message(lock_file, lock_destination=lock_destination),
+    )

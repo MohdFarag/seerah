@@ -20,10 +20,20 @@ from typing import TextIO
 import numpy as np
 from osgeo import gdal, ogr, osr
 
-from .config import Bounds, Lock, Profile
+from .config import (
+    COPERNICUS_ATTRIBUTION,
+    NATURAL_EARTH_ATTRIBUTION,
+    Bounds,
+    BuildTarget,
+    Coverage,
+    Lock,
+    Profile,
+)
 from .fetch import NE_FILES
 from .grid import (
     BASE_ZOOM,
+    TRIAL_MIN_MAPLIBRE_ZOOM,
+    WIDEST_HALF_SCREEN_DP,
     blocks,
     check_base_coverage,
     check_data_extent_coverage,
@@ -292,7 +302,7 @@ def _natural_earth_sources(lock: Lock, cache: Path) -> dict[str, Path]:
 
 
 def _natural_earth_slices(
-    profile: Profile,
+    profile: Profile | BuildTarget,
     sources: dict[str, Path],
     ne_max_zoom: int,
     directory: Path,
@@ -302,6 +312,7 @@ def _natural_earth_slices(
     hole = scratch / "hole.geojson"
     inner = shrink_extent(profile.data_extent, pixels=2)
     hole.write_text(_box(inner.west, inner.south, inner.east, inner.north).ExportToJson())
+    half_width_dp = getattr(profile, "widest_half_screen_dp", WIDEST_HALF_SCREEN_DP)
     bands = [
         ("110m", 0, 2, None),
         ("50m", 3, 5, None),
@@ -314,7 +325,11 @@ def _natural_earth_slices(
         for layer, source_layer in ((LAND_LAYER, "land"), (COAST_LAYER, "coastline")):
             source = sources[f"ne_{scale}_{source_layer}.geojson"]
             clip = (
-                view_bounds(profile.camera_bounds, maplibre_zoom=view_zoom)
+                view_bounds(
+                    profile.camera_bounds,
+                    maplibre_zoom=view_zoom,
+                    half_width_dp=half_width_dp,
+                )
                 if view_zoom is not None
                 else None
             )
@@ -324,6 +339,33 @@ def _natural_earth_slices(
                 erased, features, layer, split=(layer == LAND_LAYER and scale != "110m")
             )
             _tile(features, layer, first, last, archives)
+
+
+def _make_valid_geojson(source: Path, target: Path) -> Path:
+    """Repair clipped Natural Earth geometries with ``MakeValid()`` before layer-algebra erase."""
+    with ogr.Open(str(source)) as src_ds:
+        if src_ds is None:
+            raise BaseError(f"Cannot open clipped Natural Earth vector {source}")
+        src_layer = src_ds.GetLayer()
+        driver = ogr.GetDriverByName("GeoJSON")
+        if target.exists():
+            target.unlink()
+        with driver.CreateDataSource(str(target)) as dst_ds:
+            dst_layer = dst_ds.CreateLayer(
+                src_layer.GetName(), srs=src_layer.GetSpatialRef() or _srs(4326)
+            )
+            defn = dst_layer.GetLayerDefn()
+            for feature in src_layer:
+                geom = feature.GetGeometryRef()
+                if geom is None:
+                    continue
+                valid_geom = geom.MakeValid()
+                if valid_geom is None or valid_geom.IsEmpty():
+                    continue
+                out_feat = ogr.Feature(defn)
+                out_feat.SetGeometry(valid_geom)
+                dst_layer.CreateFeature(out_feat)
+    return target
 
 
 def _erase_extent(source: Path, hole: Path, clip: Bounds | None, scratch: Path) -> Path:
@@ -338,7 +380,7 @@ def _erase_extent(source: Path, hole: Path, clip: Bounds | None, scratch: Path) 
             source,
             clipped,
         )
-        source = clipped
+        source = _make_valid_geojson(clipped, scratch / "clipped_valid.geojson")
     erased = scratch / "erased.geojson"
     _run(
         "gdal",
@@ -389,25 +431,40 @@ def _vector_layers(meta: dict) -> list[dict]:
     return layers
 
 
-def verify_base(pmtiles_path: Path, profile: Profile) -> None:
-    """Verify the archive structure, build zoom range, trial flag and land/coast layer IDs.
+def verify_base(
+    pmtiles_path: Path,
+    profile: Profile | Coverage | BuildTarget,
+    *,
+    trial: bool | None = None,
+) -> None:
+    """Verify the archive structure, build zoom range, trial/production metadata and layer IDs.
 
     The archive's geographic bounds include global Natural Earth coverage.
     Raises BaseError if the file cannot be read or any check fails.
     """
+    target = profile.as_build_target() if isinstance(profile, Coverage) else profile
+    is_trial = getattr(target, "trial", True) if trial is None else trial
     _run("pmtiles", "verify", pmtiles_path)
     header = _show(pmtiles_path, "--header-json")
     meta = _show(pmtiles_path, "--metadata")
-    if (header.get("minzoom"), header.get("maxzoom")) != (0, profile.max_zoom):
-        raise BaseError(f"Expected base archive zooms 0 to {profile.max_zoom}")
-    if meta.get("trial") is not True:
-        raise BaseError("Base archive metadata must say trial: true")
+    if (header.get("minzoom"), header.get("maxzoom")) != (0, target.max_zoom):
+        raise BaseError(f"Expected base archive zooms 0 to {target.max_zoom}")
+    if is_trial:
+        if meta.get("trial") is not True:
+            raise BaseError("Base archive metadata must say trial: true")
+    else:
+        if "trial" in meta:
+            raise BaseError("Production base archive metadata must not contain 'trial'")
+        if meta.get("tile_schema") != 1:
+            raise BaseError("Production base archive metadata must say tile_schema: 1")
+        if meta.get("name") != "seerah-map":
+            raise BaseError("Production base archive metadata must say name: seerah-map")
     if {layer.get("id") for layer in _vector_layers(meta)} != {LAND_LAYER, COAST_LAYER}:
         raise BaseError("Expected land and coast vector layers")
 
 
 def build_base_layer(
-    profile: Profile,
+    profile: Profile | Coverage | BuildTarget,
     lock: Lock,
     cache: Path,
     work: WorkArea,
@@ -422,22 +479,44 @@ def build_base_layer(
     archive records build provenance. Reports stage start through log and
     raises BaseError if a source, tool or archive check fails.
     """
+    target = profile.as_build_target() if isinstance(profile, Coverage) else profile
     log("base stage started")
     try:
         # The guard stays outside the scratch directory that each build recreates.
         with (work.path / "base.lock").open("a") as guard:
             fcntl.flock(guard, fcntl.LOCK_EX)
-            return _build(profile, lock, cache, work, out_dir, provenance)
+            return _build(target, lock, cache, work, out_dir, provenance)
     except (OSError, RuntimeError, ValueError) as exc:
-        raise BaseError(f"Cannot build base layer for {profile.name}: {exc}") from exc
+        raise BaseError(f"Cannot build base layer for {target.name}: {exc}") from exc
 
 
 def _build(
-    profile: Profile, lock: Lock, cache: Path, work: WorkArea, out_dir: Path, provenance: Provenance
+    profile: Profile | BuildTarget,
+    lock: Lock,
+    cache: Path,
+    work: WorkArea,
+    out_dir: Path,
+    provenance: Provenance,
 ) -> Path:
+    half_width_dp = getattr(profile, "widest_half_screen_dp", WIDEST_HALF_SCREEN_DP)
+    min_maplibre_zoom = getattr(profile, "min_maplibre_zoom", TRIAL_MIN_MAPLIBRE_ZOOM)
     check_data_extent_coverage(profile.data_extent, profile.camera_bounds, profile.margin_deg)
-    ne_max = natural_earth_max_zoom(profile.camera_bounds, profile.margin_deg, profile.max_zoom)
-    check_base_coverage(profile.camera_bounds, profile.margin_deg, ne_max, profile.max_zoom)
+    ne_max = natural_earth_max_zoom(
+        profile.camera_bounds,
+        profile.margin_deg,
+        profile.max_zoom,
+        half_width_dp=half_width_dp,
+        data_extent=profile.data_extent,
+    )
+    check_base_coverage(
+        profile.camera_bounds,
+        profile.margin_deg,
+        ne_max,
+        profile.max_zoom,
+        min_maplibre_zoom=min_maplibre_zoom,
+        half_width_dp=half_width_dp,
+        data_extent=profile.data_extent,
+    )
     shutil.rmtree(work.base_dir, ignore_errors=True)
     (work.base_dir / "tmp").mkdir(parents=True)
     sources = _natural_earth_sources(lock, cache)
@@ -483,7 +562,7 @@ def _join_archives(archives: list[Path], name: str, directory: Path) -> Path:
     return staged
 
 
-def _write_metadata(staged: Path, profile: Profile, provenance: Provenance) -> None:
+def _write_metadata(staged: Path, profile: Profile | BuildTarget, provenance: Provenance) -> None:
     layers = _vector_layers(_show(staged, "--metadata"))
     try:
         allowed = [
@@ -497,15 +576,28 @@ def _write_metadata(staged: Path, profile: Profile, provenance: Provenance) -> N
         ]
     except (KeyError, TypeError) as exc:
         raise BaseError("Incomplete vector layer metadata in joined archive") from exc
-    meta = {
-        "name": profile.name,
-        "trial": True,
-        "fingerprint": provenance.fingerprint,
-        "tool_commit": provenance.tool_commit,
-        "data_commit": provenance.data_commit,
-        "image": provenance.image,
-        "vector_layers": allowed,
-    }
+    is_trial = getattr(profile, "trial", True)
+    if is_trial:
+        meta = {
+            "name": profile.name,
+            "trial": True,
+            "fingerprint": provenance.fingerprint,
+            "tool_commit": provenance.tool_commit,
+            "data_commit": provenance.data_commit,
+            "image": provenance.image,
+            "vector_layers": allowed,
+        }
+    else:
+        meta = {
+            "name": "seerah-map",
+            "tile_schema": 1,
+            "attribution": f"{COPERNICUS_ATTRIBUTION} {NATURAL_EARTH_ATTRIBUTION}",
+            "fingerprint": provenance.fingerprint,
+            "tool_commit": provenance.tool_commit,
+            "data_commit": provenance.data_commit,
+            "image": provenance.image,
+            "vector_layers": allowed,
+        }
     metadata = staged.parent / "metadata.json"
     metadata.write_text(json.dumps(meta, indent=2, sort_keys=True))
     _run("pmtiles", "edit", "--metadata", metadata, staged)

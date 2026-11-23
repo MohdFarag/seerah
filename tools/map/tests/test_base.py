@@ -362,3 +362,38 @@ def test_separate_work_areas_publish_under_the_same_output_directory_lock(
     base.verify_base(first, profile)
     assert first.read_bytes() in [path.read_bytes() for path in staged]
     assert list(out.iterdir()) == [first]
+
+
+def test_base_production_metadata_and_verify_base(built, tmp_path):
+    from seerah_map.config import BuildTarget
+    from seerah_map.pack import Provenance
+
+    profile, _, archive = built
+    prod_archive = tmp_path / base.BASE_ARCHIVE_NAME
+    shutil.copyfile(archive, prod_archive)
+    with pytest.raises(base.BaseError, match="trial"):
+        base.verify_base(prod_archive, profile, trial=False)
+
+    target = BuildTarget(
+        name="seerah-map",
+        folder=profile.folder,
+        purpose="production",
+        camera_bounds=profile.camera_bounds,
+        data_extent=profile.data_extent,
+        margin_deg=profile.margin_deg,
+        fade_deg=profile.fade_deg,
+        max_zoom=profile.max_zoom,
+        block_zoom=profile.block_zoom,
+        webp_quality=profile.webp_quality,
+        style=profile.style,
+        peninsula_outline=profile.peninsula_outline,
+        trial=False,
+    )
+    base._write_metadata(prod_archive, target, Provenance(fingerprint="prod-fp"))
+    meta = _show(prod_archive)
+    assert "trial" not in meta
+    assert meta["tile_schema"] == 1
+    assert meta["name"] == "seerah-map"
+    base.verify_base(prod_archive, target, trial=False)
+    with pytest.raises(base.BaseError, match="trial"):
+        base.verify_base(prod_archive, target, trial=True)

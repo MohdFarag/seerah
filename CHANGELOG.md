@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Production map pipeline (`tools/map`): `coverage.schema.json`, `cleanup.schema.json`, `map-data/schema/map.schema.json`, coastal cleanup edits (`remove-land` and `fill-water`), `fetch --coverage`, `validate --coverage`, `build --coverage` (`tile_schema: 1` atomic staging), and the synthetic `map-data/example-production/` fixture.
+
 - Repository structure, PRD v0.2 snapshot, requirements digest, open decisions, roadmap and ADRs.
 - Content JSON Schema and the original index of 4 phases and 41 approved event titles (kept as `full-seerah-titles.json`).
 - Content validator, pre-commit hooks (Ruff, markdownlint, JSON/YAML checks, secret detection, Conventional Commits), and CI.

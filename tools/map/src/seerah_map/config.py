@@ -23,8 +23,24 @@ from . import strict_yaml
 from .errors import ConfigError
 
 _SCHEMA_DIR = Path(__file__).parent / "schema"
+_MAP_SCHEMA_PATH = Path(__file__).resolve().parents[4] / "map-data" / "schema" / "map.schema.json"
 _MIN_BLOCK_ZOOM = 6
+_MIN_PRODUCTION_BLOCK_ZOOM = 8
+_MAX_PRODUCTION_REGIONAL_ZOOM = 12
+_FLOAT_TOLERANCE_DEG = 1e-9
 _MAX_SYMLINKS = 40  # Linux's MAXSYMLINKS limit for symlink expansion.
+
+COPERNICUS_ATTRIBUTION = (
+    "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and "
+    "© Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS "
+    "by the European Union and ESA; all rights reserved."
+)
+COPERNICUS_LIABILITY = (
+    "The organisations in charge of the Copernicus programme by law or "
+    "by delegation do not incur any liability for any use of the "
+    "Copernicus WorldDEM-30."
+)
+NATURAL_EARTH_ATTRIBUTION = "Made with Natural Earth. Public domain."
 # The same tile grid as grid.py, which imports this module and so cannot be imported here.
 _TILE_GRID = morecantile.tms.get("WebMercatorQuad")
 # The part of the grid a profile may cover: the N/E quadrant, up to the grid's northern edge.
@@ -84,6 +100,79 @@ class Profile:
         """The camera bounds widened by ``margin_deg`` on every side (degrees)."""
         b, m = self.camera_bounds, self.margin_deg
         return Bounds(b.west - m, b.south - m, b.east + m, b.north + m)
+
+
+@dataclass(frozen=True)
+class BuildTarget:
+    """Normalized build parameters shared by block, tile, pack, base and fetch stages.
+
+    ``max_zoom`` is always the 256-px tile build zoom (``Profile.max_zoom`` or
+    ``Coverage.regional_max_zoom``), never MapLibre ``camera_max_zoom``.
+    """
+
+    name: str
+    folder: Path
+    purpose: str
+    camera_bounds: Bounds
+    data_extent: Bounds
+    margin_deg: float
+    fade_deg: float
+    max_zoom: int
+    block_zoom: int
+    webp_quality: int
+    style: StyleSettings
+    peninsula_outline: Path | None
+    min_maplibre_zoom: int = 4
+    widest_half_screen_dp: float = 550.0
+    trial: bool = True
+
+
+@dataclass(frozen=True)
+class Coverage:
+    """Production v1 map coverage configuration (``coverage.yaml``, schema 1)."""
+
+    name: str
+    folder: Path
+    schema: int
+    purpose: str
+    camera_bounds: Bounds
+    data_extent: Bounds
+    camera_min_zoom: float
+    camera_max_zoom: float
+    regional_max_zoom: int
+    block_zoom: int
+    fade_deg: float
+    relief_encoding: str
+    webp_quality: int
+    widest_half_screen_dp: float
+    min_data_margin_deg: float
+    style: StyleSettings
+    peninsula_outline: Path | None = None
+
+    @property
+    def variant(self) -> str:
+        """The internal relief variant name (``value`` or ``painted``)."""
+        return "value" if self.relief_encoding == "terrarium-value" else "painted"
+
+    def as_build_target(self) -> BuildTarget:
+        """Adapt this production coverage config for the shared build stages."""
+        return BuildTarget(
+            name="seerah-map",
+            folder=self.folder,
+            purpose=self.purpose,
+            camera_bounds=self.camera_bounds,
+            data_extent=self.data_extent,
+            margin_deg=self.min_data_margin_deg,
+            fade_deg=self.fade_deg,
+            max_zoom=self.regional_max_zoom,
+            block_zoom=self.block_zoom,
+            webp_quality=self.webp_quality,
+            style=self.style,
+            peninsula_outline=self.peninsula_outline,
+            min_maplibre_zoom=math.floor(self.camera_min_zoom),
+            widest_half_screen_dp=self.widest_half_screen_dp,
+            trial=False,
+        )
 
 
 @dataclass(frozen=True)
@@ -184,23 +273,21 @@ def _check_finite(value: object, path: Path, prefix: str = "") -> None:
         raise _fail(path, prefix or "(top level)", "a finite number", value)
 
 
-def _check_bounds(raw: dict, path: Path) -> Bounds:
-    """Check the camera bounds are in the N/E quadrant, inside the tile grid and ordered."""
+def _check_bounds(raw: dict, path: Path, field_name: str = "camera_bounds") -> Bounds:
+    """Check the bounds are in the N/E quadrant, inside the tile grid and ordered."""
     bounds = Bounds(**raw)
     for key, (low, high) in _SIDE_RANGES.items():
         value = getattr(bounds, key)
         if value < low:
-            raise _fail(
-                path, f"camera_bounds.{key}", f"a value >= {low} (N/E quadrant only)", value
-            )
+            raise _fail(path, f"{field_name}.{key}", f"a value >= {low} (N/E quadrant only)", value)
         if value > high:
             raise _fail(
-                path, f"camera_bounds.{key}", f"a value <= {high} (the tile grid's edge)", value
+                path, f"{field_name}.{key}", f"a value <= {high} (the tile grid's edge)", value
             )
     if not bounds.west < bounds.east:
-        raise _fail(path, "camera_bounds", "west < east", f"{bounds.west} >= {bounds.east}")
+        raise _fail(path, field_name, "west < east", f"{bounds.west} >= {bounds.east}")
     if not bounds.south < bounds.north:
-        raise _fail(path, "camera_bounds", "south < north", f"{bounds.south} >= {bounds.north}")
+        raise _fail(path, field_name, "south < north", f"{bounds.south} >= {bounds.north}")
     return bounds
 
 
@@ -334,6 +421,244 @@ def load_profile(path: Path, *, data_root: Path | None = None) -> Profile:
     )
     _check_data_extent(profile, path)
     return profile
+
+
+def load_coverage(
+    path: Path, *, data_root: Path | None = None, allow_zero_margin: bool = False
+) -> Coverage:
+    """Load and validate a production coverage YAML file (``coverage.schema.json``).
+
+    Args:
+        path: The coverage YAML file.
+        data_root: The directory confining ``peninsula_outline`` when present.
+            Defaults to ``path.parent``.
+        allow_zero_margin: Permit ``min_data_margin_deg == 0`` (synthetic CI
+            fixtures only; production builds require ``> 0``).
+
+    Returns:
+        The validated ``Coverage`` configuration.
+
+    Raises:
+        ConfigError: If the file breaks the schema, cross-field bounds/margin/zoom
+            rules, outline confinement, or base coverage.
+    """
+    from .grid import check_base_coverage, check_data_extent_coverage, natural_earth_max_zoom
+
+    path = Path(path)
+    data = strict_yaml.load(path)
+    _validate(data, "coverage.schema.json", path)
+    _check_finite(data, path)
+
+    camera_bounds = _check_bounds(data["camera_bounds"], path, "camera_bounds")
+    data_extent = _check_bounds(data["data_extent"], path, "data_extent")
+
+    min_margin = float(data["min_data_margin_deg"])
+    if not allow_zero_margin and min_margin <= 0:
+        raise _fail(
+            path,
+            "min_data_margin_deg",
+            "a positive margin > 0 (or pass --allow-zero-margin for CI fixtures)",
+            min_margin,
+        )
+
+    side_margins = (
+        camera_bounds.west - data_extent.west,
+        camera_bounds.south - data_extent.south,
+        data_extent.east - camera_bounds.east,
+        data_extent.north - camera_bounds.north,
+    )
+    if any(m + _FLOAT_TOLERANCE_DEG < min_margin for m in side_margins):
+        raise _fail(
+            path,
+            "data_extent",
+            f"an extent enclosing camera_bounds widened by min_data_margin_deg ({min_margin})",
+            data["data_extent"],
+        )
+
+    fade = float(data["fade_deg"])
+    min_side_margin = min(side_margins)
+    if fade > min_side_margin + _FLOAT_TOLERANCE_DEG:
+        raise _fail(
+            path,
+            "fade_deg",
+            f"a value <= minimum side margin ({max(0.0, min_side_margin):g})",
+            fade,
+        )
+
+    camera_min_zoom = float(data["camera_min_zoom"])
+    camera_max_zoom = float(data["camera_max_zoom"])
+    regional_max_zoom = int(data["regional_max_zoom"])
+    block_zoom = int(data["block_zoom"])
+
+    if not camera_min_zoom < camera_max_zoom:
+        raise _fail(
+            path,
+            "camera_max_zoom",
+            f"a value > camera_min_zoom ({camera_min_zoom})",
+            camera_max_zoom,
+        )
+    if not math.floor(camera_min_zoom) < regional_max_zoom:
+        raise _fail(
+            path,
+            "camera_min_zoom",
+            f"floor(camera_min_zoom) < regional_max_zoom ({regional_max_zoom})",
+            camera_min_zoom,
+        )
+    if not (
+        _MIN_PRODUCTION_BLOCK_ZOOM
+        <= block_zoom
+        <= regional_max_zoom
+        <= _MAX_PRODUCTION_REGIONAL_ZOOM
+    ):
+        raise _fail(
+            path,
+            "block_zoom",
+            f"{_MIN_PRODUCTION_BLOCK_ZOOM} <= block_zoom"
+            f" <= regional_max_zoom ({regional_max_zoom})",
+            block_zoom,
+        )
+
+    widest_half_screen_dp = float(data["widest_half_screen_dp"])
+    try:
+        check_data_extent_coverage(data_extent, camera_bounds, min_margin)
+        ne_max = natural_earth_max_zoom(
+            camera_bounds,
+            min_margin,
+            regional_max_zoom,
+            widest_half_screen_dp,
+            data_extent=data_extent,
+        )
+        check_base_coverage(
+            camera_bounds,
+            min_margin,
+            ne_max,
+            regional_max_zoom,
+            min_maplibre_zoom=math.floor(camera_min_zoom),
+            half_width_dp=widest_half_screen_dp,
+            data_extent=data_extent,
+        )
+    except ValueError as error:
+        raise _fail(
+            path, "data_extent", f"complete base coverage ({error})", data["data_extent"]
+        ) from error
+
+    outline = (
+        _resolve_outline(data["peninsula_outline"], path, data_root)
+        if "peninsula_outline" in data
+        else None
+    )
+    style = dict(data.get("style", {}))
+    if "ink_rgb" in style:
+        style["ink_rgb"] = tuple(style["ink_rgb"])
+    return Coverage(
+        name=path.stem,
+        folder=path.parent,
+        schema=int(data["schema"]),
+        purpose=data["purpose"],
+        camera_bounds=camera_bounds,
+        data_extent=data_extent,
+        camera_min_zoom=camera_min_zoom,
+        camera_max_zoom=camera_max_zoom,
+        regional_max_zoom=regional_max_zoom,
+        block_zoom=block_zoom,
+        fade_deg=fade,
+        relief_encoding=data["relief_encoding"],
+        webp_quality=int(data.get("webp_quality", 80)),
+        widest_half_screen_dp=widest_half_screen_dp,
+        min_data_margin_deg=min_margin,
+        style=StyleSettings(**style),
+        peninsula_outline=outline,
+    )
+
+
+def validate_map_json(data: object, path: Path = Path("map.json")) -> None:
+    """Validate a ``data/map.json`` document against ``map-data/schema/map.schema.json``.
+
+    Raises:
+        ConfigError: If ``data`` violates the schema, contains non-finite numbers,
+            or breaks bounds/zoom ordering rules.
+    """
+    path = Path(path)
+    schema = json.loads(_MAP_SCHEMA_PATH.read_text(encoding="utf-8"))
+    errors = sorted(
+        Draft202012Validator(schema).iter_errors(data), key=lambda e: list(e.absolute_path)
+    )
+    if errors:
+        error = errors[0]
+        key = ".".join(str(p) for p in error.absolute_path) or "(top level)"
+        raise ConfigError(f"{path}: key {key}: {error.message}")
+    _check_finite(data, path)
+    assert isinstance(data, dict)
+    for box_key in ("camera_bounds", "data_extent"):
+        box = data[box_key]
+        if not box["west"] < box["east"]:
+            raise _fail(path, box_key, "west < east", f"{box['west']} >= {box['east']}")
+        if not box["south"] < box["north"]:
+            raise _fail(path, box_key, "south < north", f"{box['south']} >= {box['north']}")
+    cam, ext = data["camera_bounds"], data["data_extent"]
+    if not (
+        ext["west"] <= cam["west"] + _FLOAT_TOLERANCE_DEG
+        and ext["south"] <= cam["south"] + _FLOAT_TOLERANCE_DEG
+        and ext["east"] >= cam["east"] - _FLOAT_TOLERANCE_DEG
+        and ext["north"] >= cam["north"] - _FLOAT_TOLERANCE_DEG
+    ):
+        raise _fail(path, "data_extent", "an extent enclosing camera_bounds", ext)
+    if not data["min_zoom"] < data["max_zoom"]:
+        raise _fail(path, "max_zoom", f"a value > min_zoom ({data['min_zoom']})", data["max_zoom"])
+
+
+def build_map_json(coverage: Coverage) -> dict:
+    """Build and schema-validate the ``data/map.json`` dict for ``coverage``."""
+    tile_format = "png" if coverage.relief_encoding == "terrarium-value" else "webp"
+    doc = {
+        "tile_schema": 1,
+        "camera_bounds": {
+            "west": coverage.camera_bounds.west,
+            "south": coverage.camera_bounds.south,
+            "east": coverage.camera_bounds.east,
+            "north": coverage.camera_bounds.north,
+        },
+        "data_extent": {
+            "west": coverage.data_extent.west,
+            "south": coverage.data_extent.south,
+            "east": coverage.data_extent.east,
+            "north": coverage.data_extent.north,
+        },
+        "min_zoom": coverage.camera_min_zoom,
+        "max_zoom": coverage.camera_max_zoom,
+        "sources": {
+            "base": {
+                "file": "base.pmtiles",
+                "layers": ["land", "coast"],
+                "min_zoom": 0,
+                "max_zoom": coverage.regional_max_zoom,
+            },
+            "relief": {
+                "file": "relief.pmtiles",
+                "encoding": coverage.relief_encoding,
+                "tile_format": tile_format,
+                "tile_size": 256,
+                "min_zoom": 0,
+                "max_zoom": coverage.regional_max_zoom,
+            },
+        },
+        "credits": [
+            {
+                "id": "copernicus-worlddem-30",
+                "source": "Copernicus DEM GLO-30 and Water Body Mask",
+                "attribution": COPERNICUS_ATTRIBUTION,
+                "liability": COPERNICUS_LIABILITY,
+            },
+            {
+                "id": "natural-earth",
+                "source": "Natural Earth (1:110m, 1:50m, 1:10m land and coastline)",
+                "attribution": NATURAL_EARTH_ATTRIBUTION,
+            },
+        ],
+        "reconstructed_areas": [],
+    }
+    validate_map_json(doc)
+    return doc
 
 
 def load_edits(path: Path) -> list[Edit]:

@@ -15,6 +15,8 @@ NO_PEAK_REASON = "memory.peak not available (cgroup v1 or no cap)"
 
 _CGROUP_V2_ROOT = Path("/sys/fs/cgroup")
 _OOM_KILL_KEY = "oom_kill"
+_OPTIONAL_KEYS = {"purpose"}
+_PURPOSES = {"trial", "production"}
 _SHAPE: dict[str, set[str] | None] = {
     "provenance": {"tool_commit", "data_commit", "image", "fingerprint"},
     "stage_seconds": {"block", "tile", "pack", "base"},
@@ -76,9 +78,16 @@ def write_report(report: dict, out_dir: Path) -> Path:
 
 
 def _check_shape(report: dict) -> None:
-    if set(report) != set(_SHAPE):
+    keys = set(report) - _OPTIONAL_KEYS
+    if keys != set(_SHAPE):
         raise ValueError(f"report keys {sorted(report)} differ from {sorted(_SHAPE)}")
-    for section, keys in _SHAPE.items():
-        if keys is not None and set(report[section]) != keys:
+    if "purpose" in report and report["purpose"] not in _PURPOSES:
+        raise ValueError(f"report purpose {report['purpose']!r} must be one of {sorted(_PURPOSES)}")
+    if report["size_by_zoom"] is not None and not isinstance(report["size_by_zoom"], list):
+        raise ValueError("report section 'size_by_zoom' must be a list or None")
+    for section, subkeys in _SHAPE.items():
+        if subkeys is not None and set(report[section]) != subkeys:
             found = sorted(report[section])
-            raise ValueError(f"report section {section!r} keys {found} differ from {sorted(keys)}")
+            raise ValueError(
+                f"report section {section!r} keys {found} differ from {sorted(subkeys)}"
+            )
