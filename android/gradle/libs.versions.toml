@@ -12,7 +12,7 @@ targetSdk = "37"
 minSdk = "26"
 # Libraries
 androidxActivity = "1.13.0"
-androidxComposeBom = "2026.09.00"
+androidxComposeBom = "2026.11.01"
 androidxCore = "1.18.0"
 androidxLifecycle = "2.11.0"
 androidxTestEspresso = "3.7.0"
