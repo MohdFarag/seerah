@@ -3,7 +3,7 @@
 
 [versions]
 # Build
-androidGradlePlugin = "9.5.2"
+androidGradlePlugin = "9.5.3"
 kotlin = "2.4.21"
 ksp = "2.3.14"
 # Android SDK levels (ADR 0003)
