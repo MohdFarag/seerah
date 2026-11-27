@@ -30,6 +30,7 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 
@@ -92,13 +93,18 @@ private fun MapContent(
 /** Creates the map view once, after making sure MapLibre is initialised. */
 private fun createMapView(context: Context): MapView {
     MapLibre.getInstance(context)
-    return MapView(context).apply { onCreate(null) }
+    // Tiles come from local PMTiles, so MapLibre's default 4-zoom parent-tile prefetching
+    // (prefetchZoomDelta = 4, meant to hide HTTP latency) only inflates native tile memory
+    // without helping load times; setting the delta to 0 disables it cleanly.
+    val options = MapLibreMapOptions.createFromAttributes(context).setPrefetchZoomDelta(0)
+    return MapView(context, options).apply { onCreate(null) }
 }
 
 /**
  * Owns [mapView] for as long as it is composed: hands its map to [onMap], reports its rendering
- * events to [onEvent] and forwards low-memory warnings to it. On leaving the composition it removes
- * its listeners and destroys the view; no callback reaches the caller after that.
+ * events to [onEvent] and forwards low-memory and trim-memory warnings to it. On leaving the
+ * composition it removes its listeners and destroys the view; no callback reaches the caller
+ * after that.
  *
  * Declared before [MapLifecycle] so that its disposal runs after the lifecycle has stepped the view
  * down (effects are disposed in reverse order).
@@ -116,7 +122,7 @@ private fun MapViewOwnership(mapView: MapView, onMap: (MapLibreMap?) -> Unit, on
         val frameRendered = MapView.OnDidFinishRenderingFrameListener { _, _, _ ->
             if (!disposed) currentOnEvent(MapEvent.FrameRendered(SystemClock.elapsedRealtime()))
         }
-        val memory = LowMemoryCallbacks(mapView)
+        val memory = LowMemoryCallbacks(mapView::onLowMemory)
         mapView.addOnDidFinishRenderingMapListener(mapRendered)
         mapView.addOnDidFinishRenderingFrameListener(frameRendered)
         context.registerComponentCallbacks(memory)
@@ -132,14 +138,29 @@ private fun MapViewOwnership(mapView: MapView, onMap: (MapLibreMap?) -> Unit, on
     }
 }
 
-/** Forwards the system's low-memory warning to [mapView]. */
-private class LowMemoryCallbacks(private val mapView: MapView) : ComponentCallbacks2 {
-    // Deprecated in ComponentCallbacks since API 34, but still called on older devices, which
-    // are the ones that run out of memory first; MapView offers no trim-level equivalent.
-    @Deprecated("Deprecated in ComponentCallbacks; kept for older devices.")
-    override fun onLowMemory() = mapView.onLowMemory()
+/**
+ * Whether [level] from [ComponentCallbacks2.onTrimMemory] should flush MapLibre's tile caches.
+ *
+ * Covers both Android 8–13 foreground pressure (`TRIM_MEMORY_RUNNING_LOW` and
+ * `TRIM_MEMORY_RUNNING_CRITICAL`) and Android 14+ UI-hidden/background trims
+ * (`TRIM_MEMORY_UI_HIDDEN`, `TRIM_MEMORY_BACKGROUND` and above), while skipping mild foreground
+ * pressure (`TRIM_MEMORY_RUNNING_MODERATE`).
+ */
+@Suppress("DEPRECATION")
+internal fun shouldTrimMapMemory(level: Int): Boolean = level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
 
-    override fun onTrimMemory(level: Int) = Unit
+/**
+ * Forwards the system's low-memory and trim-memory warnings to MapLibre (`MapView.onLowMemory()`).
+ */
+internal class LowMemoryCallbacks(private val onTrim: () -> Unit) : ComponentCallbacks2 {
+    // Deprecated in ComponentCallbacks since API 34, but still called on older devices, which
+    // are the ones that run out of memory first.
+    @Deprecated("Deprecated in ComponentCallbacks; kept for older devices.")
+    override fun onLowMemory() = onTrim()
+
+    override fun onTrimMemory(level: Int) {
+        if (shouldTrimMapMemory(level)) onTrim()
+    }
 
     override fun onConfigurationChanged(newConfig: Configuration) = Unit
 }
