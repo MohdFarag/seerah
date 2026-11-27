@@ -327,6 +327,12 @@ def verify_map_payload_consistency(
             f"data/base.pmtiles: vector_layers must include 'land' and 'coast', "
             f"got {sorted(layer_ids)}"
         )
+    declared_layers = set(base_src["layers"])
+    if not (declared_layers <= layer_ids):
+        raise PackageError(
+            f"data/base.pmtiles: vector_layers {sorted(layer_ids)} missing layers "
+            f"declared in map.json ({sorted(declared_layers - layer_ids)})"
+        )
 
     # Relief layer checks
     relief_src = map_doc["sources"]["relief"]
@@ -626,7 +632,9 @@ def pack_map_staging(
         report = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise PackageError(f"cannot read {report_path}: {exc}") from exc
-    if not isinstance(report, dict) or report.get("purpose") != "production":
+    if not isinstance(report, dict):
+        raise PackageError(f"{report_path}: report must be a JSON object")
+    if report.get("purpose") != "production":
         raise PackageError(
             f"{report_path}: report purpose must be 'production', got {report.get('purpose')!r}"
         )
@@ -672,7 +680,9 @@ def pack_map_staging(
             f"found {list(actual_paths)}"
         )
 
-    map_doc = validate_map_json_bytes((data_dir / "map.json").read_bytes())
+    with (data_dir / "map.json").open("rb") as map_stream:
+        raw_map_json = map_stream.read(MAX_MAP_JSON_BYTES + 1)
+    map_doc = validate_map_json_bytes(raw_map_json)
     base_header, base_meta = inspect_pmtiles_file(data_dir / "base.pmtiles", "data/base.pmtiles")
     relief_header, relief_meta = inspect_pmtiles_file(
         data_dir / "relief.pmtiles", "data/relief.pmtiles"

@@ -385,6 +385,10 @@ def _add_data_metadata(staging: Path) -> None:
     [
         (_add_root_metadata, "metadata.json refused"),
         (_add_data_metadata, "metadata.json refused"),
+        (
+            lambda s: (s / "report.json").write_text("[]\n", encoding="utf-8"),
+            "report must be a JSON object",
+        ),
         (lambda s: _write_report(s, purpose="trial"), "purpose must be 'production'"),
         (lambda s: _write_relief(s, _relief_meta() | {"trial": True}), "trial archive refused"),
         (lambda s: _write_relief(s, _relief_meta() | {"variant": "value"}), "'variant'/'mode'"),
@@ -395,6 +399,7 @@ def _add_data_metadata(staging: Path) -> None:
     ids=[
         "metadata-json-in-staging",
         "metadata-json-in-data",
+        "non-object-report",
         "trial-report",
         "trial-key-in-pmtiles",
         "variant-key-in-pmtiles",
@@ -463,6 +468,10 @@ def _with_map_json(change: Callable[[dict], None]) -> Callable[[Path], None]:
             "base.pmtiles: header max_zoom",
         ),
         (
+            _with_map_json(lambda d: d["sources"]["base"]["layers"].append("valley")),
+            "missing layers declared in map.json",
+        ),
+        (
             lambda s: _write_base(s, _base_meta() | {"vector_layers": [{"id": "land"}]}),
             "must include 'land' and 'coast'",
         ),
@@ -493,6 +502,7 @@ def _with_map_json(change: Callable[[dict], None]) -> Callable[[Path], None]:
         "symlinked-map-json",
         "map-json-schema",
         "base-max-zoom",
+        "missing-declared-base-layer",
         "missing-coast-layer",
         "relief-tile-type",
         "relief-encoding",
