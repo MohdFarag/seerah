@@ -24,7 +24,11 @@ private val VERSION_CHECKS = setOf(
 /** SDK levels, Java level and lint rules shared by every Android module. */
 internal fun Project.configureAndroid(android: CommonExtension) {
     android.apply {
-        compileSdk = libs.intVersion("compileSdk")
+        compileSdk {
+            version = release(libs.intVersion("compileSdk")) {
+                minorApiLevel = libs.intVersion("compileSdkMinor")
+            }
+        }
         defaultConfig.minSdk = libs.intVersion("minSdk")
         compileOptions.apply {
             sourceCompatibility = JAVA_TARGET

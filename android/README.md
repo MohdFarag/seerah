@@ -18,7 +18,7 @@ Other modules from ADR 0003 (`core/*`, `feature/*`) are added as their first rea
 ## Requirements
 
 - JDK 21.
-- Android SDK with platform 37 (Android 17). Point Gradle at it with `local.properties` (`sdk.dir=…`, not committed) or `ANDROID_HOME`.
+- Android SDK with platform 37.2 (Android 17). Point Gradle at it with `local.properties` (`sdk.dir=…`, not committed) or `ANDROID_HOME`.
 
 ## Commands
 
@@ -70,7 +70,7 @@ Two rules for the runs:
 
 | Plugin | What it sets up |
 | --- | --- |
-| `seerah.android.application` | SDK levels (min 26, compile and target 37), Java 17 bytecode, lint with warnings as errors, Kotlin warnings as errors, R8 for release, the licence check, the module dependency rules, the MapLibre boundary, the `benchmark` build type and the rule that keeps `:core:map` out of other build types |
+| `seerah.android.application` | SDK levels (min 26, compile 37.2, target 37), Java 17 bytecode, lint with warnings as errors, Kotlin warnings as errors, R8 for release, the licence check, the module dependency rules, the MapLibre boundary, the `benchmark` build type and the rule that keeps `:core:map` out of other build types |
 | `seerah.android.application.compose` | Compose compiler, Compose BOM and preview tooling |
 | `seerah.android.library` | Like the application plugin for a library module: SDK levels, lint, Kotlin settings, the licence check and the MapLibre boundary (the module dependency rules run from `:app`) |
 | `seerah.android.library.compose` | Compose compiler and Compose BOM for a library module, without preview tooling |
