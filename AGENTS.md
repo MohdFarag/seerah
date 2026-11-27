@@ -69,7 +69,7 @@ cd android && ./gradlew spotlessApply     # format Kotlin and Gradle files
 cd android && ./gradlew check buildHealth assembleRelease  # lint, tests, module rules, licences, release build
 ```
 
-Needs JDK 21 and the Android SDK with platform 37 (see [android/README.md](android/README.md)). APKs for the owner are built by GitHub Actions (`Android` workflow, artifact `seerah-app`) and downloaded from the run's artifacts; don't send APK files in chat.
+Needs JDK 21 and the Android SDK with platform 37.2 (see [android/README.md](android/README.md)). APKs for the owner are built by GitHub Actions (`Android` workflow, artifact `seerah-app`) and downloaded from the run's artifacts; don't send APK files in chat.
 
 ## Licensing
 
