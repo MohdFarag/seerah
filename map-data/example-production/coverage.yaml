@@ -1,0 +1,14 @@
+schema: 1
+purpose: production
+camera_bounds: {west: 58.80, south: 20.50, east: 59.05, north: 20.75}
+data_extent: {west: 58.80, south: 20.50, east: 59.05, north: 20.75}
+camera_min_zoom: 4.0
+camera_max_zoom: 14.0
+regional_max_zoom: 12
+block_zoom: 11
+fade_deg: 0
+relief_encoding: painted-rgba
+webp_quality: 80
+widest_half_screen_dp: 550.0
+min_data_margin_deg: 0
+peninsula_outline: ../example/peninsula.geojson

@@ -1,13 +1,26 @@
 """Tests for the block stage: reading the sources, rendering blocks and the mosaics."""
 
+import json
 import math
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
 import pytest
-from osgeo import gdal, osr
-from seerah_map import blockstage
-from seerah_map.config import Bounds, Cell, Edit, FileRef, Lock, Profile, StyleSettings
+from osgeo import gdal, ogr, osr
+from seerah_map import base, blockstage
+from seerah_map.config import (
+    Bounds,
+    Cell,
+    CleanupEdit,
+    CleanupSource,
+    Edit,
+    FileRef,
+    Lock,
+    Profile,
+    StyleSettings,
+)
+from seerah_map.edits import validate_cleanups
 from seerah_map.grid import BASE_ZOOM, Window, blocks, border_px
 from seerah_map.workarea import open_area
 
@@ -270,18 +283,19 @@ def test_run_block_stage_validates_variant_mode_and_zoom(tmp_path):
             profile, [], "painted", lock, cache, work, 1, lambda _m: None, mode="bad"
         )
     over_profile = _profile(tmp_path, max_zoom=BASE_ZOOM + 1, block_zoom=BASE_ZOOM)
-    with pytest.raises(ValueError, match="max_zoom"):
-        blockstage.run_block_stage(
-            over_profile,
-            [],
-            "painted",
-            lock,
-            cache,
-            work,
-            1,
-            lambda _m: None,
-            mode=blockstage.PER_ZOOM,
-        )
+    for mode in blockstage.MODES:
+        with pytest.raises(ValueError, match="max_zoom"):
+            blockstage.run_block_stage(
+                over_profile,
+                [],
+                "painted",
+                lock,
+                cache,
+                work,
+                1,
+                lambda _m: None,
+                mode=mode,
+            )
     assert not (work.path / "dem.vrt").exists()
 
 
@@ -457,3 +471,226 @@ def test_per_zoom_z12_matches_pyramid_pixels_and_builds_all_zooms(tmp_path):
     )
     assert resumed == [f"z{BASE_ZOOM}/{z12_blocks[0].id}"]
     assert z12_style.is_file()
+
+
+def _box_polygon(west: float, south: float, east: float, north: float) -> dict:
+    return {
+        "type": "Polygon",
+        "coordinates": [
+            [[west, south], [east, south], [east, north], [west, north], [west, south]]
+        ],
+    }
+
+
+def _coastal_cleanup_fixture(tmp_path: Path):
+    """Synthetic coastline crossing the z12 block seam inside cell (20, 58)."""
+    seam_extent = Bounds(58.04, 20.49, 58.15, 20.60)
+    lons, lats = _cell_lonlat(*_PRESENT)
+
+    # Natural land north of 20.563, ocean south; mound away from cleanups keeps style non-empty.
+    wbm = np.where(lats >= 20.563, _LAND_CLASS, _OCEAN_CLASS).astype(np.uint8)
+    elevation = np.zeros((_CELL_PX, _CELL_PX), dtype=np.float32)
+    r2 = (lons - 58.13) ** 2 + (lats - 20.585) ** 2
+    elevation = np.where(lats >= 20.563, 30.0 * np.exp(-r2 / (2 * 0.008**2)), 0.0).astype(
+        np.float32
+    )
+
+    # Reclaimed elevated pier 220 m off coast crossing both z12 seams (58.0957 E and 20.5505 N).
+    island = (lons >= 58.080) & (lons <= 58.110) & (lats >= 20.520) & (lats <= 20.561)
+    wbm[island] = _LAND_CLASS
+    elevation[island] = 200.0
+
+    # Excavated rectangular harbour crossing the z12 vertical seam (58.0957 E).
+    harbour = (lons >= 58.085) & (lons <= 58.105) & (lats >= 20.563) & (lats <= 20.585)
+    wbm[harbour] = _OCEAN_CLASS
+    elevation[harbour] = 0.0
+
+    cache = tmp_path / "cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    lat, lon = _PRESENT
+    _write_cell(cache / "dem.tif", lat, lon, elevation, gdal.GDT_Float32)
+    _write_cell(cache / "wbm.tif", lat, lon, wbm, gdal.GDT_Byte)
+
+    def ref(name: str) -> FileRef:
+        return FileRef(url=f"https://example.invalid/{name}", size=0, sha256="0", path=name)
+
+    lock = Lock(
+        created="2026-11-23",
+        tile_list_sha256="0",
+        cells=(Cell(lat, lon, False, ref("dem.tif"), ref("wbm.tif")),),
+        natural_earth=(),
+    )
+    src = (CleanupSource(kind="imagery", work="Synthetic Sat", locator="scene-1"),)
+    remove_island = CleanupEdit(
+        id="remove-synthetic-island",
+        geometry=_box_polygon(58.075, 20.515, 58.115, 20.5615),
+        operation="remove-land",
+        reason="Remove reclaimed island straddling z12 block seam",
+        review="approved",
+        sources=src,
+    )
+    fill_harbour = CleanupEdit(
+        id="fill-synthetic-harbour",
+        geometry=_box_polygon(58.082, 20.563, 58.108, 20.588),
+        operation="fill-water",
+        reason="Infill excavated harbour straddling z12 block seam",
+        review="approved",
+        sources=src,
+    )
+    cleanups = [remove_island, fill_harbour]
+    validate_cleanups(cleanups, data_extent=seam_extent)
+    profile_z11 = replace(
+        _profile(tmp_path, fade_deg=0, max_zoom=11, block_zoom=11),
+        camera_bounds=seam_extent,
+    )
+    return lock, cache, profile_z11, cleanups
+
+
+def _geojsonl_geoms(path: Path) -> list[ogr.Geometry]:
+    geoms = []
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            feat = json.loads(line)
+            geom = ogr.CreateGeometryFromJson(json.dumps(feat["geometry"]))
+            assert geom is not None
+            geoms.append(geom)
+    return geoms
+
+
+def test_render_block_and_mask_block_apply_cleanup(tmp_path):
+    lock, cache, profile_z11, cleanups = _coastal_cleanup_fixture(tmp_path)
+    profile = replace(profile_z11, max_zoom=BASE_ZOOM, block_zoom=11)
+    assert len(blocks(profile.data_extent, profile.block_zoom)) == 1
+    block = blocks(profile.data_extent, profile.block_zoom)[0]
+
+    work_clean = open_area(tmp_path / "work", "clean")
+    vrts = blockstage.source_vrts(lock, cache, profile.data_extent, work_clean)
+    blockstage.render_block(block, profile, [], "painted", vrts, work_clean, cleanups=cleanups)
+
+    mask_clean = _read(work_clean.mask_dir / f"{block.id}.tif")
+    style_clean = _read(work_clean.style_dir / f"{block.id}.tif")
+    lons, lats = _pixel_lonlat(block.window)
+
+    # Removed pier becomes ocean (mask < 128) with zero hillshade bleed onto adjacent coast.
+    in_island = (lons >= 58.085) & (lons <= 58.105) & (lats >= 20.525) & (lats <= 20.556)
+    assert in_island.any()
+    assert mask_clean[in_island].max() < blockstage._LAND_THRESHOLD
+    assert style_clean[3][in_island].max() == 0
+
+    adjacent_coast = (lons >= 58.085) & (lons <= 58.105) & (lats >= 20.564) & (lats <= 20.569)
+    assert adjacent_coast.any()
+    assert mask_clean[adjacent_coast].min() >= blockstage._LAND_THRESHOLD
+    assert style_clean[3][adjacent_coast].max() == 0
+
+    # Filled harbour becomes solid land (mask >= 128) and flat 0 m plain (0 hillshade alpha).
+    in_harbour = (lons >= 58.089) & (lons <= 58.101) & (lats >= 20.570) & (lats <= 20.580)
+    assert in_harbour.any()
+    assert mask_clean[in_harbour].min() >= blockstage._LAND_THRESHOLD
+    assert style_clean[3][in_harbour].max() == 0
+
+    # Direct _render_mask_block also applies cleanups identically to render_block.
+    work_mask = open_area(tmp_path / "work", "mask-only")
+    blockstage._render_mask_block(block, profile, vrts[1], work_mask, cleanups=cleanups)
+    np.testing.assert_array_equal(_read(work_mask.mask_dir / f"{block.id}.tif"), mask_clean)
+
+
+def test_changed_cleanup_ids_reads_each_blocks_record(tmp_path):
+    lock, cache, profile_z11, cleanups = _coastal_cleanup_fixture(tmp_path)
+    profile = replace(profile_z11, max_zoom=BASE_ZOOM, block_zoom=11)
+    block_list = blocks(profile.data_extent, profile.block_zoom)
+    work = open_area(tmp_path / "work", "records")
+    vrts = blockstage.source_vrts(lock, cache, profile.data_extent, work)
+
+    with pytest.raises(FileNotFoundError, match="cleanup record"):
+        blockstage.changed_cleanup_ids(block_list, work)
+
+    far_away = replace(
+        cleanups[0],
+        id="far-away",
+        geometry={
+            "type": "Polygon",
+            "coordinates": [[[10.0, 10.0], [10.1, 10.0], [10.1, 10.1], [10.0, 10.1], [10.0, 10.0]]],
+        },
+    )
+    for block in block_list:
+        blockstage.render_block(
+            block, profile, [], "painted", vrts, work, cleanups=[*cleanups, far_away]
+        )
+
+    assert blockstage.changed_cleanup_ids(block_list, work) == {c.id for c in cleanups}
+
+
+def test_per_zoom_rejects_cleanups(tmp_path):
+    lock, cache, profile_z11, cleanups = _coastal_cleanup_fixture(tmp_path)
+    work = open_area(tmp_path / "work", "pz")
+    with pytest.raises(ValueError, match="pyramid"):
+        blockstage.run_block_stage(
+            profile_z11,
+            [],
+            "painted",
+            lock,
+            cache,
+            work,
+            1,
+            lambda _m: None,
+            mode=blockstage.PER_ZOOM,
+            cleanups=cleanups,
+        )
+
+
+def test_cleanup_across_block_edge_matches_single_block_and_base_coast(tmp_path):
+    lock, cache, profile_z11, cleanups = _coastal_cleanup_fixture(tmp_path)
+    profile_z12 = replace(profile_z11, block_zoom=12)
+    assert len(blocks(profile_z11.data_extent, profile_z11.block_zoom)) == 1
+    assert len(blocks(profile_z12.data_extent, profile_z12.block_zoom)) == 4
+
+    work_single = open_area(tmp_path / "work", "single")
+    work_multi = open_area(tmp_path / "work", "multi")
+
+    blockstage.run_block_stage(
+        profile_z11, [], "painted", lock, cache, work_single, 1, lambda _m: None, cleanups=cleanups
+    )
+    blockstage.run_block_stage(
+        profile_z12, [], "painted", lock, cache, work_multi, 2, lambda _m: None, cleanups=cleanups
+    )
+
+    np.testing.assert_array_equal(
+        _read(work_single.path / "style.vrt"),
+        _read(work_multi.path / "style.vrt"),
+    )
+    np.testing.assert_array_equal(
+        _read(work_single.path / "mask.vrt"),
+        _read(work_multi.path / "mask.vrt"),
+    )
+
+    # Extract z6..11 vector land and coast slices on both single-block and 4-block runs.
+    for work, prof in ((work_single, profile_z11), (work_multi, profile_z12)):
+        (work.base_dir / "tmp").mkdir(parents=True, exist_ok=True)
+        base._wbm_slices(prof, work, [])
+
+    single_coast = _geojsonl_geoms(work_single.base_dir / "wbm_coast_6.geojsonl")
+    multi_coast = _geojsonl_geoms(work_multi.base_dir / "wbm_coast_6.geojsonl")
+    single_land = _geojsonl_geoms(work_single.base_dir / "wbm_land_6.geojsonl")
+    multi_land = _geojsonl_geoms(work_multi.base_dir / "wbm_land_6.geojsonl")
+
+    def envelope_of(geoms: list[ogr.Geometry]) -> tuple[float, float, float, float]:
+        env = np.array([g.GetEnvelope() for g in geoms])
+        return (
+            float(env[:, 0].min()),
+            float(env[:, 1].max()),
+            float(env[:, 2].min()),
+            float(env[:, 3].max()),
+        )
+
+    assert len(single_coast) >= 1 and len(multi_coast) >= 2
+    assert envelope_of(multi_coast) == pytest.approx(envelope_of(single_coast), abs=1e-4)
+    # Removed island leaves no offshore contour below lat ~20.560.
+    assert envelope_of(multi_coast)[2] > 20.560
+    # Total coast length matches without any spurious north-south seam line.
+    assert sum(g.Length() for g in multi_coast) == pytest.approx(
+        sum(g.Length() for g in single_coast), abs=5e-4
+    )
+    assert envelope_of(multi_land) == pytest.approx(envelope_of(single_land), abs=1e-4)
+    assert sum(g.Area() for g in multi_land) == pytest.approx(
+        sum(g.Area() for g in single_land), abs=5e-5
+    )

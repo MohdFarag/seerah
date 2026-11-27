@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Map coastal cleanup edits",
+  "description": "Production coastal cleanup edits (Copernicus Water Body Mask + coincident elevation). Finite numbers, explicit ring closure, exact WebMercatorQuad bounds, OGR validity/area, and non-overlapping opposite operations are checked in seerah_map.config and seerah_map.edits.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "purpose",
+    "edits"
+  ],
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1
+    },
+    "purpose": {
+      "const": "production"
+    },
+    "edits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cleanup_edit"
+      }
+    }
+  },
+  "$defs": {
+    "review": {
+      "description": "Owner review state. Only 'approved' may ship; unapproved edits are skipped and logged (ADR 0007 decision 4, ADR 0009 decision 2).",
+      "enum": [
+        "title-approved",
+        "draft",
+        "in-review",
+        "approved"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "work",
+        "locator"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "imagery",
+            "dated-data"
+          ]
+        },
+        "work": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "edition": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^https?://\\S+$"
+        }
+      }
+    },
+    "position": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": false,
+      "prefixItems": [
+        {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        {
+          "type": "number",
+          "minimum": -85.0511287798066,
+          "maximum": 85.0511287798066
+        }
+      ]
+    },
+    "linear_ring": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "$ref": "#/$defs/position"
+      }
+    },
+    "polygon_coordinates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/linear_ring"
+      }
+    },
+    "cleanup_edit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "class",
+        "operation",
+        "geometry",
+        "reason",
+        "review"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "class": {
+          "const": "cleanup"
+        },
+        "operation": {
+          "enum": [
+            "remove-land",
+            "fill-water"
+          ]
+        },
+        "geometry": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "coordinates"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "Polygon"
+                },
+                "coordinates": {
+                  "$ref": "#/$defs/polygon_coordinates"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "coordinates"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "MultiPolygon"
+                },
+                "coordinates": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/polygon_coordinates"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "review": {
+                "const": "approved"
+              }
+            },
+            "required": [
+              "review"
+            ]
+          },
+          "then": {
+            "required": [
+              "sources"
+            ],
+            "properties": {
+              "sources": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

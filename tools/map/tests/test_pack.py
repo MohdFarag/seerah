@@ -154,3 +154,90 @@ def test_stored_tiles_rejects_a_file_that_is_not_an_archive(tmp_path):
     bogus.write_bytes(b"not an archive")
     with pytest.raises(pack.PackError, match="tile count"):
         pack.stored_tiles(bogus)
+
+
+def test_pack_production_metadata_and_verify(tmp_path):
+    from seerah_map.config import COPERNICUS_ATTRIBUTION
+
+    prof = _profile(tmp_path)
+    meta = pack.metadata(prof, "value", _PROVENANCE, trial=False)
+    assert "trial" not in meta
+    assert "variant" not in meta
+    assert "mode" not in meta
+    assert meta["tile_schema"] == 1
+    assert meta["name"] == "seerah-map"
+    assert meta["format"] == "png"
+    assert meta["attribution"] == COPERNICUS_ATTRIBUTION
+
+    work = _work(tmp_path)
+    out_dir = tmp_path / "out"
+    archive = pack.pack(work, out_dir, meta, write_metadata_file=False)
+    assert archive.is_file()
+    assert not (out_dir / "metadata.json").exists()
+    pack.verify(archive, prof, trial=False)
+    with pytest.raises(pack.PackError, match="trial"):
+        pack.verify(archive, prof, trial=True)
+
+
+def test_validate_outline_accepts_polygon_and_rejects_bad_files(tmp_path):
+    from seerah_map.errors import ConfigError
+
+    good = tmp_path / "good.geojson"
+    ring = [[58.0, 20.0], [59.0, 20.0], [59.0, 21.0], [58.0, 21.0], [58.0, 20.0]]
+    good.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {},
+                        "geometry": {"type": "Polygon", "coordinates": [ring]},
+                    }
+                ],
+            }
+        )
+    )
+    pack.validate_outline(good)
+
+    bad_json = tmp_path / "bad.geojson"
+    bad_json.write_text("{not json")
+    with pytest.raises(ConfigError, match="cannot open peninsula_outline"):
+        pack.validate_outline(bad_json)
+
+    point_only = tmp_path / "point.geojson"
+    point_only.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {},
+                        "geometry": {"type": "Point", "coordinates": [58.0, 20.0]},
+                    }
+                ],
+            }
+        )
+    )
+    with pytest.raises(ConfigError, match="valid polygon"):
+        pack.validate_outline(point_only)
+
+    bowtie = tmp_path / "bowtie.geojson"
+    bowtie_ring = [[58.0, 20.0], [59.0, 21.0], [59.0, 20.0], [58.0, 21.0], [58.0, 20.0]]
+    bowtie.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {},
+                        "geometry": {"type": "Polygon", "coordinates": [bowtie_ring]},
+                    }
+                ],
+            }
+        )
+    )
+    with pytest.raises(ConfigError, match="valid polygon"):
+        pack.validate_outline(bowtie)

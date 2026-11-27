@@ -15,7 +15,7 @@ The project's code and documentation are Apache-2.0 ([LICENSE](LICENSE)) and its
 | Material | Used by | Licence and attribution |
 | --- | --- | --- |
 | Natural Earth land and coastlines | `tools/spike/build_base.sh`, `tools/map/` | Public domain |
-| Copernicus DEM GLO-30 and Water Body Mask | `tools/spike/build_base.sh` (DEM), `tools/map/` (DEM and Water Body Mask; the valley probe also reads unpinned Copernicus DEM GLO-90 without shipping output) | Free licence with attribution. For derived data such as relief: "Produced using Copernicus WorldDEM-30 © DLR e.V." Confirm the wording against the current [licence](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/DEM/resources/license/License-COPDEM-30.pdf) before any release |
+| Copernicus DEM GLO-30 and Water Body Mask | `tools/spike/build_base.sh` (DEM), `tools/map/` (DEM and Water Body Mask; the valley probe also reads unpinned Copernicus DEM GLO-90 without shipping output) | Free licence with attribution ([licence](https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/DEM/resources/license/License-COPDEM-30.pdf), verified on 2026-11-23 against `INFO/eula_F.pdf` in cell `Copernicus_DSM_COG_10_N20_00_E058_00_DEM`, SHA-256 `32049914c37f14e7d53b48d13d74a49e77c030236e2acc7a0df426f9344feba2`). Modified/adapted data notice (Article 6(b), embedded in `data/map.json` `credits` and PMTiles `attribution`): `"produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved."` Liability notice (Article 6(c), embedded in `data/map.json` `credits`): `"The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30."` |
 
 ## Map build tools (`tools/map/`)
 
@@ -34,6 +34,19 @@ Used in the containerised map build toolchain (`tools/map/`); none of these tool
 | `jsonschema` | MIT |
 | `pytest` (container test suite) | MIT |
 | `WhiteboxTools` (`whitebox_tools`) | MIT |
+
+## Package signing and verification tools (`tools/packages/`)
+
+Used on the host to build, sign and verify `content` and `map` packages (`tools/packages/`); none of these tools ships in any app build. Exact pinned Python package versions and hashes are recorded in [tools/packages/requirements.txt](tools/packages/requirements.txt).
+
+| Tool | Licence |
+| --- | --- |
+| `cryptography` | Apache-2.0 OR BSD-3-Clause |
+| `cffi` | MIT |
+| `pycparser` | BSD-3-Clause |
+| Protomaps `pmtiles` | BSD-3-Clause |
+| `jsonschema` | MIT |
+| `pytest` (host test suite) | MIT |
 
 ## Map rendering (spike, `:core:map` and `benchmark`)
 

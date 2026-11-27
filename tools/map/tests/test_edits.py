@@ -4,9 +4,19 @@ import math
 
 import numpy as np
 import pytest
-from seerah_map.config import Edit, StyleSettings
-from seerah_map.edits import applicable, apply, touches
-from seerah_map.grid import BASE_ZOOM, TILE_PX, Block, Window, border_px, pixel_m
+from seerah_map.config import Bounds, CleanupEdit, CleanupSource, Edit, StyleSettings
+from seerah_map.edits import (
+    applicable,
+    apply,
+    apply_cleanup,
+    apply_wbm_cleanup,
+    touches,
+    validate_cleanups,
+)
+from seerah_map.errors import ConfigError
+from seerah_map.grid import BASE_ZOOM, TILE_PX, Block, Window, border_px, pixel_m, row_latitudes
+from seerah_map.mask import land_mask
+from seerah_map.style import darkness
 
 _FLAT_M = 100.0
 _RAISE_M = 10.0
@@ -172,3 +182,268 @@ def test_feather_uses_window_zoom():
     assert change[60, 40 - half_cols] == pytest.approx(_RAISE_M / 2, abs=0.5)
     beyond = math.ceil(feather_m / ground_per_px_10) + 2
     assert change[60, 40 - beyond] == 0
+
+
+def _cleanup(
+    geometry: dict,
+    operation: str = "remove-land",
+    *,
+    edit_id: str = "c1",
+    review: str = "approved",
+) -> CleanupEdit:
+    return CleanupEdit(
+        id=edit_id,
+        geometry=geometry,
+        operation=operation,
+        reason="Remove or infill synthetic modern coastal feature",
+        review=review,
+        sources=(CleanupSource(kind="imagery", work="Synthetic Sat", locator="scene-1"),),
+    )
+
+
+def _valid_mask(window: Window) -> np.ndarray:
+    return np.ones((window.rows, window.cols), dtype=bool)
+
+
+def test_cleanup_applicable_and_touches():
+    window = _window_at(_LON, _LAT)
+    far = _window_at(_LON + 2, _LAT)
+    near_box = _lonlat_box(window, 20, 30)
+    far_box = _lonlat_box(far, 20, 30)
+    a1 = _cleanup(near_box, edit_id="a1", review="approved")
+    d1 = _cleanup(near_box, edit_id="d1", review="draft")
+    r1 = _cleanup(near_box, edit_id="r1", review="in-review")
+    t1 = _cleanup(near_box, edit_id="t1", review="title-approved")
+    a2 = _cleanup(far_box, edit_id="a2", review="approved")
+
+    kept, skipped = applicable([a1, d1, r1, t1, a2])
+    assert kept == [a1, a2]
+    assert skipped == ["d1", "r1", "t1"]
+
+    assert touches(a1, window)
+    assert not touches(a2, window)
+
+    # Just outside `window` west edge: `reach_m=0.0` skips it, large `reach_m` hits it.
+    just_left = _lonlat_box(Window(window.col0 - 20, window.row0, window.cols, window.rows), 5, 10)
+    adjacent = _cleanup(just_left, edit_id="adj")
+    assert not touches(adjacent, window)
+    assert touches(adjacent, window, reach_m=2000.0)
+    with pytest.raises(ValueError, match="non-negative"):
+        touches(adjacent, window, reach_m=-1.0)
+
+
+def test_apply_cleanup_remove_land_and_immutability():
+    window = _window_at(_LON, _LAT)
+    elev = np.full((window.rows, window.cols), 45.0, dtype=np.float32)
+    wbm = np.zeros((window.rows, window.cols), dtype=np.uint8)
+    valid = _valid_mask(window)
+    valid[:10, :] = False
+
+    clean = _cleanup(_lonlat_box(window, 40, 40), "remove-land")
+    out_elev, out_wbm, changed = apply_cleanup(elev, wbm, valid, [clean], window)
+    assert changed == (clean.id,)
+
+    # Inputs stay unchanged.
+    assert (elev == 45.0).all()
+    assert (wbm == 0).all()
+
+    # Inside & valid turned into sea (wbm=1) and 0.0 m elevation.
+    assert (out_wbm[45:75, 45:75] == 1).all()
+    assert (out_elev[45:75, 45:75] == 0.0).all()
+    # Outside & invalid stayed untouched.
+    assert out_wbm[5, 5] == 0
+    assert out_elev[5, 5] == 45.0
+    assert out_wbm[100, 100] == 0
+    assert out_elev[100, 100] == 45.0
+
+    # Overlapping invalid band: remove-land touching row 0..80 leaves ~valid rows untouched.
+    spanning = _cleanup(_lonlat_box(window, 0, 50), "remove-land")
+    _, wbm_span, _ = apply_cleanup(elev, wbm, valid, [spanning], window)
+    assert (wbm_span[:10, :50] == 0).all()
+    assert (wbm_span[10:45, 5:45] == 1).all()
+
+    np.testing.assert_array_equal(apply_wbm_cleanup(wbm, valid, [clean], window), out_wbm)
+
+
+def test_remove_land_zeroes_elevation_to_prevent_coastal_blur_bleed():
+    window = _window_at(_LON, _LAT)
+    valid = _valid_mask(window)
+    # Natural flat land on cols 0..41, tall artificial pier inside cols 42..78 / rows 42..78.
+    elev = np.zeros((window.rows, window.cols), dtype=np.float32)
+    elev[42:78, 42:78] = 200.0
+    wbm = np.ones((window.rows, window.cols), dtype=np.uint8)
+    wbm[:, :42] = 0
+    wbm[42:78, 42:78] = 0
+
+    clean = _cleanup(_lonlat_box(window, 40, 40), "remove-land")
+    cleaned_elev, cleaned_wbm, _ = apply_cleanup(elev, wbm, valid, [clean], window)
+    cleaned_land = land_mask(cleaned_wbm, valid) >= 128
+
+    lats = row_latitudes(window)
+    px_m = window.pixel_m()
+    s = StyleSettings()
+    shade_clean = darkness(cleaned_elev, cleaned_land, lats, px_m, s, banded=False)
+    shade_wbm_only = darkness(elev, cleaned_land, lats, px_m, s, banded=False)
+
+    # Zeroing elevation keeps natural coast flat (0); un-zeroed bleeds hillshade onto coast.
+    assert (shade_clean[45:75, 32:41] == 0.0).all()
+    assert shade_wbm_only[45:75, 32:41].max() > 0.05
+
+
+def test_apply_cleanup_fill_water_only_infills_ocean_pixels():
+    window = _window_at(_LON, _LAT)
+    valid = _valid_mask(window)
+    valid[55:60, 55:60] = False
+
+    elev = np.full((window.rows, window.cols), 120.0, dtype=np.float32)
+    wbm = np.ones((window.rows, window.cols), dtype=np.uint8)
+    # Place existing land (0), lake (2), and river (3) inside the fill-water polygon.
+    wbm[45:50, 45:50] = 0
+    wbm[50:55, 50:55] = 2
+    wbm[60:65, 60:65] = 3
+    elev[wbm == 1] = -3.0  # synthetic negative DEM noise in basin; valid ocean pixels -> 0.0
+
+    fill = _cleanup(_lonlat_box(window, 40, 40), "fill-water")
+    out_elev, out_wbm, changed = apply_cleanup(elev, wbm, valid, [fill], window)
+    assert changed == (fill.id,)
+
+    # Pure ocean pixel inside polygon became wbm=0, elevation=0.0.
+    assert out_wbm[70, 70] == 0
+    assert out_elev[70, 70] == 0.0
+    # Existing land (0), lake (2), river (3) and their elevations stayed untouched.
+    assert (out_wbm[46:49, 46:49] == 0).all() and (out_elev[46:49, 46:49] == 120.0).all()
+    assert (out_wbm[51:54, 51:54] == 2).all() and (out_elev[51:54, 51:54] == 120.0).all()
+    assert (out_wbm[61:64, 61:64] == 3).all() and (out_elev[61:64, 61:64] == 120.0).all()
+    # Invalid pixel stayed untouched.
+    assert out_wbm[57, 57] == 1 and out_elev[57, 57] == -3.0
+    # Outside polygon ocean stayed untouched.
+    assert out_wbm[5, 5] == 1 and out_elev[5, 5] == -3.0
+
+    np.testing.assert_array_equal(apply_wbm_cleanup(wbm, valid, [fill], window), out_wbm)
+
+
+def test_apply_cleanup_supports_multipolygon_and_polygon_with_hole():
+    window = _window_at(_LON, _LAT)
+    valid = _valid_mask(window)
+    outer = _lonlat_box(window, 20, 80)["coordinates"][0]
+    hole = list(reversed(_lonlat_box(window, 45, 30)["coordinates"][0]))
+    poly_with_hole = {"type": "Polygon", "coordinates": [outer, hole]}
+
+    wbm = np.zeros((window.rows, window.cols), dtype=np.uint8)
+    elev = np.full((window.rows, window.cols), 30.0, dtype=np.float32)
+    out_elev, out_wbm, _ = apply_cleanup(
+        elev, wbm, valid, [_cleanup(poly_with_hole, "remove-land")], window
+    )
+    assert out_wbm[25, 25] == 1 and out_elev[25, 25] == 0.0
+    assert out_wbm[60, 60] == 0 and out_elev[60, 60] == 30.0
+
+    p1 = _lonlat_box(window, 15, 25)["coordinates"]
+    p2 = _lonlat_box(window, 80, 25)["coordinates"]
+    multi = {"type": "MultiPolygon", "coordinates": [p1, p2]}
+    wbm_ocean = np.ones((window.rows, window.cols), dtype=np.uint8)
+    out_wbm_multi = apply_wbm_cleanup(wbm_ocean, valid, [_cleanup(multi, "fill-water")], window)
+    assert out_wbm_multi[25, 25] == 0
+    assert out_wbm_multi[90, 90] == 0
+    assert out_wbm_multi[60, 60] == 1
+
+
+def test_apply_cleanup_reports_edits_that_change_no_pixel():
+    window = _window_at(_LON, _LAT)
+    valid = _valid_mask(window)
+    sea = np.ones((window.rows, window.cols), dtype=np.uint8)
+    flat_sea = np.zeros((window.rows, window.cols), dtype=np.float32)
+    land = np.zeros((window.rows, window.cols), dtype=np.uint8)
+
+    remove = _cleanup(_lonlat_box(window, 40, 40), "remove-land")
+    fill = _cleanup(_lonlat_box(window, 40, 40), "fill-water")
+
+    # Removing land from flat sea and filling water on dry land change nothing.
+    assert apply_cleanup(flat_sea, sea, valid, [remove], window).changed_ids == ()
+    assert apply_cleanup(flat_sea, land, valid, [fill], window).changed_ids == ()
+    # Sea with non-zero elevation still changes: the elevation is zeroed.
+    noisy_sea = np.full((window.rows, window.cols), -2.0, dtype=np.float32)
+    assert apply_cleanup(noisy_sea, sea, valid, [remove], window).changed_ids == (remove.id,)
+
+
+def test_apply_cleanup_rejects_bad_operation_and_shape_mismatch():
+    window = _window_at(_LON, _LAT)
+    far = _window_at(_LON + 5, _LAT)
+    valid = _valid_mask(window)
+    wbm = np.zeros((window.rows, window.cols), dtype=np.uint8)
+    elev = np.zeros((window.rows, window.cols), dtype=np.float32)
+
+    bad_op = _cleanup(_lonlat_box(far, 10, 10), operation="raise")
+    with pytest.raises(ValueError, match="unknown operation"):
+        apply_cleanup(elev, wbm, valid, [bad_op], window)
+    with pytest.raises(ValueError, match="unknown operation"):
+        apply_wbm_cleanup(wbm, valid, [bad_op], window)
+
+    with pytest.raises(ValueError, match="shape"):
+        apply_cleanup(elev[:-1, :], wbm, valid, [], window)
+    with pytest.raises(ValueError, match="shape"):
+        apply_wbm_cleanup(wbm[:-1, :], valid, [], window)
+
+
+def test_validate_cleanups_rules():
+    window = _window_at(_LON, _LAT)
+    box_a = _lonlat_box(window, 10, 30)
+    box_b = _lonlat_box(window, 70, 30)
+    box_overlap = _lonlat_box(window, 20, 30)
+    extent = Bounds(39.0, 29.0, 40.5, 31.0)
+
+    # Disjoint approved edits and same-op overlapping approved edits pass.
+    validate_cleanups(
+        [
+            _cleanup(box_a, "remove-land", edit_id="r1"),
+            _cleanup(box_overlap, "remove-land", edit_id="r2"),
+            _cleanup(box_b, "fill-water", edit_id="f1"),
+        ],
+        data_extent=extent,
+    )
+
+    # Unapproved opposite overlapping edits or unapproved edits outside extent pass.
+    far_box = _lonlat_box(_window_at(10.0, 10.0), 10, 30)
+    validate_cleanups(
+        [
+            _cleanup(box_a, "remove-land", edit_id="r1"),
+            _cleanup(box_overlap, "fill-water", edit_id="f-draft", review="draft"),
+            _cleanup(far_box, "fill-water", edit_id="f-far", review="in-review"),
+        ],
+        data_extent=extent,
+    )
+
+    # Conflicting approved opposite operations fail.
+    with pytest.raises(ConfigError, match="overlap"):
+        validate_cleanups(
+            [
+                _cleanup(box_a, "remove-land", edit_id="r1"),
+                _cleanup(box_overlap, "fill-water", edit_id="f1"),
+            ],
+            data_extent=extent,
+        )
+
+    # Approved edit outside data_extent (e.g. swapped lat/lon) fails.
+    with pytest.raises(ConfigError, match="data_extent"):
+        validate_cleanups([_cleanup(far_box, "remove-land", edit_id="far")], data_extent=extent)
+
+    # Self-intersecting bow-tie geometry fails IsValid() even when draft.
+    bowtie = {
+        "type": "Polygon",
+        "coordinates": [[[39.5, 30.0], [39.6, 30.1], [39.6, 30.0], [39.5, 30.1], [39.5, 30.0]]],
+    }
+    with pytest.raises(ConfigError, match="invalid or zero-area"):
+        validate_cleanups([_cleanup(bowtie, "remove-land", edit_id="bow", review="draft")])
+
+    # Collinear zero-area polygon fails Area() > 0.
+    collinear = {
+        "type": "Polygon",
+        "coordinates": [[[39.5, 30.0], [39.6, 30.0], [39.7, 30.0], [39.5, 30.0]]],
+    }
+    with pytest.raises(ConfigError, match="invalid or zero-area"):
+        validate_cleanups([_cleanup(collinear, "remove-land", edit_id="flat", review="draft")])
+
+    # Duplicate ID and unknown operation fail.
+    with pytest.raises(ConfigError, match="duplicate"):
+        validate_cleanups([_cleanup(box_a, edit_id="dup"), _cleanup(box_b, edit_id="dup")])
+    with pytest.raises(ConfigError, match="unknown operation"):
+        validate_cleanups([_cleanup(box_a, operation="carve", edit_id="badop")])
