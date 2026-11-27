@@ -11,7 +11,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 | How the app explains reconstructed terrain (settings, map information, credits); nothing is labelled on the map itself | Before a map package with reconstructions is listed in `stable` ([ADR 0009](adr/0009-map-data-pipeline.md) decision 11) |
 | Streaming map tiles online, as an option beside the offline map | After v1 |
 | Final v1 event list and depth; whether and how al-Isra is included after its dating is checked | As each phase's content is prepared |
-| Date documentation; pre-Hijra reference; Gregorian conversion | Content review with the owner |
+| Date documentation; Gregorian conversion | Content review with the owner |
 | Long-running events, approximate or unknown dates, disputed locations | When those cases come up in content |
 | The actual display-date values (the one-date rule is decided) | Content review |
 | Choice of narrations, verses, explanations, editions; asset rights inventory | Content preparation |
@@ -30,6 +30,7 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 ## Decided
 
 - v1 map pipeline: [specification](design/v1-map-pipeline-spec.md), owner decisions D1–D7 approved 2026-11-23. Coastal cleanup edits (`remove-land` and `fill-water`, their own schema, imagery or dated-data sources), the production `coverage.yaml` and `map.json` (`tile_schema: 1`) formats, and host-side package signing in `tools/packages/`. The values in `coverage.yaml` stay open (above).
+- Pre-Hijra dating: canonical Hijri axis (`1 BH, 2 BH…` / `1 AH…`, no year zero) plus an explicit, optional, owner-reviewed `prophethood_year` (السنة من البعثة) shown alongside pre-Hijra dates when sourced, never computed by formula; a display-priority toggle (Hijri default) may be added in a future release (owner, 2026-11-22; [ADR 0005](adr/0005-content-model-exploration-and-story.md)).
 - Map data pipeline: [ADR 0009](adr/0009-map-data-pipeline.md), accepted 2026-11-14. Terrain-only base map in style C from pinned Copernicus data, one map package, terrain edits baked into the relief and disclosed outside the map, built from the private `seerah-content` repository.
 - Update hosting and the update index: [ADR 0008](adr/0008-update-hosting-and-index.md), accepted 2026-11-13. Free hosting until the first public release (index at `seerah-updates.pages.dev`, packages on GitHub Releases), and an automatic check that never downloads.
 - Content formats, compatibility and package signing: [ADR 0007](adr/0007-content-formats-compatibility-and-signing.md), accepted 2026-11-13.

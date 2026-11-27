@@ -1,6 +1,6 @@
 # 0005. Content model: exploration and story layers
 
-**Status:** Accepted by the owner on 2026-11-13. The detailed specification (entity fields, the director's toolkit, directing guidelines, examples) is [design/exploration-and-story.md](../design/exploration-and-story.md).
+**Status:** Accepted by the owner on 2026-11-13. The detailed specification (entity fields, the director's toolkit, directing guidelines, examples) is [design/exploration-and-story.md](../design/exploration-and-story.md). Decision 4 (pre-Hijra dating) refined by the owner on 2026-11-22.
 
 ## Context
 
@@ -11,7 +11,7 @@ The owner wants content written in a form aimed at the app: facts that live on t
 1. **Two layers.** The *exploration layer* holds facts: places, events, routes, areas, texts and sources, each with its time, place and accuracy. The *story layer* holds direction: chapters, scenes and steps that reference exploration items.
 2. **The story never adds a fact.** Places, dates, coordinates, routes and texts shown in a story must exist in the exploration layer with their sources. The story adds only direction and short reviewed linking sentences marked as editorial. The build checks this.
 3. **Places have one identity and a history** (names, existence, appearance change over time). Yathrib and al-Madinah are one place.
-4. **Time:** Hijri years counted from the Hijra, no year zero; months where a source gives them; precision is part of every date; events with the same date keep an explicit order.
+4. **Time:** Hijri years counted from the Hijra (`1 AH` onward; `1 BH, 2 BH…` before it, no year zero) are the single canonical axis for storage, ordering, year-by-year authoring, and the timeline bar; months where a source gives them; precision is part of every date; events with the same date keep an explicit order. For pre-Hijra dates, any sourced year of Prophethood (السنة من البعثة) is stored explicitly as an optional, owner-reviewed `prophethood_year` field — never computed by formula, because Hijri years start in Muharram while Prophethood began in Ramadan and the two overlap across year boundaries. In v1, pre-Hijra dates show both labels together when sourced (`٣ ق.هـ · السنة ١٠ من البعثة`) with no toggle; a future release may add a user-selectable display-priority toggle (Hijri default) over the same fixed Hijri timeline (owner, 2026-11-22).
 5. **Visibility in free exploration:** `always` (on the map in its time, from the zoom its prominence allows) or `in-context` (on the map only while its parent event is open, always readable inside it). No fact is story-only. Unknown locations get no marker; events outside the map get their own presentation.
 6. **Event kinds** by what the event was about: call to Islam, opposition, pledge and covenant, migration and journey, founding, legislation, expeditions. Verses are links to events, not a kind.
 7. **A closed director's toolkit:** camera (frame wide, medium or close; follow a route; transitions), time (set year or sourced month; time-lapse), emphasis (highlight, focus, reveal in context), drawing (route step by step, movement arrows, soft area tint), panel (title card, original text, linking sentence, automatic certainty notes), flow (next and back, explore here).
@@ -29,6 +29,7 @@ The owner wants content written in a form aimed at the app: facts that live on t
 | Camera directions | Shot sizes in words | Zoom levels and coordinates | Works on every screen size and survives map data changes |
 | Story-only facts | None (`in-context` instead) | A "story only" visibility level | The PRD keeps introductions and related situations available in free exploration (§6) |
 | Authoring order and storage | Year files compiled per entity | Hand-written per-entity files; Notion databases | Year by year matches how the Seerah is read and reviewed; git gives history, review and checks |
+| Pre-Hijra dating | Canonical Hijri axis (`ق.هـ` / `هـ`, no year zero) + explicit sourced `prophethood_year` shown alongside pre-Hijra dates in v1 (Option B); optional display-priority toggle (Option C) deferred to a future release | Full dual-axis toggle re-bucketing the timeline; display-priority toggle in v1 | Hijri years start in Muharram while Prophethood began in Ramadan, so formula conversion (`14 - bh`) is inaccurate and re-bucketing breaks year-by-year authoring and the `1 BH -> 1 AH` seam. Showing both sourced labels directly fits v1's three pre-Hijra years without adding a setting, and keeps the data model ready if a display-priority toggle is added later |
 
 ## Consequences
 
