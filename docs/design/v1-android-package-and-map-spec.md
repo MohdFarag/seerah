@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # v1 Android package verification, storage and tile_schema 1 map spec
 
 - **Author:** MohdFarag
-- **Status:** Proposed — revised after [Elephant-Goldfish Model (EGM) review](egm-review-v1-android-package-and-map/consolidated_review_report.md); awaiting owner approval of D1, D2, and D5 (`D3` moved to an internal technical decision; `D4` deferred)
+- **Status:** Approved by the owner on 2026-11-28 (`D1`, `D2`, `D5` approved; `D3` moved to an internal technical decision; `D4` deferred); revised after [Elephant-Goldfish Model (EGM) review](egm-review-v1-android-package-and-map/consolidated_review_report.md)
 - **Date:** 2026-11-28
 
 ## Overview
@@ -22,9 +22,9 @@ The specification delivers four coordinated pieces across `build-logic`, `:core:
 
 ---
 
-## Owner Decisions (Awaiting Approval)
+## Owner Decisions (Approved 2026-11-28)
 
-These three design choices (`D1`, `D2`, and `D5`) sit within accepted Architecture Decision Records (ADRs) and await Mohamed's sign-off before Phase 1 starts.
+These three design choices (`D1`, `D2`, and `D5`) sit within accepted Architecture Decision Records (ADRs) and were approved by Mohamed on 2026-11-28.
 
 | ID | Topic | Recommended option | Alternative | Why |
 | --- | --- | --- | --- | --- |
