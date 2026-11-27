@@ -1,15 +1,17 @@
 # map-data
 
-Map data, kept separate from the app code. Historical map data (`historical/`, `updates/`) is content: all rights reserved under the [content licence](../LICENSES/LicenseRef-Seerah-Content.txt) ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)). The v1 map data pipeline for the Arabian Peninsula is decided in [ADR 0009](../docs/adr/0009-map-data-pipeline.md). The real map configuration and the terrain edits are private (the private repository's `map/` section). This folder holds the spike's map files, the synthetic example the map trial's tool is tested on (`example/`), and, later, the documented tile schema.
+Map data, kept separate from the app code. Historical map data (`historical/`, `updates/`) is content: all rights reserved under the [content licence](../LICENSES/LicenseRef-Seerah-Content.txt) ([ADR 0006](../docs/adr/0006-open-source-code-and-closed-content.md)). The v1 map data pipeline for the Arabian Peninsula is decided in [ADR 0009](../docs/adr/0009-map-data-pipeline.md). The real map configuration and the terrain edits are private (the private repository's `map/` section). This folder holds the spike's map files, the synthetic examples the map tool is tested on (`example/` and `example-production/`), and the public `tile_schema: 1` producer schema (`schema/map.schema.json`).
 
 ```text
 map-data/
-  historical/spike/  Hijra route, waypoints, time states and region labels used by the spike (GeoJSON)
-  style/fonts/       Amiri and IBM Plex Sans Arabic, with their OFL licences
-  style/glyphs/      pre-built glyph files for the spike's rejected glyph mode, kept for comparison
-  updates/           the spike's test content update (manifest and zip); the installed spike APKs fetch it from this path
-  example/           synthetic map trial example for CI (public)
-  dist/              generated base map files and trial output (not committed)
+  historical/spike/    Hijra route, waypoints, time states and region labels used by the spike (GeoJSON)
+  style/fonts/         Amiri and IBM Plex Sans Arabic, with their OFL licences
+  style/glyphs/        pre-built glyph files for the spike's rejected glyph mode, kept for comparison
+  updates/             the spike's test content update (manifest and zip); the installed spike APKs fetch it from this path
+  schema/              public JSON Schema for data/map.json (tile_schema: 1)
+  example/             synthetic map trial example for CI (public)
+  example-production/  synthetic production map example for CI (public)
+  dist/                generated base map files, trial output and production staging output (not committed)
 ```
 
 Rules for all map data (from the PRD):
@@ -43,7 +45,34 @@ dist/<name>-<variant>-<fp8>/           # or dist/<name>-<variant>-per-zoom-<fp8>
   report.json
 ```
 
-This is trial output, never packaged or published. It is **not** `tile_schema` 1, the map package format, which is not defined yet.
+This is trial output, never packaged or published. It is **not** `tile_schema` 1.
+
+## The production map example (`example-production/`) and `tile_schema: 1` staging
+
+`example-production/` is the synthetic `purpose: production` fixture for CI, covering the same Masirah Island window (`min_data_margin_deg: 0`, tested with `--allow-zero-margin`):
+
+| File | Content |
+| --- | --- |
+| `coverage.yaml` | production coverage configuration (`purpose: production`, `relief_encoding: painted-rgba`) |
+| `cleanup.yaml` | one approved `remove-land` polygon crossing a block edge and one `draft` `fill-water` polygon (skipped by builds) |
+| `sources.lock` | pinned Copernicus DEM and Natural Earth files with SHA-256 checksums |
+
+`python3 tools/map/run.py -- build --coverage <rel>` stages a `tile_schema: 1` production map directory into `dist/map-staging-<fp8>/`:
+
+```text
+dist/map-staging-<fp8>/
+  data/
+    base.pmtiles    vector base archive ("tile_schema": 1, no "trial" flag)
+    relief.pmtiles  relief archive ("tile_schema": 1, no "trial" flag)
+    map.json        validated against map-data/schema/map.schema.json
+  report.json       build provenance, timings, tile counts and applied/skipped cleanup IDs
+```
+
+### `tile_schema` 1
+
+- **`data/base.pmtiles`:** PMTiles v3 archive of gzip-compressed MVT vector tiles across build zooms `0..regional_max_zoom`, containing `land` (`MultiPolygon`) and `coast` (`MultiLineString`) with empty feature properties (`fields: {}`), plus reserved optional layer `valley` (absent in v1; `tile_schema: 1` readers accept `{"land", "coast"} <= layer_ids`).
+- **`data/relief.pmtiles`:** PMTiles v3 archive of uncompressed `256×256` raster tiles across build zooms `0..regional_max_zoom` (every tile covering `data_extent` is present with zero skipped blank tiles), encoded as `terrarium-value` (`png`) or `painted-rgba` (`webp`). Reserved optional archive `data/relief-detail.pmtiles` is absent in v1.
+- **PMTiles v3 binary header and JSON metadata:** the binary header stores `min_zoom = 0`, `max_zoom = regional_max_zoom`, tile type and compression, and bounds (`relief.pmtiles` bounds match `data_extent`). JSON metadata carries `"name": "seerah-map"`, `"tile_schema": 1`, `"attribution"`, `"fingerprint"`, `"tool_commit"`, `"data_commit"`, and `"image"`, plus `"encoding"` on `relief.pmtiles` or `"vector_layers"` on `base.pmtiles`, with no `"trial"`, `"variant"`, or `"mode"` keys.
 
 ## Spike base map
 

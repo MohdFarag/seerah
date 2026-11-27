@@ -352,3 +352,124 @@ def test_example_base_has_no_inland_edge_coast(reference):
                             abs(c0 - edge) <= tol and abs(c1 - edge) <= tol and span > tol
                         ), (name, x0, y0, x1, y1)
     assert inside_segments > 0
+
+
+def _production_data(root: Path, *, encoding: str = "painted-rgba") -> Path:
+    shutil.copytree(EXAMPLE, root / "example")
+    shutil.copytree(EXAMPLE.parent / "example-production", root / "example-production")
+    if encoding == "terrarium-value":
+        cov_file = root / "example-production" / "coverage.yaml"
+        lines = [
+            line
+            for line in cov_file.read_text(encoding="utf-8").splitlines()
+            if not line.startswith("webp_quality:")
+        ]
+        text = "\n".join(lines).replace(
+            "relief_encoding: painted-rgba", "relief_encoding: terrarium-value"
+        )
+        cov_file.write_text(text + "\n", encoding="utf-8")
+    return root
+
+
+def test_example_production_builds_painted_terrarium_and_is_deterministic(run_cli, tmp_path):
+    data = _production_data(tmp_path / "data")
+    run_a = tmp_path / "run_a"
+
+    assert (
+        run_cli(["validate", *_roots(run_a, data), "--coverage", "example-production"]).returncode
+        == 2
+    )
+    val_ok = run_cli(
+        [
+            "validate",
+            *_roots(run_a, data),
+            "--coverage",
+            "example-production",
+            "--allow-zero-margin",
+        ]
+    )
+    assert val_ok.returncode == 0, val_ok.output
+
+    hashes = []
+    for label in ("run_a", "run_b"):
+        run_dir = tmp_path / label
+        res = run_cli(
+            [
+                "build",
+                *_roots(run_dir, data),
+                "--coverage",
+                "example-production",
+                "--allow-zero-margin",
+            ]
+        )
+        assert res.returncode == 0, res.output
+        (staged,) = (run_dir / "out").glob("map-staging-*")
+        assert not (staged / "metadata.json").exists()
+        assert not (staged / "data" / "metadata.json").exists()
+        base_pm = staged / "data" / "base.pmtiles"
+        relief_pm = staged / "data" / "relief.pmtiles"
+        map_json_path = staged / "data" / "map.json"
+        report_path = staged / "report.json"
+        assert base_pm.is_file()
+        assert relief_pm.is_file()
+        assert map_json_path.is_file()
+        assert report_path.is_file()
+        hashes.append((_sha256(base_pm), _sha256(relief_pm), _sha256(map_json_path)))
+
+    assert hashes[0] == hashes[1]
+
+    (staged_a,) = (tmp_path / "run_a" / "out").glob("map-staging-*")
+    cov = config.load_coverage(
+        data / "example-production" / "coverage.yaml",
+        data_root=data,
+        allow_zero_margin=True,
+    )
+    target = cov.as_build_target()
+    base_pm = staged_a / "data" / "base.pmtiles"
+    relief_pm = staged_a / "data" / "relief.pmtiles"
+    with base_pm.open("rb") as f:
+        base_meta = Reader(MmapSource(f)).metadata()
+    assert "trial" not in base_meta
+    assert base_meta["tile_schema"] == 1
+    assert base_meta["name"] == "seerah-map"
+    base.verify_base(base_pm, target, trial=False)
+
+    with relief_pm.open("rb") as f:
+        relief_meta = Reader(MmapSource(f)).metadata()
+    assert "trial" not in relief_meta
+    assert "variant" not in relief_meta
+    assert "mode" not in relief_meta
+    assert relief_meta["tile_schema"] == 1
+    assert relief_meta["name"] == "seerah-map"
+
+    map_json = json.loads((staged_a / "data" / "map.json").read_text(encoding="utf-8"))
+    config.validate_map_json(map_json)
+    assert map_json["sources"]["relief"]["encoding"] == "painted-rgba"
+    assert map_json["sources"]["relief"]["tile_format"] == "webp"
+
+    rep = json.loads((staged_a / "report.json").read_text(encoding="utf-8"))
+    assert rep["purpose"] == "production"
+    assert rep["edits"] == {
+        "applied": ["remove-synthetic-pier"],
+        "skipped": ["draft-synthetic-basin"],
+    }
+    pack.verify(relief_pm, target, trial=False)
+
+    # Also build terrarium-value production coverage.
+    data_tv = _production_data(tmp_path / "data_tv", encoding="terrarium-value")
+    run_tv = tmp_path / "run_tv"
+    res_tv = run_cli(
+        [
+            "build",
+            *_roots(run_tv, data_tv),
+            "--coverage",
+            "example-production",
+            "--allow-zero-margin",
+        ]
+    )
+    assert res_tv.returncode == 0, res_tv.output
+    (staged_tv,) = (run_tv / "out").glob("map-staging-*")
+    map_json_tv = json.loads((staged_tv / "data" / "map.json").read_text(encoding="utf-8"))
+    config.validate_map_json(map_json_tv)
+    assert map_json_tv["sources"]["relief"]["encoding"] == "terrarium-value"
+    assert map_json_tv["sources"]["relief"]["tile_format"] == "png"

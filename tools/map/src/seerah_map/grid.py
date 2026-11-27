@@ -294,36 +294,61 @@ def _widen_camera(camera: Bounds, margin_deg: float) -> Bounds:
     )
 
 
-def _contains(outer: Bounds, inner: Bounds) -> bool:
+_FLOAT_TOLERANCE_DEG = 1e-9
+
+
+def _contains(outer: Bounds, inner: Bounds, *, tol: float = 0.0) -> bool:
     return (
-        outer.west <= inner.west
-        and outer.south <= inner.south
-        and outer.east >= inner.east
-        and outer.north >= inner.north
+        outer.west <= inner.west + tol
+        and outer.south <= inner.south + tol
+        and outer.east >= inner.east - tol
+        and outer.north >= inner.north - tol
     )
 
 
 def natural_earth_max_zoom(
-    camera: Bounds, margin_deg: float, max_zoom: int, half_width_dp: float = WIDEST_HALF_SCREEN_DP
+    camera: Bounds,
+    margin_deg: float,
+    max_zoom: int,
+    half_width_dp: float = WIDEST_HALF_SCREEN_DP,
+    *,
+    data_extent: Bounds | None = None,
 ) -> int:
     """Return the highest build zoom whose view exceeds the data margin in degrees.
 
     Use build zoom 0 if the view always fits, or max_zoom if the margin is zero.
     Build tiles use 256-pixel tiles and display one zoom lower in MapLibre.
     """
-    if margin_deg == 0:
-        return max_zoom
-    extent = _widen_camera(camera, margin_deg)
+    if data_extent is None:
+        if margin_deg == 0:
+            return max_zoom
+        extent = _widen_camera(camera, margin_deg)
+    else:
+        extent = data_extent
+        min_side_margin = min(
+            camera.west - extent.west,
+            camera.south - extent.south,
+            extent.east - camera.east,
+            extent.north - camera.north,
+        )
+        if min_side_margin <= 0:
+            return max_zoom
     for build_zoom in range(max_zoom, 0, -1):
         if not _contains(extent, view_bounds(camera, build_zoom - 1, half_width_dp)):
             return build_zoom
     return 0
 
 
-def check_data_extent_coverage(data_extent: Bounds, camera: Bounds, margin_deg: float) -> None:
+def check_data_extent_coverage(
+    data_extent: Bounds,
+    camera: Bounds,
+    margin_deg: float,
+    *,
+    tol: float = _FLOAT_TOLERANCE_DEG,
+) -> None:
     """Raise if the data extent fails to enclose the camera plus the margin in degrees."""
     required_extent = _widen_camera(camera, margin_deg)
-    if not _contains(data_extent, required_extent):
+    if not _contains(data_extent, required_extent, tol=tol):
         raise ValueError(
             f"Data extent {data_extent} does not cover required extent {required_extent}"
         )
@@ -336,9 +361,11 @@ def check_base_coverage(
     max_zoom: int,
     min_maplibre_zoom: int = TRIAL_MIN_MAPLIBRE_ZOOM,
     half_width_dp: float = WIDEST_HALF_SCREEN_DP,
+    *,
+    data_extent: Bounds | None = None,
 ) -> None:
-    """Raise if a trial view needs Natural Earth above its maximum build zoom."""
-    extent = _widen_camera(camera, margin_deg)
+    """Raise if a view needs Natural Earth above its maximum build zoom."""
+    extent = _widen_camera(camera, margin_deg) if data_extent is None else data_extent
     for maplibre_zoom in range(min_maplibre_zoom, max_zoom):
         build_zoom = maplibre_zoom + 1
         if build_zoom > ne_max_zoom and not _contains(

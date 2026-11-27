@@ -1,0 +1,25 @@
+schema: 1
+purpose: production
+edits:
+  - id: remove-synthetic-pier
+    class: cleanup
+    operation: remove-land
+    reason: Synthetic coastal cleanup crossing tile column 58.887E for CI testing
+    review: approved
+    sources:
+      - kind: imagery
+        work: Synthetic test fixture (not real geography)
+        locator: Synthetic coastal pier tile column 58.887E
+    geometry:
+      type: Polygon
+      coordinates:
+        - [[58.86, 20.6173], [58.92, 20.6173], [58.92, 20.6227], [58.86, 20.6227], [58.86, 20.6173]]
+  - id: draft-synthetic-basin
+    class: cleanup
+    operation: fill-water
+    reason: Synthetic draft edit; skipped by production builds
+    review: draft
+    geometry:
+      type: Polygon
+      coordinates:
+        - [[58.82, 20.55], [58.84, 20.55], [58.84, 20.57], [58.82, 20.57], [58.82, 20.55]]

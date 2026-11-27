@@ -1,5 +1,6 @@
 """Tests for strict YAML loading and the profile, edits and lock loaders."""
 
+import ast
 import copy
 import datetime
 import math
@@ -407,3 +408,400 @@ def test_lock_rejects_bad_types(tmp_path, cells, key):
     )
     with pytest.raises(ConfigError, match=key.replace("[", r"\[").replace("]", r"\]")):
         config.load_lock(path)
+
+
+def _cleanup_doc(**overrides):
+    data = strict_yaml.load(FIXTURES / "cleanup_ok.yaml")
+    data.update(overrides)
+    return data
+
+
+def _write_cleanup(tmp_path, data, name="cleanup.yaml"):
+    path = tmp_path / name
+    strict_yaml.dump(data, path)
+    return path
+
+
+def _cleanup_with_edit(tmp_path, index=0, **edit_changes):
+    data = _cleanup_doc()
+    edit = copy.deepcopy(data["edits"][index])
+    for k, v in edit_changes.items():
+        if v is None:
+            edit.pop(k, None)
+        else:
+            edit[k] = v
+    data["edits"] = [edit]
+    return _write_cleanup(tmp_path, data)
+
+
+def test_cleanup_loads_valid_fixture_and_empty_edits(tmp_path):
+    cleanups = config.load_cleanup(FIXTURES / "cleanup_ok.yaml")
+    assert [e.id for e in cleanups] == [
+        "remove-synthetic-pier",
+        "fill-synthetic-basin",
+        "draft-synthetic-spit",
+    ]
+    assert cleanups[0].operation == "remove-land"
+    assert cleanups[0].geometry["type"] == "Polygon"
+    assert cleanups[0].sources[0].kind == "imagery"
+    assert cleanups[1].operation == "fill-water"
+    assert cleanups[1].geometry["type"] == "MultiPolygon"
+    assert cleanups[1].sources[0].edition == "2020"
+    assert cleanups[2].review == "draft"
+    assert cleanups[2].sources == ()
+
+    empty = _write_cleanup(tmp_path, {"schema": 1, "purpose": "production", "edits": []})
+    assert config.load_cleanup(empty) == []
+
+
+@pytest.mark.parametrize("review", ["draft", "in-review", "title-approved"])
+@pytest.mark.parametrize("sources", [None, []])
+def test_cleanup_allows_unapproved_without_sources(tmp_path, review, sources):
+    path = _cleanup_with_edit(tmp_path, review=review, sources=sources)
+    loaded = config.load_cleanup(path)
+    assert loaded[0].review == review
+    assert loaded[0].sources == ()
+
+
+def test_cleanup_accepts_grid_edges(tmp_path):
+    ring = [
+        [-180, -GRID_TOP],
+        [180, -GRID_TOP],
+        [180, GRID_TOP],
+        [-180, GRID_TOP],
+        [-180, -GRID_TOP],
+    ]
+    path = _cleanup_with_edit(tmp_path, geometry={"type": "Polygon", "coordinates": [ring]})
+    assert len(config.load_cleanup(path)) == 1
+
+
+@pytest.mark.parametrize("schema", ["1", 2, True])
+def test_cleanup_rejects_bad_schema(tmp_path, schema):
+    path = _write_cleanup(tmp_path, _cleanup_doc(schema=schema))
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+@pytest.mark.parametrize("purpose", ["trial", "staging"])
+def test_cleanup_rejects_non_production_purpose(tmp_path, purpose):
+    path = _write_cleanup(tmp_path, _cleanup_doc(purpose=purpose))
+    with pytest.raises(ConfigError, match="purpose"):
+        config.load_cleanup(path)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"class": "reconstruction"},
+        {"class": None},
+        {"operation": "raise"},
+        {"operation": "lower"},
+        {"id": "Upper_Case"},
+        {"id": "-leading"},
+        {"id": "trailing-"},
+        {"id": "double--dash"},
+        {"id": ""},
+        {"reason": "   "},
+        {"reason": "\t\n"},
+        {"feather_m": 10},
+        {
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [[58.1, 20.1], [58.2, 20.2]],
+            }
+        },
+        {
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[58.1, 20.1], [58.2, 20.1], [58.1, 20.1]]],
+            }
+        },
+        {
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [[58.1, 20.1], [58.2, 20.1], [58.2, 20.2], [58.1, 20.2], [58.1, 20.19]]
+                ],
+            }
+        },
+        {
+            "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                    [[[58.1, 20.1], [58.2, 20.1], [58.2, 20.2], [58.1, 20.2], [58.1, 20.1]]],
+                    [[[58.3, 20.3], [58.4, 20.3], [58.4, 20.4], [58.3, 20.4], [58.3, 20.39]]],
+                ],
+            }
+        },
+    ],
+)
+def test_cleanup_rejects_invalid_edit_fields(tmp_path, changes):
+    path = _cleanup_with_edit(tmp_path, **changes)
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+def test_cleanup_rejects_duplicate_ids(tmp_path):
+    data = _cleanup_doc()
+    second = copy.deepcopy(data["edits"][0])
+    data["edits"] = [data["edits"][0], second]
+    with pytest.raises(ConfigError, match="edits.id"):
+        config.load_cleanup(_write_cleanup(tmp_path, data))
+
+
+@pytest.mark.parametrize(
+    ("lon", "lat"),
+    [
+        (180.1, 20.0),
+        (-180.1, 20.0),
+        (58.0, math.nextafter(GRID_TOP, math.inf)),
+        (58.0, math.nextafter(-GRID_TOP, -math.inf)),
+        (58.0, -86.0),
+    ],
+)
+def test_cleanup_rejects_out_of_range_coordinates(tmp_path, lon, lat):
+    ring = [[58.1, 20.1], [lon, lat], [58.2, 20.2], [58.1, 20.2], [58.1, 20.1]]
+    path = _cleanup_with_edit(tmp_path, geometry={"type": "Polygon", "coordinates": [ring]})
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+@pytest.mark.parametrize("scalar", [".nan", ".inf", "-.inf"])
+def test_cleanup_rejects_non_finite_coordinates(tmp_path, scalar):
+    raw = (FIXTURES / "cleanup_ok.yaml").read_text(encoding="utf-8")
+    bad = raw.replace("[58.2, 20.1]", f"[{scalar}, 20.1]", 1)
+    assert bad != raw
+    with pytest.raises(ConfigError) as caught:
+        config.load_cleanup(_write(tmp_path, bad, "bad.yaml"))
+    if scalar == ".nan":
+        assert "finite" in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "sources",
+    [
+        None,
+        [],
+        [{"kind": "atlas", "work": "Atlas", "locator": "p. 1"}],
+        [{"kind": "quran", "work": "Quran", "locator": "2:1"}],
+        [{"kind": "imagery", "work": "  ", "locator": "scene-1"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "   "}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "edition": "   "}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "url": "ftp://example.invalid/x"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "url": "not a url"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "url": "https://bad url"}],
+        [{"kind": "imagery", "work": "Sat", "locator": "s1", "extra": "bad"}],
+    ],
+)
+def test_cleanup_rejects_invalid_approved_sources(tmp_path, sources):
+    path = _cleanup_with_edit(tmp_path, review="approved", sources=sources)
+    with pytest.raises(ConfigError):
+        config.load_cleanup(path)
+
+
+def test_config_module_does_not_import_osgeo():
+    tree = ast.parse(Path(config.__file__).read_text(encoding="utf-8"))
+    imported = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.append(node.module)
+    assert not any(name == "osgeo" or name.startswith("osgeo.") for name in imported)
+
+
+def _valid_coverage_dict(**overrides):
+    data = {
+        "schema": 1,
+        "purpose": "production",
+        "camera_bounds": {"west": 58.85, "south": 20.55, "east": 59.00, "north": 20.70},
+        "data_extent": {"west": 58.80, "south": 20.50, "east": 59.05, "north": 20.75},
+        "camera_min_zoom": 4.0,
+        "camera_max_zoom": 14.0,
+        "regional_max_zoom": 12,
+        "block_zoom": 11,
+        "fade_deg": 0.02,
+        "relief_encoding": "painted-rgba",
+        "webp_quality": 80,
+        "widest_half_screen_dp": 550.0,
+        "min_data_margin_deg": 0.05,
+    }
+    data.update(overrides)
+    return data
+
+
+def _write_coverage(tmp_path: Path, data: dict, name: str = "coverage.yaml") -> Path:
+    import json
+
+    return _write(tmp_path, json.dumps(data, indent=2), name)
+
+
+def test_load_coverage_valid_painted_and_terrarium(tmp_path: Path):
+    painted_path = _write_coverage(tmp_path, _valid_coverage_dict(), "painted.yaml")
+    painted = config.load_coverage(painted_path)
+    assert painted.purpose == "production"
+    assert painted.relief_encoding == "painted-rgba"
+    assert painted.webp_quality == 80
+    assert painted.variant == "painted"
+    assert painted.peninsula_outline is None
+    target = painted.as_build_target()
+    assert target.camera_bounds == painted.camera_bounds
+    assert target.data_extent == painted.data_extent
+    assert target.max_zoom == 12
+    assert target.block_zoom == 11
+    assert target.fade_deg == pytest.approx(0.02)
+
+    terrarium_data = _valid_coverage_dict(relief_encoding="terrarium-value")
+    terrarium_data.pop("webp_quality")
+    terrarium_path = _write_coverage(tmp_path, terrarium_data, "terrarium.yaml")
+    terrarium = config.load_coverage(terrarium_path)
+    assert terrarium.relief_encoding == "terrarium-value"
+    assert terrarium.webp_quality == 80
+    assert terrarium.variant == "value"
+
+
+def test_load_coverage_example_production_fixture():
+    repo_root = Path(__file__).resolve().parents[3]
+    cov_path = repo_root / "map-data" / "example-production" / "coverage.yaml"
+    with pytest.raises(ConfigError, match="min_data_margin_deg"):
+        config.load_coverage(cov_path, data_root=repo_root / "map-data")
+    cov = config.load_coverage(cov_path, data_root=repo_root / "map-data", allow_zero_margin=True)
+    assert cov.purpose == "production"
+    assert (
+        cov.peninsula_outline
+        == (repo_root / "map-data" / "example" / "peninsula.geojson").resolve()
+    )
+    cleanup = config.load_cleanup(repo_root / "map-data" / "example-production" / "cleanup.yaml")
+    assert [e.id for e in cleanup] == ["remove-synthetic-pier", "draft-synthetic-basin"]
+
+
+def test_load_coverage_webp_quality_rules(tmp_path: Path):
+    missing_q = _valid_coverage_dict(relief_encoding="painted-rgba")
+    missing_q.pop("webp_quality")
+    with pytest.raises(ConfigError):
+        config.load_coverage(_write_coverage(tmp_path, missing_q, "missing_q.yaml"))
+
+    forbidden_q = _valid_coverage_dict(relief_encoding="terrarium-value", webp_quality=80)
+    with pytest.raises(ConfigError):
+        config.load_coverage(_write_coverage(tmp_path, forbidden_q, "forbidden_q.yaml"))
+
+
+def test_load_coverage_margin_and_fade_rules(tmp_path: Path):
+    zero_margin = _valid_coverage_dict(
+        camera_bounds={"west": 58.80, "south": 20.50, "east": 59.05, "north": 20.75},
+        data_extent={"west": 58.80, "south": 20.50, "east": 59.05, "north": 20.75},
+        min_data_margin_deg=0.0,
+        fade_deg=0.0,
+    )
+    path = _write_coverage(tmp_path, zero_margin, "zero.yaml")
+    with pytest.raises(ConfigError, match="--allow-zero-margin"):
+        config.load_coverage(path, allow_zero_margin=False)
+    cov = config.load_coverage(path, allow_zero_margin=True)
+    assert cov.min_data_margin_deg == 0.0
+
+    insufficient_margin = _valid_coverage_dict(min_data_margin_deg=0.10)
+    with pytest.raises(ConfigError, match="enclosing camera_bounds widened by min_data_margin_deg"):
+        config.load_coverage(_write_coverage(tmp_path, insufficient_margin, "insuff.yaml"))
+
+    asymmetric_zero_side = _valid_coverage_dict(
+        camera_bounds={"west": 58.80, "south": 20.55, "east": 59.00, "north": 20.70},
+        data_extent={"west": 58.80, "south": 20.50, "east": 59.05, "north": 20.75},
+        min_data_margin_deg=0.0,
+        fade_deg=0.01,
+    )
+    with pytest.raises(ConfigError, match="fade_deg"):
+        config.load_coverage(
+            _write_coverage(tmp_path, asymmetric_zero_side, "asym.yaml"),
+            allow_zero_margin=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "overrides,match",
+    [
+        ({"camera_min_zoom": 14.0, "camera_max_zoom": 14.0}, "camera_min_zoom"),
+        ({"camera_min_zoom": 12.2, "regional_max_zoom": 12}, "regional_max_zoom"),
+        ({"regional_max_zoom": 10, "block_zoom": 11}, "block_zoom"),
+    ],
+)
+def test_load_coverage_zoom_and_base_coverage_errors(tmp_path: Path, overrides: dict, match: str):
+    data = _valid_coverage_dict(**overrides)
+    with pytest.raises(ConfigError, match=match):
+        config.load_coverage(_write_coverage(tmp_path, data))
+
+
+def test_build_and_validate_map_json(tmp_path: Path):
+    painted = config.load_coverage(_write_coverage(tmp_path, _valid_coverage_dict(), "p.yaml"))
+    painted_json = config.build_map_json(painted)
+    assert painted_json["tile_schema"] == 1
+    assert painted_json["sources"]["base"] == {
+        "file": "base.pmtiles",
+        "layers": ["land", "coast"],
+        "min_zoom": 0,
+        "max_zoom": 12,
+    }
+    assert painted_json["sources"]["relief"] == {
+        "file": "relief.pmtiles",
+        "encoding": "painted-rgba",
+        "tile_format": "webp",
+        "tile_size": 256,
+        "min_zoom": 0,
+        "max_zoom": 12,
+    }
+    assert painted_json["reconstructed_areas"] == []
+    credits_by_id = {c["id"]: c for c in painted_json["credits"]}
+    assert credits_by_id["copernicus-worlddem-30"]["attribution"] == config.COPERNICUS_ATTRIBUTION
+    assert credits_by_id["copernicus-worlddem-30"]["liability"] == config.COPERNICUS_LIABILITY
+    assert credits_by_id["natural-earth"]["attribution"] == config.NATURAL_EARTH_ATTRIBUTION
+
+    terrarium_data = _valid_coverage_dict(relief_encoding="terrarium-value")
+    terrarium_data.pop("webp_quality")
+    terrarium = config.load_coverage(_write_coverage(tmp_path, terrarium_data, "t.yaml"))
+    terrarium_json = config.build_map_json(terrarium)
+    assert terrarium_json["sources"]["relief"]["encoding"] == "terrarium-value"
+    assert terrarium_json["sources"]["relief"]["tile_format"] == "png"
+
+
+def test_validate_map_json_general_bounds_and_rejections(tmp_path: Path):
+    import copy
+
+    cov = config.load_coverage(_write_coverage(tmp_path, _valid_coverage_dict()))
+    base_doc = config.build_map_json(cov)
+
+    western_doc = copy.deepcopy(base_doc)
+    western_doc["camera_bounds"] = {"west": -10.0, "south": -5.0, "east": 15.0, "north": 25.0}
+    western_doc["data_extent"] = {"west": -12.0, "south": -6.0, "east": 16.0, "north": 26.0}
+    config.validate_map_json(western_doc)
+
+    bad_west_east = copy.deepcopy(base_doc)
+    bad_west_east["camera_bounds"]["west"] = 60.0
+    with pytest.raises(ConfigError, match="west < east"):
+        config.validate_map_json(bad_west_east)
+
+    bad_extent = copy.deepcopy(base_doc)
+    bad_extent["data_extent"]["east"] = 58.90
+    with pytest.raises(ConfigError, match="data_extent"):
+        config.validate_map_json(bad_extent)
+
+    bad_zoom = copy.deepcopy(base_doc)
+    bad_zoom["min_zoom"] = 14.0
+    bad_zoom["max_zoom"] = 14.0
+    with pytest.raises(ConfigError, match="min_zoom"):
+        config.validate_map_json(bad_zoom)
+
+    bad_reconstructed = copy.deepcopy(base_doc)
+    bad_reconstructed["reconstructed_areas"] = [{"id": "not-yet-specified"}]
+    with pytest.raises(ConfigError):
+        config.validate_map_json(bad_reconstructed)
+
+    bad_format = copy.deepcopy(base_doc)
+    bad_format["sources"]["relief"]["tile_format"] = "png"
+    with pytest.raises(ConfigError):
+        config.validate_map_json(bad_format)
+
+    missing_credit = copy.deepcopy(base_doc)
+    missing_credit["credits"] = [
+        c for c in base_doc["credits"] if c["id"] != "copernicus-worlddem-30"
+    ]
+    with pytest.raises(ConfigError):
+        config.validate_map_json(missing_credit)

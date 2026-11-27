@@ -1,8 +1,8 @@
-"""The map tool's command line: ``fetch``, ``build`` and ``clean``.
+"""The map tool's command line: ``fetch``, ``validate``, ``build`` and ``clean``.
 
-Profiles are named by their path relative to the data root, without ``.yaml``
-(for example ``trial/full``). The profile's ``edits.yaml`` and ``<stem>.lock``
-are read from the same folder.
+Profiles (``--profile``) and production coverage configs (``--coverage``) are
+named by their path relative to the data root, without ``.yaml`` (for example
+``trial/full`` or ``coverage``).
 
 Exit codes: 0 for success, 1 when a check fails (``FetchError``,
 ``CompletenessError``, ``PackError``, ``BaseError``), 2 for a usage or
@@ -10,8 +10,10 @@ configuration error.
 """
 
 import argparse
+import json
 import os
 import resource
+import shutil
 import sys
 import time
 from collections.abc import Callable
@@ -19,10 +21,18 @@ from pathlib import Path
 
 from . import config
 from .base import BaseError, build_base_layer
-from .blockstage import MODES, PAINTED, PER_ZOOM, PYRAMID, VARIANTS, run_block_stage
-from .edits import applicable
+from .blockstage import (
+    MODES,
+    PAINTED,
+    PER_ZOOM,
+    PYRAMID,
+    VARIANTS,
+    changed_cleanup_ids,
+    run_block_stage,
+)
+from .edits import applicable, validate_cleanups
 from .errors import ConfigError
-from .fetch import FetchError, check_lock_matches, fetch
+from .fetch import FetchError, check_lock_matches, fetch, verify_cached_sources
 from .grid import blocks, expected_tiles
 from .pack import (
     METADATA_NAME,
@@ -32,6 +42,7 @@ from .pack import (
     pack,
     size_by_zoom,
     stored_tiles,
+    validate_outline,
     verify,
 )
 from .report import read_cgroup, write_report
@@ -46,6 +57,12 @@ SRC_ROOT = Path(__file__).resolve().parent.parent
 MEMORY_MAX = Path("/sys/fs/cgroup/memory.max")
 DEFAULT_PER_WORKER_MIB = 2048
 EDITS_NAME = "edits.yaml"
+CLEANUP_NAME = "cleanup.yaml"
+SOURCES_LOCK_NAME = "sources.lock"
+MAP_JSON_NAME = "map.json"
+PRODUCTION_LOCK_DEST = "seerah-content/map/"
+MAX_RELEASE_FILE_BYTES = 2_147_483_647
+ZIP_BUDGET_OVERHEAD = 1_048_576
 FP_SHORT = 8
 
 TOOL_COMMIT_ENV = "SEERAH_TOOL_COMMIT"
@@ -127,13 +144,68 @@ def _profile_path(data: Path, rel: str) -> Path:
     return path
 
 
+def _coverage_path(data: Path, rel: str) -> Path:
+    for candidate in (data / f"{rel}.yaml", data / rel, data / rel / "coverage.yaml"):
+        if candidate.is_file():
+            return candidate
+    raise _UsageError(f"no coverage file at {data / f'{rel}.yaml'}")
+
+
 def _cmd_fetch(args: argparse.Namespace) -> int:
+    if args.coverage is not None:
+        coverage_path = _coverage_path(args.data, args.coverage)
+        coverage = config.load_coverage(
+            coverage_path,
+            data_root=args.data,
+            allow_zero_margin=args.allow_zero_margin,
+        )
+        lock_path = coverage_path.parent / SOURCES_LOCK_NAME
+        result = fetch(
+            coverage,
+            lock_path,
+            args.cache,
+            args.out,
+            lock_name=SOURCES_LOCK_NAME,
+            lock_destination=PRODUCTION_LOCK_DEST,
+        )
+        _say(f"fetch: {result.downloaded} downloaded, {result.verified} verified")
+        _say(result.message)
+        return EXIT_OK
+    if args.allow_zero_margin:
+        raise _UsageError("--allow-zero-margin is only supported with --coverage")
     profile_path = _profile_path(args.data, args.profile)
     profile = config.load_profile(profile_path, data_root=args.data)
     lock_path = profile_path.with_suffix(".lock")
     result = fetch(profile, lock_path, args.cache, args.out)
     _say(f"fetch: {result.downloaded} downloaded, {result.verified} verified")
     _say(result.message)
+    return EXIT_OK
+
+
+def _cmd_validate(args: argparse.Namespace) -> int:
+    coverage_path = _coverage_path(args.data, args.coverage)
+    cleanup_path = coverage_path.parent / CLEANUP_NAME
+    lock_path = coverage_path.parent / SOURCES_LOCK_NAME
+    if not cleanup_path.is_file():
+        raise _UsageError(f"no cleanup file at {cleanup_path}")
+    if not lock_path.is_file():
+        raise _UsageError(_MISSING_LOCK.format(path=lock_path))
+    coverage = config.load_coverage(
+        coverage_path,
+        data_root=args.data,
+        allow_zero_margin=args.allow_zero_margin,
+    )
+    cleanups = config.load_cleanup(cleanup_path)
+    lock = config.load_lock(lock_path)
+    try:
+        check_lock_matches(lock, coverage)
+    except FetchError as error:
+        raise ConfigError(f"{lock_path}: {error}") from error
+    validate_cleanups(cleanups, data_extent=coverage.data_extent)
+    if coverage.peninsula_outline is not None:
+        validate_outline(coverage.peninsula_outline)
+    config.build_map_json(coverage)
+    _say(f"validate: {coverage_path.name} ok ({len(cleanups)} cleanup edits)")
     return EXIT_OK
 
 
@@ -148,8 +220,209 @@ def _tiles_written(tiles_dir: Path) -> int:
     return sum(1 for p in tiles_dir.rglob("*") if p.is_file() and p.name != METADATA_NAME)
 
 
+def _check_release_size(data_dir: Path) -> None:
+    """Enforce the < 2 GiB (ZIP64_LIMIT) single-file release ceiling on staged data files."""
+    files = [p for p in sorted(data_dir.iterdir()) if p.is_file()]
+    total = 0
+    for path in files:
+        size = path.stat().st_size
+        if size > MAX_RELEASE_FILE_BYTES:
+            raise PackError(
+                f"{path.name} is {size} bytes, exceeding MAX_RELEASE_FILE_BYTES "
+                f"({MAX_RELEASE_FILE_BYTES})"
+            )
+        total += size
+    if total + ZIP_BUDGET_OVERHEAD > MAX_RELEASE_FILE_BYTES:
+        raise PackError(
+            f"staged data total ({total} bytes) + ZIP_BUDGET_OVERHEAD ({ZIP_BUDGET_OVERHEAD} bytes)"
+            f" exceeds MAX_RELEASE_FILE_BYTES ({MAX_RELEASE_FILE_BYTES})"
+        )
+
+
+def _check_cleanups_changed_pixels(
+    target: config.BuildTarget, area: WorkArea, cleanups: list[config.CleanupEdit]
+) -> list[str]:
+    """Return the approved cleanup IDs in file order; refuse any that changed no pixel."""
+    if not cleanups:
+        return []
+    changed = changed_cleanup_ids(blocks(target.data_extent, target.block_zoom), area)
+    unchanged = [c.id for c in cleanups if c.id not in changed]
+    if unchanged:
+        raise ConfigError(
+            f"approved cleanup edits changed no pixels (check coordinates and operation): "
+            f"{', '.join(unchanged)}"
+        )
+    return [c.id for c in cleanups]
+
+
+def _replace_staging_dir(tmp_staging: Path, final_staging: Path) -> None:
+    """Swap ``tmp_staging`` into ``final_staging``, restoring any previous directory on error."""
+    old_staging = final_staging.parent / f".old-{final_staging.name}-{os.getpid()}"
+    shutil.rmtree(old_staging, ignore_errors=True)
+    moved_old = False
+    if final_staging.exists():
+        os.replace(final_staging, old_staging)
+        moved_old = True
+    try:
+        os.replace(tmp_staging, final_staging)
+    except BaseException:
+        if moved_old and not final_staging.exists() and old_staging.exists():
+            os.replace(old_staging, final_staging)
+        raise
+    if moved_old:
+        shutil.rmtree(old_staging, ignore_errors=True)
+
+
+def _cmd_build_coverage(args: argparse.Namespace) -> int:
+    if args.variant is not None:
+        raise _UsageError(
+            "--variant cannot be used with --coverage (relief_encoding is set in coverage.yaml)"
+        )
+    if args.mode is not None:
+        raise _UsageError(
+            "--mode cannot be used with --coverage (production builds always use pyramid)"
+        )
+    coverage_path = _coverage_path(args.data, args.coverage)
+    cleanup_path = coverage_path.parent / CLEANUP_NAME
+    lock_path = coverage_path.parent / SOURCES_LOCK_NAME
+    if not cleanup_path.is_file():
+        raise _UsageError(f"no cleanup file at {cleanup_path}")
+    if not lock_path.is_file():
+        raise _UsageError(_MISSING_LOCK.format(path=lock_path))
+
+    coverage = config.load_coverage(
+        coverage_path,
+        data_root=args.data,
+        allow_zero_margin=args.allow_zero_margin,
+    )
+    all_cleanups = config.load_cleanup(cleanup_path)
+    lock = config.load_lock(lock_path)
+    validate_cleanups(all_cleanups, data_extent=coverage.data_extent)
+    if coverage.peninsula_outline is not None:
+        validate_outline(coverage.peninsula_outline)
+    verify_cached_sources(lock, coverage, args.cache)
+    map_doc = config.build_map_json(coverage)
+
+    tool_commit = _env(TOOL_COMMIT_ENV)
+    data_commit = _env(DATA_COMMIT_ENV)
+    image_digest = _env(IMAGE_DIGEST_ENV)
+    outline_bytes = (
+        coverage.peninsula_outline.read_bytes() if coverage.peninsula_outline is not None else b""
+    )
+    variant = coverage.variant
+    fp = fingerprint(
+        coverage_path.read_bytes(),
+        cleanup_path.read_bytes(),
+        lock_path.read_bytes(),
+        tool_commit,
+        image_digest,
+        variant,
+        SRC_ROOT,
+        mode=PYRAMID,
+        extra_parts=(
+            b"production",
+            (data_commit or _UNKNOWN).encode(),
+            outline_bytes,
+        ),
+    )
+    fp8 = fp[:FP_SHORT]
+    _say(f"build: production {coverage.relief_encoding} fingerprint {fp8}")
+    count, reason = worker_count(_read_memory_max(), args.per_worker_mib, args.workers)
+    _say(f"workers: {count} ({reason})")
+    cleanups, skipped = applicable(all_cleanups)
+    for edit_id in skipped:
+        _say(f"edit {edit_id} skipped: not approved")
+
+    target = coverage.as_build_target()
+    area = open_area(args.work, fp)
+    args.out.mkdir(parents=True, exist_ok=True)
+    final_staging = args.out / f"map-staging-{fp8}"
+    tmp_staging = args.out / f".tmp-map-staging-{fp8}-{os.getpid()}"
+    shutil.rmtree(tmp_staging, ignore_errors=True)
+    tmp_data = tmp_staging / "data"
+    tmp_data.mkdir(parents=True, exist_ok=True)
+
+    seconds: dict[str, float] = {}
+    try:
+        _timed(
+            seconds,
+            "block",
+            lambda: run_block_stage(
+                target,
+                [],
+                variant,
+                lock,
+                args.cache,
+                area,
+                count,
+                _say,
+                mode=PYRAMID,
+                cleanups=cleanups,
+            ),
+        )
+        applied = _check_cleanups_changed_pixels(target, area, cleanups)
+        child_rss_kib = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+        _timed(
+            seconds,
+            "tile",
+            lambda: run_tile_stage(area, target, variant, count, _say, mode=PYRAMID),
+        )
+        area_bytes = dict(list_areas(args.work)).get(fp)
+
+        provenance = Provenance(
+            tool_commit=tool_commit or _UNKNOWN,
+            data_commit=data_commit or _UNKNOWN,
+            image=image_digest or _UNKNOWN,
+            fingerprint=fp,
+        )
+
+        def pack_and_verify() -> Path:
+            meta = metadata(target, variant, provenance, mode=PYRAMID, trial=False)
+            archive = pack(area, tmp_data, meta, write_metadata_file=False)
+            verify(archive, target, trial=False)
+            return archive
+
+        archive = _timed(seconds, "pack", pack_and_verify)
+        _say(f"pack done: {archive}")
+        base_archive = _timed(
+            seconds,
+            "base",
+            lambda: build_base_layer(target, lock, args.cache, area, tmp_data, provenance, _say),
+        )
+        _say(f"base done: {base_archive}")
+
+        map_text = json.dumps(map_doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+        (tmp_data / MAP_JSON_NAME).write_text(map_text, encoding="utf-8")
+        _check_release_size(tmp_data)
+
+        report = _report(area, target, provenance, seconds, child_rss_kib, area_bytes, archive)
+        report["purpose"] = "production"
+        report["edits"] = {"applied": applied, "skipped": skipped}
+        report["workers"] = {
+            "count": count,
+            "reason": reason,
+            "gdal_cachemax_mib": _gdal_cachemax_mib(),
+        }
+        write_report(report, tmp_staging)
+        _replace_staging_dir(tmp_staging, final_staging)
+    except BaseException:
+        shutil.rmtree(tmp_staging, ignore_errors=True)
+        raise
+
+    remove(area)
+    _say("work area removed")
+    return EXIT_OK
+
+
 def _cmd_build(args: argparse.Namespace) -> int:
-    if args.mode == PER_ZOOM and args.variant != PAINTED:
+    if args.coverage is not None:
+        return _cmd_build_coverage(args)
+    if args.allow_zero_margin:
+        raise _UsageError("--allow-zero-margin is only supported with --coverage")
+    if args.variant is None:
+        raise _UsageError("--variant is required with --profile")
+    mode = PYRAMID if args.mode is None else args.mode
+    if mode == PER_ZOOM and args.variant != PAINTED:
         raise _UsageError("--mode per-zoom is only supported with --variant painted")
     profile_path = _profile_path(args.data, args.profile)
     edits_path = profile_path.parent / EDITS_NAME
@@ -173,10 +446,10 @@ def _cmd_build(args: argparse.Namespace) -> int:
         image_digest,
         args.variant,
         SRC_ROOT,
-        mode=args.mode,
+        mode=mode,
     )
     fp8 = fp[:FP_SHORT]
-    _say(f"build: {profile.name} {args.variant} fingerprint {fp8} ({args.mode})")
+    _say(f"build: {profile.name} {args.variant} fingerprint {fp8} ({mode})")
     count, reason = worker_count(_read_memory_max(), args.per_worker_mib, args.workers)
     _say(f"workers: {count} ({reason})")
     edits, skipped = applicable(all_edits)
@@ -187,22 +460,22 @@ def _cmd_build(args: argparse.Namespace) -> int:
     area = open_area(args.work, fp)
     out_dir = args.out / (
         f"{profile.name}-{args.variant}-{fp8}"
-        if args.mode == PYRAMID
-        else f"{profile.name}-{args.variant}-{args.mode}-{fp8}"
+        if mode == PYRAMID
+        else f"{profile.name}-{args.variant}-{mode}-{fp8}"
     )
     seconds: dict[str, float] = {}
     _timed(
         seconds,
         "block",
         lambda: run_block_stage(
-            profile, edits, args.variant, lock, args.cache, area, count, _say, mode=args.mode
+            profile, edits, args.variant, lock, args.cache, area, count, _say, mode=mode
         ),
     )
     child_rss_kib = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
     _timed(
         seconds,
         "tile",
-        lambda: run_tile_stage(area, profile, args.variant, count, _say, mode=args.mode),
+        lambda: run_tile_stage(area, profile, args.variant, count, _say, mode=mode),
     )
     area_bytes = dict(list_areas(args.work)).get(fp)
 
@@ -214,7 +487,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
     )
 
     def pack_and_verify() -> Path:
-        archive = pack(area, out_dir, metadata(profile, args.variant, provenance, mode=args.mode))
+        archive = pack(area, out_dir, metadata(profile, args.variant, provenance, mode=mode))
         verify(archive, profile)
         return archive
 
@@ -241,7 +514,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
 def _report(
     area: WorkArea,
-    profile: config.Profile,
+    profile: config.Profile | config.BuildTarget,
     provenance: Provenance,
     seconds: dict[str, float],
     child_rss_kib: int,
@@ -250,6 +523,7 @@ def _report(
 ) -> dict:
     """Assemble the report sections that come from the build's measurements."""
     expected = expected_tiles(blocks(profile.data_extent, profile.block_zoom), profile.max_zoom)
+    outline = profile.peninsula_outline
     return {
         "provenance": {
             "tool_commit": provenance.tool_commit,
@@ -265,7 +539,7 @@ def _report(
             "written": _tiles_written(area.tiles_dir),
             "stored": stored_tiles(archive),
         },
-        "size_by_zoom": size_by_zoom(area.tiles_dir, profile.peninsula_outline),
+        "size_by_zoom": size_by_zoom(area.tiles_dir, outline) if outline is not None else None,
     }
 
 
@@ -303,21 +577,49 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="seerah_map", description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
     profile_help = "profile path relative to --data, without .yaml (e.g. trial/full)"
+    coverage_help = "production coverage path relative to --data, without .yaml (e.g. coverage)"
 
     fetch_cmd = commands.add_parser("fetch", parents=[roots], help="download and pin sources")
-    fetch_cmd.add_argument("--profile", required=True, help=profile_help)
+    fetch_target = fetch_cmd.add_mutually_exclusive_group(required=True)
+    fetch_target.add_argument("--profile", help=profile_help)
+    fetch_target.add_argument("--coverage", help=coverage_help)
+    fetch_cmd.add_argument(
+        "--allow-zero-margin",
+        action="store_true",
+        help="allow min_data_margin_deg: 0 on --coverage fetches (for synthetic CI fixtures only)",
+    )
     fetch_cmd.set_defaults(run=_cmd_fetch)
+
+    validate_cmd = commands.add_parser(
+        "validate",
+        parents=[roots],
+        help="validate production coverage, cleanup and lock files",
+    )
+    validate_cmd.add_argument("--coverage", required=True, help=coverage_help)
+    validate_cmd.add_argument(
+        "--allow-zero-margin",
+        action="store_true",
+        help="allow min_data_margin_deg: 0 (for synthetic CI fixtures only)",
+    )
+    validate_cmd.set_defaults(run=_cmd_validate)
 
     build_cmd = commands.add_parser(
         "build", parents=[roots], help="build the relief and base archives"
     )
-    build_cmd.add_argument("--profile", required=True, help=profile_help)
-    build_cmd.add_argument("--variant", required=True, choices=VARIANTS)
+    build_target = build_cmd.add_mutually_exclusive_group(required=True)
+    build_target.add_argument("--profile", help=profile_help)
+    build_target.add_argument("--coverage", help=coverage_help)
+    build_cmd.add_argument("--variant", choices=VARIANTS, default=None)
     build_cmd.add_argument(
         "--mode",
         choices=MODES,
-        default=PYRAMID,
-        help="how zooms below max_zoom are built (default pyramid)",
+        default=None,
+        help="how zooms below max_zoom are built (default pyramid; --profile only)",
+    )
+    build_cmd.add_argument(
+        "--allow-zero-margin",
+        action="store_true",
+        help="allow min_data_margin_deg: 0 on --coverage builds (for synthetic CI fixtures only)",
     )
     build_cmd.add_argument(
         "--workers", type=_positive, help="worker processes (default: by memory)"

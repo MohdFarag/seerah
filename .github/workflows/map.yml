@@ -3,9 +3,19 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["tools/map/**", "map-data/example/**", ".github/workflows/map.yml"]
+    paths:
+      - "tools/map/**"
+      - "map-data/example/**"
+      - "map-data/example-production/**"
+      - "map-data/schema/**"
+      - ".github/workflows/map.yml"
   pull_request:
-    paths: ["tools/map/**", "map-data/example/**", ".github/workflows/map.yml"]
+    paths:
+      - "tools/map/**"
+      - "map-data/example/**"
+      - "map-data/example-production/**"
+      - "map-data/schema/**"
+      - ".github/workflows/map.yml"
 permissions: {}
 concurrency:
   group: map-${{ github.ref }}
@@ -91,11 +101,11 @@ jobs:
           TAG: ${{ needs.image.outputs.tag }}
         run: docker pull "$TAG" || docker build -t "$TAG" tools/map
 
-      # The example's downloads, pinned by its lock.
+      # The examples' downloads, pinned by their locks.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/cache
-          key: map-example-${{ hashFiles('map-data/example/example.lock') }}
+          key: map-example-${{ hashFiles('map-data/example/example.lock', 'map-data/example-production/sources.lock') }}
 
       - name: Tool tests (in the image)
         env:

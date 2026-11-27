@@ -231,3 +231,53 @@ def test_truncated_download_never_enters_cache(tmp_path):
         server.server_close()
         thread.join()
     assert list((tmp_path / "cache").iterdir()) == []
+
+
+def test_fetch_custom_lock_name_and_destination(tmp_path, out, http_server):
+    first = run(tmp_path, http_server)
+    profile = make_profile(tmp_path / "data")
+    prod_out = tmp_path / "prod_out"
+    res = fetch.fetch(
+        profile,
+        None,
+        tmp_path / "cache",
+        prod_out,
+        dem_base=str(http_server),
+        ne_base=f"{http_server}/natural-earth/geojson",
+        lock_name="sources.lock",
+        lock_destination="seerah-content/map/",
+    )
+    assert res.wrote_new_lock
+    assert (prod_out / "sources.lock").is_file()
+    assert "seerah-content/map/sources.lock" in res.message
+    assert res.lock.cells == first.lock.cells
+
+
+def test_verify_cached_sources_valid_and_corrupted(tmp_path, out, http_server):
+    from dataclasses import replace
+
+    first = run(tmp_path, http_server)
+    cache = tmp_path / "cache"
+    profile = make_profile(tmp_path / "data")
+    fetch.verify_cached_sources(first.lock, profile, cache)
+
+    dem_file = cache / first.lock.cells[0].dem.path
+    original_bytes = dem_file.read_bytes()
+    dem_file.write_bytes(original_bytes[:-1] + bytes([original_bytes[-1] ^ 0xFF]))
+    with pytest.raises(fetch.FetchError, match="sha256"):
+        fetch.verify_cached_sources(first.lock, profile, cache)
+
+    dem_file.write_bytes(original_bytes + b"extra")
+    with pytest.raises(fetch.FetchError, match="expected"):
+        fetch.verify_cached_sources(first.lock, profile, cache)
+
+    dem_file.unlink()
+    with pytest.raises(fetch.FetchError, match="cached file missing"):
+        fetch.verify_cached_sources(first.lock, profile, cache)
+
+    dem_file.write_bytes(original_bytes)
+    bad_dem = replace(first.lock.cells[0].dem, path="../escape.tif")
+    bad_cell = replace(first.lock.cells[0], dem=bad_dem)
+    bad_lock = replace(first.lock, cells=(bad_cell, *first.lock.cells[1:]))
+    with pytest.raises(fetch.FetchError, match="escapes cache"):
+        fetch.verify_cached_sources(bad_lock, profile, cache)

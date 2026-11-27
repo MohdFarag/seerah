@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Map production coverage configuration",
+  "description": "Production v1 map coverage configuration (coverage.yaml, schema 1). Finite values, N/E quadrant bounds, positive min_data_margin_deg (unless --allow-zero-margin), data_extent margin enclosure, fade_deg <= min(side_margins), zoom ordering, outline confinement, and base coverage are checked in seerah_map.config.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "purpose",
+    "camera_bounds",
+    "data_extent",
+    "camera_min_zoom",
+    "camera_max_zoom",
+    "regional_max_zoom",
+    "block_zoom",
+    "fade_deg",
+    "relief_encoding",
+    "widest_half_screen_dp",
+    "min_data_margin_deg"
+  ],
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1
+    },
+    "purpose": {
+      "const": "production"
+    },
+    "camera_bounds": {
+      "$ref": "#/$defs/bounds"
+    },
+    "data_extent": {
+      "$ref": "#/$defs/bounds"
+    },
+    "camera_min_zoom": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 22
+    },
+    "camera_max_zoom": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 22
+    },
+    "regional_max_zoom": {
+      "type": "integer",
+      "minimum": 8,
+      "maximum": 12
+    },
+    "block_zoom": {
+      "type": "integer",
+      "minimum": 8,
+      "maximum": 12
+    },
+    "fade_deg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "relief_encoding": {
+      "enum": [
+        "terrarium-value",
+        "painted-rgba"
+      ]
+    },
+    "webp_quality": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "widest_half_screen_dp": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "min_data_margin_deg": {
+      "type": "number",
+      "minimum": 0
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blur_px": {
+          "type": "number",
+          "minimum": 0
+        },
+        "band_blur_px": {
+          "type": "number",
+          "minimum": 0
+        },
+        "exaggeration": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "azimuth_deg": {
+          "type": "number"
+        },
+        "altitude_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 90
+        },
+        "contrast": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "bands": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ink_rgb": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "max_alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "peninsula_outline": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "relief_encoding": {
+            "const": "painted-rgba"
+          }
+        },
+        "required": [
+          "relief_encoding"
+        ]
+      },
+      "then": {
+        "required": [
+          "webp_quality"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "relief_encoding": {
+            "const": "terrarium-value"
+          }
+        },
+        "required": [
+          "relief_encoding"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "webp_quality"
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "west",
+        "south",
+        "east",
+        "north"
+      ],
+      "properties": {
+        "west": {
+          "type": "number",
+          "maximum": 180
+        },
+        "south": {
+          "type": "number",
+          "maximum": 90
+        },
+        "east": {
+          "type": "number",
+          "maximum": 180
+        },
+        "north": {
+          "type": "number",
+          "maximum": 90
+        }
+      }
+    }
+  }
+}

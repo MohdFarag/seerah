@@ -270,3 +270,29 @@ def test_border_scales_down_at_coarse_zooms():
     assert border_px(StyleSettings(), [edit], z8_block) < border_px(
         StyleSettings(), [edit], z12_block
     )
+
+
+def test_check_data_extent_coverage_float_tolerance():
+    from seerah_map.grid import Bounds, check_data_extent_coverage
+
+    cam = Bounds(west=58.85, south=20.55, east=59.00, north=20.70)
+    data = Bounds(west=58.80, south=20.50, east=59.05, north=20.75)
+    check_data_extent_coverage(data, cam, margin_deg=0.05)
+    check_data_extent_coverage(data, cam, margin_deg=0.05 + 5e-10)
+    with pytest.raises(ValueError, match="does not cover required extent"):
+        check_data_extent_coverage(data, cam, margin_deg=0.05 + 1e-6)
+
+
+def test_natural_earth_max_zoom_and_base_coverage_with_data_extent():
+    from seerah_map.grid import Bounds, check_base_coverage, natural_earth_max_zoom
+
+    cam = Bounds(west=58.85, south=20.55, east=59.00, north=20.70)
+    tight_data = Bounds(west=58.80, south=20.50, east=59.05, north=20.75)
+    wide_data = Bounds(west=30.0, south=10.0, east=65.0, north=35.0)
+    ne_tight = natural_earth_max_zoom(cam, 0.05, 12, data_extent=tight_data)
+    assert ne_tight >= 6
+    check_base_coverage(cam, 0.05, ne_tight, 12, data_extent=tight_data)
+    with pytest.raises(ValueError, match="Base coverage is incomplete"):
+        check_base_coverage(cam, 0.05, ne_tight - 1, 12, data_extent=tight_data)
+    ne_wide = natural_earth_max_zoom(cam, 0.05, 12, data_extent=wide_data)
+    check_base_coverage(cam, 0.05, ne_wide, 12, data_extent=wide_data)

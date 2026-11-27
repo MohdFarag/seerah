@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Seerah v1 map package metadata (data/map.json, tile_schema 1)",
+  "$comment": "Producer schema for data/map.json (additionalProperties: false). Per ADR 0009 decision 10, Android tile_schema: 1 readers ignore unknown optional fields, layers (e.g. valley), or archives (e.g. relief-detail.pmtiles).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tile_schema",
+    "camera_bounds",
+    "data_extent",
+    "min_zoom",
+    "max_zoom",
+    "sources",
+    "credits",
+    "reconstructed_areas"
+  ],
+  "properties": {
+    "tile_schema": {
+      "type": "integer",
+      "const": 1
+    },
+    "camera_bounds": {
+      "$ref": "#/$defs/wgs84_bounds"
+    },
+    "data_extent": {
+      "$ref": "#/$defs/wgs84_bounds"
+    },
+    "min_zoom": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 22
+    },
+    "max_zoom": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 22
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base",
+        "relief"
+      ],
+      "properties": {
+        "base": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file",
+            "layers",
+            "min_zoom",
+            "max_zoom"
+          ],
+          "properties": {
+            "file": {
+              "const": "base.pmtiles"
+            },
+            "layers": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "const": "land"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "coast"
+                  }
+                }
+              ]
+            },
+            "min_zoom": {
+              "type": "integer",
+              "const": 0
+            },
+            "max_zoom": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 12
+            }
+          }
+        },
+        "relief": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file",
+            "encoding",
+            "tile_format",
+            "tile_size",
+            "min_zoom",
+            "max_zoom"
+          ],
+          "properties": {
+            "file": {
+              "const": "relief.pmtiles"
+            },
+            "encoding": {
+              "enum": [
+                "terrarium-value",
+                "painted-rgba"
+              ]
+            },
+            "tile_format": {
+              "enum": [
+                "png",
+                "webp"
+              ]
+            },
+            "tile_size": {
+              "type": "integer",
+              "const": 256
+            },
+            "min_zoom": {
+              "type": "integer",
+              "const": 0
+            },
+            "max_zoom": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 12
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "encoding": {
+                    "const": "terrarium-value"
+                  }
+                },
+                "required": [
+                  "encoding"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "tile_format": {
+                    "const": "png"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "encoding": {
+                    "const": "painted-rgba"
+                  }
+                },
+                "required": [
+                  "encoding"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "tile_format": {
+                    "const": "webp"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "credits": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/credit"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id",
+              "liability"
+            ],
+            "properties": {
+              "id": {
+                "const": "copernicus-worlddem-30"
+              },
+              "liability": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "natural-earth"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "reconstructed_areas": {
+      "type": "array",
+      "maxItems": 0
+    }
+  },
+  "$defs": {
+    "wgs84_bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "west",
+        "south",
+        "east",
+        "north"
+      ],
+      "properties": {
+        "west": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "south": {
+          "type": "number",
+          "minimum": -85.0511287798066,
+          "maximum": 85.0511287798066
+        },
+        "east": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "north": {
+          "type": "number",
+          "minimum": -85.0511287798066,
+          "maximum": 85.0511287798066
+        }
+      }
+    },
+    "credit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "attribution"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "attribution": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "liability": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      }
+    }
+  }
+}
