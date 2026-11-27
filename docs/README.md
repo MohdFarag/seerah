@@ -35,6 +35,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | [design/map-trial-phase-3-plan.md](design/map-trial-phase-3-plan.md) | Phase 3 plan: vector base layer (`base.pmtiles`), `tippecanoe` and `WhiteboxTools`, `:core:map` base-layer wiring, private trial inputs and documentation ([consolidated EGM review](design/egm-review-map-trial-phase-3/consolidated_review_report.md)). |
 | [design/map-profile-validation-plan.md](design/map-profile-validation-plan.md) | Coordinate bounds, outline paths and strict YAML regression test plan ([consolidated EGM review](design/egm-review-map-profile-validation/consolidated_review_report.md)). |
 | [design/v1-map-pipeline-spec.md](design/v1-map-pipeline-spec.md) | Production v1 map pipeline: coastal cleanup edits, `coverage.yaml`, `map.json` (`tile_schema: 1`) and shared host-side Ed25519 signing/packaging ([consolidated EGM review](design/egm-review-v1-map-pipeline/consolidated_review_report.md)). |
+| [design/v1-android-package-and-map-spec.md](design/v1-android-package-and-map-spec.md) | Proposed v1 Android package verification, storage lifecycle and `tile_schema: 1` map-loading specification ([consolidated EGM review](design/egm-review-v1-android-package-and-map/consolidated_review_report.md)). |
 | [design/2026-11-22_DRIFT_REPORT.md](design/2026-11-22_DRIFT_REPORT.md) | Dated EGM drift report comparing `docs/` against the codebase at commit `cb58036` (historical snapshot). |
 
 ## Map trial
