@@ -20,7 +20,14 @@ from seerah_map import base
 from seerah_map.blockstage import _distance_to_edge_deg, _write_geotiff
 from seerah_map.config import Bounds, FileRef, Lock, load_profile
 from seerah_map.fetch import NE_FILES
-from seerah_map.grid import Window, blocks, row_latitudes, shrink_extent
+from seerah_map.grid import (
+    TRIAL_MIN_MAPLIBRE_ZOOM,
+    WIDEST_HALF_SCREEN_DP,
+    Window,
+    blocks,
+    row_latitudes,
+    shrink_extent,
+)
 from seerah_map.pack import Provenance
 from seerah_map.workarea import open_area
 
@@ -362,3 +369,46 @@ def test_separate_work_areas_publish_under_the_same_output_directory_lock(
     base.verify_base(first, profile)
     assert first.read_bytes() in [path.read_bytes() for path in staged]
     assert list(out.iterdir()) == [first]
+
+
+def test_base_production_metadata_and_verify_base(built, tmp_path):
+    from seerah_map.config import BuildTarget
+    from seerah_map.pack import Provenance
+
+    profile, _, archive = built
+    prod_archive = tmp_path / base.BASE_ARCHIVE_NAME
+    shutil.copyfile(archive, prod_archive)
+    with pytest.raises(base.BaseError, match="trial"):
+        base.verify_base(prod_archive, profile, trial=False)
+
+    target = BuildTarget(
+        name="seerah-map",
+        folder=profile.folder,
+        purpose="production",
+        camera_bounds=profile.camera_bounds,
+        data_extent=profile.data_extent,
+        margin_deg=profile.margin_deg,
+        fade_deg=profile.fade_deg,
+        max_zoom=profile.max_zoom,
+        block_zoom=profile.block_zoom,
+        webp_quality=profile.webp_quality,
+        style=profile.style,
+        peninsula_outline=profile.peninsula_outline,
+        min_maplibre_zoom=TRIAL_MIN_MAPLIBRE_ZOOM,
+        widest_half_screen_dp=WIDEST_HALF_SCREEN_DP,
+        trial=False,
+    )
+    base._write_metadata(prod_archive, target, Provenance(fingerprint="prod-fp"))
+    meta = _show(prod_archive)
+    assert "trial" not in meta
+    assert meta["tile_schema"] == 1
+    assert meta["name"] == "seerah-map"
+    base.verify_base(prod_archive, target, trial=False)
+    for forbidden in ({"variant": "value"}, {"mode": "pyramid"}):
+        bad_meta = tmp_path / "bad_meta.json"
+        bad_meta.write_text(json.dumps(meta | forbidden), encoding="utf-8")
+        subprocess.run(["pmtiles", "edit", "--metadata", bad_meta, prod_archive], check=True)
+        with pytest.raises(base.BaseError, match="variant|mode"):
+            base.verify_base(prod_archive, target, trial=False)
+    with pytest.raises(base.BaseError, match="trial"):
+        base.verify_base(prod_archive, target, trial=True)

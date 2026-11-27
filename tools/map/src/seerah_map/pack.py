@@ -22,7 +22,16 @@ from pmtiles.reader import MmapSource, Reader
 from pmtiles.tile import MagicNumberNotFound
 
 from .blockstage import PYRAMID
-from .config import Bounds, Profile
+from .config import (
+    COPERNICUS_ATTRIBUTION,
+    PRODUCTION_MAP_NAME,
+    TILE_SCHEMA,
+    Bounds,
+    BuildTarget,
+    Coverage,
+    Profile,
+)
+from .errors import ConfigError
 from .workarea import WorkArea, atomic_write
 
 ARCHIVE_NAME = "relief.pmtiles"
@@ -58,22 +67,46 @@ class Provenance:
     fingerprint: str = _UNKNOWN
 
 
-def metadata(profile: Profile, variant: str, provenance: Provenance, mode: str = PYRAMID) -> dict:
+def metadata(
+    profile: Profile | BuildTarget,
+    variant: str,
+    provenance: Provenance,
+    mode: str = PYRAMID,
+    *,
+    trial: bool | None = None,
+) -> dict:
     """Build the archive's metadata.
 
     Args:
-        profile: the build profile.
+        profile: the build profile or target.
         variant: ``painted`` or ``value``.
         provenance: where the build came from.
         mode: how zooms below ``max_zoom`` were built (``pyramid`` or ``per-zoom``).
+        trial: whether to emit trial metadata (``trial: true``, ``variant``,
+            ``mode``) or production ``tile_schema: 1`` metadata (``name: seerah-map``,
+            no ``trial``/``variant``/``mode`` keys). Defaults to ``profile.trial``
+            when present, else ``True``.
 
     Returns:
-        A dict with ``format`` (``webp`` or ``png``), ``minzoom`` 0, ``maxzoom``,
-        ``bounds`` (``"west,south,east,north"`` of the data extent, degrees),
-        ``name``, ``trial`` (always true), ``variant``, ``mode``, ``encoding``
-        and the provenance fields.
+        A metadata dict for ``disk_to_pmtiles``.
     """
+    is_trial = getattr(profile, "trial", True) if trial is None else trial
     tile_format, encoding = _FORMATS[variant]
+    if not is_trial:
+        return {
+            "format": tile_format,
+            "minzoom": 0,
+            "maxzoom": profile.max_zoom,
+            "bounds": _bounds_text(profile.data_extent),
+            "name": PRODUCTION_MAP_NAME,
+            "tile_schema": TILE_SCHEMA,
+            "attribution": COPERNICUS_ATTRIBUTION,
+            "encoding": encoding,
+            "fingerprint": provenance.fingerprint,
+            "tool_commit": provenance.tool_commit,
+            "data_commit": provenance.data_commit,
+            "image": provenance.image,
+        }
     return {
         "format": tile_format,
         "minzoom": 0,
@@ -95,7 +128,7 @@ def _bounds_text(bounds: Bounds) -> str:
     return f"{bounds.west},{bounds.south},{bounds.east},{bounds.north}"
 
 
-def pack(work: WorkArea, out_dir: Path, meta: dict) -> Path:
+def pack(work: WorkArea, out_dir: Path, meta: dict, *, write_metadata_file: bool = True) -> Path:
     """Pack the work area's tiles into ``out_dir/relief.pmtiles``.
 
     Args:
@@ -104,9 +137,11 @@ def pack(work: WorkArea, out_dir: Path, meta: dict) -> Path:
         meta: the metadata from ``metadata``. It is written to
             ``<tiles>/metadata.json``, where ``disk_to_pmtiles`` reads the
             format, zooms and bounds for the archive's header.
+        write_metadata_file: whether to copy ``metadata.json`` into ``out_dir``
+            (``True`` for trial builds, ``False`` for production staging).
 
     Returns:
-        The archive's path. ``metadata.json`` is copied beside it.
+        The archive's path.
 
     Raises:
         PackError: if the packer fails.
@@ -124,8 +159,9 @@ def pack(work: WorkArea, out_dir: Path, meta: dict) -> Path:
         )
         if result.returncode != 0:
             raise PackError(f"disk_to_pmtiles failed: {result.stderr.strip()}")
-    with atomic_write(out_dir / METADATA_NAME) as tmp:
-        tmp.write_text(text)
+    if write_metadata_file:
+        with atomic_write(out_dir / METADATA_NAME) as tmp:
+            tmp.write_text(text)
     return archive
 
 
@@ -156,33 +192,57 @@ def stored_tiles(pmtiles_path: Path) -> int:
         raise PackError(f"cannot read the tile count of {pmtiles_path}: {error}") from error
 
 
-def verify(pmtiles_path: Path, profile: Profile) -> None:
-    """Check an archive's structure, zooms, bounds and trial marker.
+def verify(
+    pmtiles_path: Path,
+    profile: Profile | Coverage | BuildTarget,
+    *,
+    trial: bool | None = None,
+) -> None:
+    """Check an archive's structure, zooms, bounds and trial/production metadata contract.
 
     Args:
         pmtiles_path: the archive.
-        profile: the profile it was built from.
+        profile: the profile, coverage or build target it was built from.
+        trial: whether to verify trial metadata (``trial: true``) or production
+            ``tile_schema: 1`` metadata (``trial`` absent, ``tile_schema == 1``,
+            ``name == "seerah-map"``). Defaults to ``profile.trial`` when present,
+            else ``True`` for ``Profile`` and ``False`` for ``Coverage``.
 
     Raises:
-        PackError: if ``pmtiles verify`` fails, the zooms are not 0 to the
-            profile's ``max_zoom``, a bound differs from the data extent by
-            more than 1e-6 degrees, or the metadata is not ``trial: true``.
+        PackError: if ``pmtiles verify`` fails, the zooms or bounds disagree,
+            or the trial/production metadata contract is broken.
     """
+    target = profile.as_build_target() if isinstance(profile, Coverage) else profile
+    is_trial = getattr(target, "trial", True) if trial is None else trial
     _pmtiles("verify", pmtiles_path)
     header = json.loads(_pmtiles("show", pmtiles_path, "--header-json"))
     meta = json.loads(_pmtiles("show", pmtiles_path, "--metadata"))
     if header["minzoom"] != 0:
         raise PackError(f"minzoom is {header['minzoom']}, expected 0")
-    if header["maxzoom"] != profile.max_zoom:
-        raise PackError(f"maxzoom is {header['maxzoom']}, expected {profile.max_zoom}")
-    extent = profile.data_extent
+    if header["maxzoom"] != target.max_zoom:
+        raise PackError(f"maxzoom is {header['maxzoom']}, expected {target.max_zoom}")
+    extent = target.data_extent
     expected = [extent.west, extent.south, extent.east, extent.north]
     if any(
         abs(a - b) > _BOUNDS_TOLERANCE_DEG for a, b in zip(header["bounds"], expected, strict=True)
     ):
         raise PackError(f"bounds are {header['bounds']}, expected {expected}")
-    if meta.get("trial") is not True:
-        raise PackError("metadata does not say trial: true")
+    if is_trial:
+        if meta.get("trial") is not True:
+            raise PackError("metadata does not say trial: true")
+    else:
+        if "trial" in meta:
+            raise PackError("production metadata must not contain 'trial'")
+        if "variant" in meta or "mode" in meta:
+            raise PackError("production metadata must not contain trial 'variant' or 'mode' keys")
+        if meta.get("tile_schema") != TILE_SCHEMA:
+            raise PackError(
+                f"metadata tile_schema is {meta.get('tile_schema')!r}, expected {TILE_SCHEMA}"
+            )
+        if meta.get("name") != PRODUCTION_MAP_NAME:
+            raise PackError(
+                f"metadata name is {meta.get('name')!r}, expected {PRODUCTION_MAP_NAME!r}"
+            )
 
 
 def _centre_lon_lat(z: int, x: int, y: int) -> tuple[float, float]:
@@ -193,12 +253,32 @@ def _centre_lon_lat(z: int, x: int, y: int) -> tuple[float, float]:
 
 
 def _outline_geometry(outline: Path) -> ogr.Geometry:
+    if not outline.is_file():
+        raise ConfigError(f"peninsula_outline {outline} does not exist")
+    try:
+        source = ogr.Open(str(outline))
+    except (RuntimeError, OSError) as exc:
+        raise ConfigError(f"cannot open peninsula_outline {outline}: {exc}") from exc
+    if source is None:
+        raise ConfigError(f"cannot open peninsula_outline {outline}")
+    layer = source.GetLayer()
+    if layer is None:
+        raise ConfigError(f"peninsula_outline {outline} has no vector layer")
     land = None
-    source = ogr.Open(str(outline))
-    for feature in source.GetLayer():
-        geometry = feature.GetGeometryRef().Clone()
+    for feature in layer:
+        geom = feature.GetGeometryRef()
+        if geom is None:
+            continue
+        geometry = geom.Clone()
         land = geometry if land is None else land.Union(geometry)
+    if land is None or land.IsEmpty() or not land.IsValid() or land.Area() <= 0:
+        raise ConfigError(f"peninsula_outline {outline} has no valid polygon geometry")
     return land
+
+
+def validate_outline(outline: Path) -> None:
+    """Validate that ``outline`` exists and holds a valid, positive-area polygon geometry."""
+    _outline_geometry(outline)
 
 
 def size_by_zoom(tiles_dir: Path, outline: Path) -> list[dict]:

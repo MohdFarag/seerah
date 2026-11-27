@@ -1,0 +1,65 @@
+%YAML 1.2
+---
+cells:
+- absent: false
+  dem:
+    path:
+      copernicus/Copernicus_DSM_COG_10_N20_00_E058_00_DEM/Copernicus_DSM_COG_10_N20_00_E058_00_DEM.tif
+    sha256: c6201b56c450878a9168655ee944cdeb499d7a89285050b2ceb6800b67d5b04d
+    size: 22174248
+    url:
+      https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N20_00_E058_00_DEM/Copernicus_DSM_COG_10_N20_00_E058_00_DEM.tif
+  lat: 20
+  lon: 58
+  wbm:
+    path:
+      copernicus/Copernicus_DSM_COG_10_N20_00_E058_00_DEM/Copernicus_DSM_COG_10_N20_00_E058_00_WBM.tif
+    sha256: 760f8699d95cbefbb2b0d599dff57cc8b99cd775a655f2f2cef9d76aa9524f95
+    size: 106897
+    url:
+      https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N20_00_E058_00_DEM/AUXFILES/Copernicus_DSM_COG_10_N20_00_E058_00_WBM.tif
+- absent: true
+  dem: null
+  lat: 20
+  lon: 59
+  wbm: null
+created: 2026-11-16
+natural_earth:
+- path:
+    natural-earth/f1890d9f152c896d250a77557a5751a93d494776/ne_110m_land.geojson
+  sha256: 9e0729ee253ca7d7a5c4ae9395fb1902264c5377c52e224d13dd85010e2835d9
+  size: 138160
+  url:
+    https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_110m_land.geojson
+- path:
+    natural-earth/f1890d9f152c896d250a77557a5751a93d494776/ne_110m_coastline.geojson
+  sha256: 851f581ff5ffb844deed8ae1a9ce22e3c4bb3d74fa342cadb5d8e39b41ae7c3c
+  size: 139907
+  url:
+    https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_110m_coastline.geojson
+- path:
+    natural-earth/f1890d9f152c896d250a77557a5751a93d494776/ne_50m_land.geojson
+  sha256: e874b27a51d146452be360cafb3cc50c86001074a67d534113e6534682f9826b
+  size: 1636166
+  url:
+    https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_50m_land.geojson
+- path:
+    natural-earth/f1890d9f152c896d250a77557a5751a93d494776/ne_50m_coastline.geojson
+  sha256: 271f1c4c1908312bac6b29d158ea1356544beafc129f260005300913aa5ea283
+  size: 1640858
+  url:
+    https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_50m_coastline.geojson
+- path:
+    natural-earth/f1890d9f152c896d250a77557a5751a93d494776/ne_10m_land.geojson
+  sha256: 1ac90796408bc6ad6911d69448485d3c4dbf2190370080368a09976e1c9f7416
+  size: 10157965
+  url:
+    https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_land.geojson
+- path:
+    natural-earth/f1890d9f152c896d250a77557a5751a93d494776/ne_10m_coastline.geojson
+  sha256: 6f75ae0e0de157b14946e2255eb1f5486d9a13819032e26d4610852d296788f6
+  size: 10110735
+  url:
+    https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_coastline.geojson
+tile_list_sha256:
+  10604e3052c98a09e9216f1a8f0a555a04148419757575f783d4937fd44316dc

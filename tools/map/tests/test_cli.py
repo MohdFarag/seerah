@@ -331,3 +331,258 @@ def test_build_rejects_value_with_per_zoom(tmp_path, monkeypatch, capsys):
     assert "painted" in err
     assert calls == []
     assert list_areas(tmp_path / "work") == []
+
+
+def _coverage_data(tmp_path: Path, *, margin: float = 0.05) -> Path:
+    import json
+    import shutil
+
+    repo_root = Path(__file__).resolve().parents[3]
+    cov_dir = tmp_path / "data" / "prod"
+    cov_dir.mkdir(parents=True, exist_ok=True)
+    outline = cov_dir / "peninsula.geojson"
+    shutil.copyfile(repo_root / "map-data" / "example" / "peninsula.geojson", outline)
+    shutil.copyfile(
+        repo_root / "map-data" / "example-production" / "cleanup.yaml",
+        cov_dir / "cleanup.yaml",
+    )
+    shutil.copyfile(
+        repo_root / "map-data" / "example-production" / "sources.lock",
+        cov_dir / "sources.lock",
+    )
+    cam = (
+        {"west": 58.85, "south": 20.55, "east": 59.00, "north": 20.70}
+        if margin > 0
+        else {"west": 58.80, "south": 20.50, "east": 59.05, "north": 20.75}
+    )
+    cov_dict = {
+        "schema": 1,
+        "purpose": "production",
+        "camera_bounds": cam,
+        "data_extent": {"west": 58.80, "south": 20.50, "east": 59.05, "north": 20.75},
+        "camera_min_zoom": 4.0,
+        "camera_max_zoom": 14.0,
+        "regional_max_zoom": 12,
+        "block_zoom": 11,
+        "fade_deg": 0.0,
+        "relief_encoding": "painted-rgba",
+        "webp_quality": 80,
+        "widest_half_screen_dp": 550.0,
+        "min_data_margin_deg": margin,
+        "peninsula_outline": "peninsula.geojson",
+    }
+    (cov_dir / "coverage.yaml").write_text(json.dumps(cov_dict, indent=2), encoding="utf-8")
+    return cov_dir
+
+
+def test_validate_coverage_command(tmp_path, capsys):
+    _coverage_data(tmp_path, margin=0.0)
+    code = cli.main(["validate", "--coverage", "prod", *_roots(tmp_path)])
+    assert code == cli.EXIT_USAGE
+    assert "--allow-zero-margin" in capsys.readouterr().err
+
+    code = cli.main(["validate", "--coverage", "prod", "--allow-zero-margin", *_roots(tmp_path)])
+    assert code == 0
+    assert "validate: coverage.yaml ok" in capsys.readouterr().out
+
+    (tmp_path / "data" / "prod" / "sources.lock").unlink()
+    code = cli.main(["validate", "--coverage", "prod", "--allow-zero-margin", *_roots(tmp_path)])
+    assert code == cli.EXIT_USAGE
+    assert "sources.lock" in capsys.readouterr().err
+
+
+def test_fetch_coverage_command(tmp_path, monkeypatch):
+    _coverage_data(tmp_path, margin=0.05)
+    seen: list[tuple] = []
+
+    def fake_fetch(target, lock_path, cache, out, **kwargs):
+        seen.append((lock_path.name, kwargs.get("lock_name"), kwargs.get("lock_destination")))
+        return SimpleNamespace(downloaded=0, verified=1, message="stub fetch")
+
+    monkeypatch.setattr(cli, "fetch", fake_fetch)
+    assert cli.main(["fetch", "--coverage", "prod", *_roots(tmp_path)]) == 0
+    assert seen == [("sources.lock", "sources.lock", "seerah-content/map/")]
+
+
+def test_fetch_coverage_refuses_zero_margin_without_flag(tmp_path, monkeypatch, capsys):
+    _coverage_data(tmp_path, margin=0.0)
+    monkeypatch.setattr(
+        cli,
+        "fetch",
+        lambda *a, **kw: SimpleNamespace(downloaded=0, verified=1, message="stub fetch"),
+    )
+
+    assert cli.main(["fetch", "--coverage", "prod", *_roots(tmp_path)]) == cli.EXIT_USAGE
+    assert "--allow-zero-margin" in capsys.readouterr().err
+    assert cli.main(["fetch", "--coverage", "prod", "--allow-zero-margin", *_roots(tmp_path)]) == 0
+
+
+def test_fetch_profile_rejects_allow_zero_margin(tmp_path, capsys):
+    _data(tmp_path)
+
+    assert cli.main([*_fetch(tmp_path), "--allow-zero-margin"]) == cli.EXIT_USAGE
+    assert "--allow-zero-margin" in capsys.readouterr().err
+
+
+def test_build_coverage_rejects_incompatible_flags(tmp_path, capsys):
+    _coverage_data(tmp_path, margin=0.05)
+    _data(tmp_path)
+
+    for bad_args in [
+        ["build", "--coverage", "prod", "--variant", "painted", *_roots(tmp_path)],
+        ["build", "--coverage", "prod", "--mode", "per-zoom", *_roots(tmp_path)],
+        [
+            "build",
+            "--profile",
+            "trial/t",
+            "--variant",
+            "painted",
+            "--allow-zero-margin",
+            *_roots(tmp_path),
+        ],
+    ]:
+        assert cli.main(bad_args) == cli.EXIT_USAGE
+        assert capsys.readouterr().err != ""
+
+
+def test_build_coverage_stages_atomic_bundle_and_checks_cache_and_size(
+    tmp_path, monkeypatch, capsys
+):
+    import json
+    import shutil
+
+    from seerah_map import fetch
+
+    _coverage_data(tmp_path, margin=0.05)
+    calls: list[str] = []
+
+    monkeypatch.setattr(
+        cli,
+        "verify_cached_sources",
+        lambda lock, target, cache: calls.append("verify_cache"),
+    )
+    monkeypatch.setattr(
+        cli,
+        "run_block_stage",
+        lambda *a, **kw: (calls.append("block"), [])[1],
+    )
+    monkeypatch.setattr(cli, "changed_cleanup_ids", lambda blocks, area: {"remove-synthetic-pier"})
+    monkeypatch.setattr(
+        cli,
+        "run_tile_stage",
+        lambda *a, **kw: (calls.append("tile"), 1)[1],
+    )
+
+    def fake_pack(area, out_dir, meta, *, write_metadata_file=True):
+        calls.append("pack")
+        assert "trial" not in meta
+        assert meta["tile_schema"] == 1
+        assert write_metadata_file is False
+        out_dir.mkdir(parents=True, exist_ok=True)
+        pmtiles = out_dir / "relief.pmtiles"
+        pmtiles.write_bytes(b"relief-bytes")
+        return pmtiles
+
+    monkeypatch.setattr(cli, "pack", fake_pack)
+    monkeypatch.setattr(cli, "verify", lambda *a, **kw: calls.append("verify"))
+    monkeypatch.setattr(cli, "stored_tiles", lambda path: 1)
+    monkeypatch.setattr(cli, "size_by_zoom", lambda tiles, outline: [])
+
+    def fake_base(target, lock, cache, area, out_dir, provenance, log):
+        calls.append("base")
+        assert target.trial is False
+        out_dir.mkdir(parents=True, exist_ok=True)
+        base_pm = out_dir / "base.pmtiles"
+        base_pm.write_bytes(b"base-bytes")
+        return base_pm
+
+    monkeypatch.setattr(cli, "build_base_layer", fake_base)
+
+    assert cli.main(["build", "--coverage", "prod", *_roots(tmp_path)]) == 0
+    assert calls == ["verify_cache", "block", "tile", "pack", "verify", "base"]
+
+    staged_dirs = list((tmp_path / "out").iterdir())
+    assert len(staged_dirs) == 1
+    staged = staged_dirs[0]
+    assert staged.name.startswith("map-staging-")
+    assert (staged / "data" / "base.pmtiles").exists()
+    assert (staged / "data" / "relief.pmtiles").exists()
+    assert (staged / "data" / "map.json").exists()
+    assert not (staged / "metadata.json").exists()
+    assert not (staged / "data" / "metadata.json").exists()
+    rep = json.loads((staged / "report.json").read_text(encoding="utf-8"))
+    assert rep["purpose"] == "production"
+    assert rep["edits"] == {
+        "applied": ["remove-synthetic-pier"],
+        "skipped": ["draft-synthetic-basin"],
+    }
+
+    # Cache verification failure aborts before block stage.
+    calls.clear()
+    monkeypatch.setattr(
+        cli,
+        "verify_cached_sources",
+        lambda *a, **kw: (_ for _ in ()).throw(fetch.FetchError("bad sha256")),
+    )
+    assert cli.main(["build", "--coverage", "prod", *_roots(tmp_path)]) == 1
+    assert calls == []
+
+    # Release size failure cleans up .tmp-map-staging-* and exits with 1.
+    monkeypatch.setattr(cli, "verify_cached_sources", lambda *a, **kw: None)
+    monkeypatch.setattr(cli, "MAX_RELEASE_FILE_BYTES", 10)
+    monkeypatch.setattr(cli, "ZIP_BUDGET_OVERHEAD", 2)
+    shutil.rmtree(staged)
+    assert cli.main(["build", "--coverage", "prod", *_roots(tmp_path)]) == 1
+    assert "MAX_RELEASE_FILE_BYTES" in capsys.readouterr().err
+    assert list((tmp_path / "out").iterdir()) == []
+
+
+def test_build_coverage_refuses_approved_cleanup_that_changed_no_pixels(
+    tmp_path, monkeypatch, capsys
+):
+    _coverage_data(tmp_path, margin=0.05)
+    calls: list[str] = []
+    monkeypatch.setattr(cli, "verify_cached_sources", lambda *a, **kw: None)
+    monkeypatch.setattr(cli, "run_block_stage", lambda *a, **kw: [])
+    monkeypatch.setattr(cli, "changed_cleanup_ids", lambda blocks, area: set())
+    monkeypatch.setattr(cli, "run_tile_stage", lambda *a, **kw: calls.append("tile"))
+
+    assert cli.main(["build", "--coverage", "prod", *_roots(tmp_path)]) == cli.EXIT_USAGE
+    err = capsys.readouterr().err
+    assert "changed no pixels" in err
+    assert "remove-synthetic-pier" in err
+    assert calls == []
+    assert list((tmp_path / "out").iterdir()) == []
+
+
+def test_replace_staging_dir_swaps_and_restores_previous_on_error(tmp_path, monkeypatch):
+    final_staging = tmp_path / "map-staging-abc"
+    final_staging.mkdir()
+    (final_staging / "marker.txt").write_text("old", encoding="utf-8")
+
+    tmp_new = tmp_path / ".tmp-map-staging-abc-1"
+    tmp_new.mkdir()
+    (tmp_new / "marker.txt").write_text("new", encoding="utf-8")
+
+    cli._replace_staging_dir(tmp_new, final_staging)
+    assert (final_staging / "marker.txt").read_text(encoding="utf-8") == "new"
+    assert [p.name for p in tmp_path.iterdir()] == ["map-staging-abc"]
+
+    tmp_fail = tmp_path / ".tmp-map-staging-abc-2"
+    tmp_fail.mkdir()
+    (tmp_fail / "marker.txt").write_text("broken", encoding="utf-8")
+
+    real_replace = cli.os.replace
+    calls = 0
+
+    def fail_second_replace(src, dst):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("rename failed")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(cli.os, "replace", fail_second_replace)
+    with pytest.raises(OSError, match="rename failed"):
+        cli._replace_staging_dir(tmp_fail, final_staging)
+    assert (final_staging / "marker.txt").read_text(encoding="utf-8") == "new"

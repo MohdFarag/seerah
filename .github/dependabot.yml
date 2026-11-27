@@ -31,6 +31,12 @@ updates:
     # above updates the base image.
     ignore:
       - dependency-name: numpy
+  # Host-side package signing and verification tool (tools/packages/requirements.txt).
+  - package-ecosystem: pip
+    directory: /tools/packages
+    schedule: { interval: monthly }
+    cooldown: { default-days: 7 }
+    commit-message: { prefix: build }
   # The v1 app's version catalog (android/gradle/libs.versions.toml). The spike is not updated.
   - package-ecosystem: gradle
     directory: /android

@@ -6,8 +6,9 @@ The **content itself** (the v1 index of 26 draft events, event files, and everyt
 
 ```text
 content/
-  schema/content.schema.json  entity definitions (phase, event, situation, text, source, place, display date)
-  example/                    a synthetic example in the same layout as seerah-content (not Seerah content); tests the validator
+  schema/content.schema.json   entity definitions (phase, event, situation, text, source, place, display date)
+  schema/manifest.schema.json  shared signed package manifest schema (kind: "content" | "map")
+  example/                     a synthetic example in the same layout as seerah-content (not Seerah content); tests the validator
 ```
 
 `python3 tools/validate_content.py` checks the example; `python3 tools/validate_content.py ../seerah-content` checks the real content. A change to the format is made here first, then applied in `seerah-content`.
