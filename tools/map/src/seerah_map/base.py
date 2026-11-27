@@ -1,4 +1,4 @@
-"""Build the trial's land and coast vector archive from mask blocks and Natural Earth.
+"""Build the land and coast vector archive from mask blocks and Natural Earth.
 
 The low zoom mask bands share a grid bounded by the data extent. At higher
 zooms, polygons are cut on the block grid and contours get a pixel of context
@@ -457,6 +457,10 @@ def verify_base(
     else:
         if "trial" in meta:
             raise BaseError("Production base archive metadata must not contain 'trial'")
+        if "variant" in meta or "mode" in meta:
+            raise BaseError(
+                "Production base archive metadata must not contain trial 'variant' or 'mode' keys"
+            )
         if meta.get("tile_schema") != TILE_SCHEMA:
             raise BaseError(f"Production base archive metadata must say tile_schema: {TILE_SCHEMA}")
         if meta.get("name") != PRODUCTION_MAP_NAME:

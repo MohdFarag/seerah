@@ -255,6 +255,24 @@ def _check_cleanups_changed_pixels(
     return [c.id for c in cleanups]
 
 
+def _replace_staging_dir(tmp_staging: Path, final_staging: Path) -> None:
+    """Swap ``tmp_staging`` into ``final_staging``, restoring any previous directory on error."""
+    old_staging = final_staging.parent / f".old-{final_staging.name}-{os.getpid()}"
+    shutil.rmtree(old_staging, ignore_errors=True)
+    moved_old = False
+    if final_staging.exists():
+        os.replace(final_staging, old_staging)
+        moved_old = True
+    try:
+        os.replace(tmp_staging, final_staging)
+    except BaseException:
+        if moved_old and not final_staging.exists() and old_staging.exists():
+            os.replace(old_staging, final_staging)
+        raise
+    if moved_old:
+        shutil.rmtree(old_staging, ignore_errors=True)
+
+
 def _cmd_build_coverage(args: argparse.Namespace) -> int:
     if args.variant is not None:
         raise _UsageError(
@@ -386,8 +404,7 @@ def _cmd_build_coverage(args: argparse.Namespace) -> int:
             "gdal_cachemax_mib": _gdal_cachemax_mib(),
         }
         write_report(report, tmp_staging)
-        shutil.rmtree(final_staging, ignore_errors=True)
-        os.replace(tmp_staging, final_staging)
+        _replace_staging_dir(tmp_staging, final_staging)
     except BaseException:
         shutil.rmtree(tmp_staging, ignore_errors=True)
         raise

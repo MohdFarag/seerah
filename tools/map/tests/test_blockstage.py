@@ -283,18 +283,19 @@ def test_run_block_stage_validates_variant_mode_and_zoom(tmp_path):
             profile, [], "painted", lock, cache, work, 1, lambda _m: None, mode="bad"
         )
     over_profile = _profile(tmp_path, max_zoom=BASE_ZOOM + 1, block_zoom=BASE_ZOOM)
-    with pytest.raises(ValueError, match="max_zoom"):
-        blockstage.run_block_stage(
-            over_profile,
-            [],
-            "painted",
-            lock,
-            cache,
-            work,
-            1,
-            lambda _m: None,
-            mode=blockstage.PER_ZOOM,
-        )
+    for mode in blockstage.MODES:
+        with pytest.raises(ValueError, match="max_zoom"):
+            blockstage.run_block_stage(
+                over_profile,
+                [],
+                "painted",
+                lock,
+                cache,
+                work,
+                1,
+                lambda _m: None,
+                mode=mode,
+            )
     assert not (work.path / "dem.vrt").exists()
 
 

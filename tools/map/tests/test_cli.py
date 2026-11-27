@@ -553,3 +553,36 @@ def test_build_coverage_refuses_approved_cleanup_that_changed_no_pixels(
     assert "remove-synthetic-pier" in err
     assert calls == []
     assert list((tmp_path / "out").iterdir()) == []
+
+
+def test_replace_staging_dir_swaps_and_restores_previous_on_error(tmp_path, monkeypatch):
+    final_staging = tmp_path / "map-staging-abc"
+    final_staging.mkdir()
+    (final_staging / "marker.txt").write_text("old", encoding="utf-8")
+
+    tmp_new = tmp_path / ".tmp-map-staging-abc-1"
+    tmp_new.mkdir()
+    (tmp_new / "marker.txt").write_text("new", encoding="utf-8")
+
+    cli._replace_staging_dir(tmp_new, final_staging)
+    assert (final_staging / "marker.txt").read_text(encoding="utf-8") == "new"
+    assert [p.name for p in tmp_path.iterdir()] == ["map-staging-abc"]
+
+    tmp_fail = tmp_path / ".tmp-map-staging-abc-2"
+    tmp_fail.mkdir()
+    (tmp_fail / "marker.txt").write_text("broken", encoding="utf-8")
+
+    real_replace = cli.os.replace
+    calls = 0
+
+    def fail_second_replace(src, dst):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("rename failed")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(cli.os, "replace", fail_second_replace)
+    with pytest.raises(OSError, match="rename failed"):
+        cli._replace_staging_dir(tmp_fail, final_staging)
+    assert (final_staging / "marker.txt").read_text(encoding="utf-8") == "new"

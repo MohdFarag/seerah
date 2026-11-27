@@ -568,8 +568,8 @@ def run_block_stage(
         The identifiers of the blocks rendered in this run, in completion order.
 
     Raises:
-        ValueError: if ``variant`` or ``mode`` is unknown, ``max_zoom > BASE_ZOOM``
-            in ``per-zoom`` mode, or ``cleanups`` is passed in ``per-zoom`` mode.
+        ValueError: if ``variant`` or ``mode`` is unknown, ``max_zoom > BASE_ZOOM``,
+            or ``cleanups`` is passed in ``per-zoom`` mode.
     """
     if variant not in VARIANTS:
         raise ValueError(f"unknown variant {variant!r}; expected one of {VARIANTS}")
@@ -577,7 +577,7 @@ def run_block_stage(
         raise ValueError(f"unknown mode {mode!r}; expected one of {MODES}")
     if mode == PER_ZOOM and cleanups:
         raise ValueError("cleanup edits are only supported in pyramid mode")
-    if mode == PER_ZOOM and profile.max_zoom > BASE_ZOOM:
+    if profile.max_zoom > BASE_ZOOM:
         raise ValueError(f"max_zoom {profile.max_zoom} is above the base zoom {BASE_ZOOM}")
     check_lock_matches(lock, profile)
     vrts = source_vrts(lock, cache, profile.data_extent, work)

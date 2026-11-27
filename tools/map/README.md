@@ -1,6 +1,6 @@
 # tools/map
 
-The map build tool for the trial that [ADR 0009](../../docs/adr/0009-map-data-pipeline.md) decision 13 requires. It downloads pinned Copernicus elevation and Water Body Mask cells and Natural Earth files, renders the style C relief block by block, cuts it into tiles, packs `relief.pmtiles`, and builds the vector base archive `base.pmtiles` (`land` and `coast` layers) alongside `metadata.json` and `report.json`. The design is in [docs/design/map-trial-build.md](../../docs/design/map-trial-build.md), planned across [phase 1](../../docs/design/map-trial-phase-1-plan.md), [phase 2](../../docs/design/map-trial-phase-2-plan.md) and [phase 3](../../docs/design/map-trial-phase-3-plan.md).
+The map build tool for the trial ([ADR 0009](../../docs/adr/0009-map-data-pipeline.md) decision 13) and the production v1 map pipeline ([v1 pipeline specification](../../docs/design/v1-map-pipeline-spec.md)). It downloads pinned Copernicus elevation and Water Body Mask cells and Natural Earth files, applies approved coastal cleanup edits, renders the style C relief block by block, cuts it into tiles, packs `relief.pmtiles`, and builds the vector base archive `base.pmtiles` (`land` and `coast` layers) alongside `data/map.json` (in production mode) or `metadata.json` (in trial mode) and `report.json`. The trial design is in [docs/design/map-trial-build.md](../../docs/design/map-trial-build.md), planned across [phase 1](../../docs/design/map-trial-phase-1-plan.md), [phase 2](../../docs/design/map-trial-phase-2-plan.md) and [phase 3](../../docs/design/map-trial-phase-3-plan.md).
 
 The tool runs in a toolchain image (GDAL, `tippecanoe`, `tile-join`, `go-pmtiles`, `WhiteboxTools`, and the Python packages in `requirements.txt`). The image holds no tool code: the code runs from this checkout, mounted read-only at `/src`.
 
@@ -83,7 +83,7 @@ Run one full build at a time for each fingerprint. Different fingerprints have s
   report.json       provenance, stage times (stage_seconds: block, tile, pack, base; stage_seconds.base added in phase 3), memory, disk, tile counts, size per zoom inside and outside the outline
 ```
 
-**Trial output is never packaged or published.** `relief.pmtiles`, `base.pmtiles` and `metadata.json` all carry `trial: true`, and the future packaging step must refuse them. This output is not the `tile_schema` 1 map package.
+**Trial output is never packaged or published.** `relief.pmtiles`, `base.pmtiles` and `metadata.json` all carry `trial: true`, and [tools/packages](../packages/README.md) refuses them. This output is not the `tile_schema` 1 map package.
 
 `build --coverage C` atomically stages a `tile_schema: 1` production map directory under `/out/map-staging-<fp8>/` (no `trial` flag, no sidecar `metadata.json`):
 

@@ -1,5 +1,3 @@
-# SPDX-FileCopyrightText: 2026 Mohamed
-# SPDX-License-Identifier: Apache-2.0
 schema: 1
 purpose: production
 camera_bounds: {west: 58.80, south: 20.50, east: 59.05, north: 20.75}

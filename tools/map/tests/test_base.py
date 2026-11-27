@@ -404,5 +404,11 @@ def test_base_production_metadata_and_verify_base(built, tmp_path):
     assert meta["tile_schema"] == 1
     assert meta["name"] == "seerah-map"
     base.verify_base(prod_archive, target, trial=False)
+    for forbidden in ({"variant": "value"}, {"mode": "pyramid"}):
+        bad_meta = tmp_path / "bad_meta.json"
+        bad_meta.write_text(json.dumps(meta | forbidden), encoding="utf-8")
+        subprocess.run(["pmtiles", "edit", "--metadata", bad_meta, prod_archive], check=True)
+        with pytest.raises(base.BaseError, match="variant|mode"):
+            base.verify_base(prod_archive, target, trial=False)
     with pytest.raises(base.BaseError, match="trial"):
         base.verify_base(prod_archive, target, trial=True)

@@ -57,7 +57,7 @@ This is trial output, never packaged or published. It is **not** `tile_schema` 1
 | `cleanup.yaml` | one approved `remove-land` polygon crossing a block edge and one `draft` `fill-water` polygon (skipped by builds) |
 | `sources.lock` | pinned Copernicus DEM and Natural Earth files with SHA-256 checksums |
 
-`tools/map/run.py build --coverage <rel>` stages a `tile_schema: 1` production map directory into `dist/map-staging-<fp8>/`:
+`python3 tools/map/run.py -- build --coverage <rel>` stages a `tile_schema: 1` production map directory into `dist/map-staging-<fp8>/`:
 
 ```text
 dist/map-staging-<fp8>/
@@ -67,6 +67,12 @@ dist/map-staging-<fp8>/
     map.json        validated against map-data/schema/map.schema.json
   report.json       build provenance, timings, tile counts and applied/skipped cleanup IDs
 ```
+
+### `tile_schema` 1
+
+- **`data/base.pmtiles`:** PMTiles v3 archive of gzip-compressed MVT vector tiles across build zooms `0..regional_max_zoom`, containing `land` (`MultiPolygon`) and `coast` (`MultiLineString`) with empty feature properties (`fields: {}`), plus reserved optional layer `valley` (absent in v1; `tile_schema: 1` readers accept `{"land", "coast"} <= layer_ids`).
+- **`data/relief.pmtiles`:** PMTiles v3 archive of uncompressed `256×256` raster tiles across build zooms `0..regional_max_zoom` (every tile covering `data_extent` is present with zero skipped blank tiles), encoded as `terrarium-value` (`png`) or `painted-rgba` (`webp`). Reserved optional archive `data/relief-detail.pmtiles` is absent in v1.
+- **PMTiles v3 binary header and JSON metadata:** the binary header stores `min_zoom = 0`, `max_zoom = regional_max_zoom`, tile type and compression, and bounds (`relief.pmtiles` bounds match `data_extent`). JSON metadata carries `"name": "seerah-map"`, `"tile_schema": 1`, `"attribution"`, `"fingerprint"`, `"tool_commit"`, `"data_commit"`, and `"image"`, plus `"encoding"` on `relief.pmtiles` or `"vector_layers"` on `base.pmtiles`, with no `"trial"`, `"variant"`, or `"mode"` keys.
 
 ## Spike base map
 
