@@ -7,7 +7,7 @@
 #     -e UV_CUSTOM_COMPILE_COMMAND='see the command in tools/packages/requirements.in' \
 #     --mount type=image,src=ghcr.io/astral-sh/uv:0.13.6,dst=/uvimg \
 #     -v "$PWD/tools/packages:/m" -w /m ghcr.io/al-seerah/seerah-map:e752be682c117fd4 \
-#     /uvimg/uv pip compile --python-platform x86_64-unknown-linux-gnu \
+#     /uvimg/uv pip compile --universal --python-version 3.11 \
 #       --generate-hashes requirements.in -o requirements.txt
 cryptography==50.0.2  # 2026-09-30
 jsonschema==4.26.0  # fixed by the owner
