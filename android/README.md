@@ -10,6 +10,7 @@ android/
   gradle/        version catalog (libs.versions.toml) and the Gradle wrapper
   app/           :app, the application module
   core/map/      :core:map, the map module: the only one that touches MapLibre (see its README)
+  core/model/    :core:model, pure-JVM shared domain and map metadata models (see its README)
   spike/         the finished technical spike, a separate build (reference only)
 ```
 
@@ -75,8 +76,9 @@ Two rules for the runs:
 | `seerah.android.library` | Like the application plugin for a library module: SDK levels, lint, Kotlin settings, the licence check and the MapLibre boundary (the module dependency rules run from `:app`) |
 | `seerah.android.library.compose` | Compose compiler and Compose BOM for a library module, without preview tooling |
 | `seerah.hilt` | Hilt with KSP |
+| `seerah.jvm.library` | Pure-JVM library module: Java 17 bytecode, Kotlin warnings as errors, the licence check, the MapLibre boundary and dependency analysis |
 
-Feature and JVM conventions are added with the first module that needs them.
+Feature conventions are added with the first module that needs them.
 
 ## Rules the build enforces
 

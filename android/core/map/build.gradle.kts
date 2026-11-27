@@ -8,6 +8,7 @@ android {
 }
 
 dependencies {
+    api(project(":core:model"))
     api(libs.androidx.compose.runtime)
     api(libs.androidx.compose.ui)
     implementation(libs.maplibre.android.opengl)

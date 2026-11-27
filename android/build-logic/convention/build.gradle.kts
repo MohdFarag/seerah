@@ -37,5 +37,9 @@ gradlePlugin {
             id = "seerah.hilt"
             implementationClass = "HiltConventionPlugin"
         }
+        register("jvmLibrary") {
+            id = "seerah.jvm.library"
+            implementationClass = "JvmLibraryConventionPlugin"
+        }
     }
 }
