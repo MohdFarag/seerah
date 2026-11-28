@@ -37,7 +37,7 @@ PYTHONPATH=tools/packages/src python3 -m seerah_packages keygen \
 
 1. Enter and confirm a high-entropy passphrase when prompted.
 2. Verify that `~/.config/seerah-keys/seerah-2026-01.key.pem` has mode `0600` and never leaves the owner's encrypted storage.
-3. Copy only the public key JSON (`seerah-2026-01.pub.json`) into the app's trusted public keyring when embedding it in the Android client.
+3. Wrap only the public key JSON object (`seerah-2026-01.pub.json`) inside `{"keys": [...]}` in [trusted_package_keys.json](../android/core/content/src/main/res/raw/trusted_package_keys.json) when embedding it in the Android client (before the key ceremony, Android keeps `{"keys": []}` as a fail-closed placeholder, whereas host `signing.py verify` requires 1 or 2 keys; embed real keys before shipping beta APKs).
 
 ---
 
@@ -73,7 +73,7 @@ PYTHONPATH=tools/packages/src python3 -m seerah_packages verify \
 The trusted keyring holds at most **2 keys** (`current` and `next`, per [ADR 0007](adr/0007-content-formats-compatibility-and-signing.md) decision 9):
 
 1. **Generate `next`:** Run `keygen --key-id seerah-<year>-<seq>` to create the new keypair.
-2. **Ship dual-key app release:** Add `next`'s `.pub.json` alongside `current`'s `.pub.json` in the app's trusted keyring (`2` keys total) and ship an app update. Continue signing packages with `current` while users update.
+2. **Ship dual-key app release:** Add `next`'s `.pub.json` alongside `current`'s `.pub.json` inside `{"keys": [...]}` in [trusted_package_keys.json](../android/core/content/src/main/res/raw/trusted_package_keys.json) (`2` keys total) and ship an app update. Continue signing packages with `current` while users update.
 3. **Switch signing to `next`:** Once the minimum supported `min_app_version` includes `next`, sign new packages with `--key-id <next>`.
 4. **Retire old key:** In a subsequent app release, remove the old `current` public key so `next` becomes the sole trusted key.
 

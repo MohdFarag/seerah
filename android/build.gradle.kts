@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.licensee) apply false
     alias(libs.plugins.module.graph.assert) apply false
@@ -38,6 +40,7 @@ dependencyAnalysis {
             primary("com.google.dagger:hilt-android")
             includeDependency("com.google.dagger:dagger")
             includeDependency("com.google.dagger:hilt-core")
+            includeDependency("javax.inject:javax.inject")
             includeDependency("androidx.annotation:annotation")
             includeDependency("androidx.fragment:fragment")
             includeDependency("androidx.lifecycle:lifecycle-viewmodel")

@@ -9,6 +9,9 @@ The map module. It is the only module that may touch MapLibre ([ADR 0003](../../
 - `CameraLimits`: where the camera may go.
 - `MapCamera`: moves the camera.
 - `MapEvent`: rendering events (`FullyRendered`, `FrameRendered`).
+- `MapPackageBinding` (`toCameraLimits`, `resolveMapFiles`, `styleCValueRamp`, `toStyleSpec`): converts verified `:core:model` `MapMetadata` (`tile_schema: 1`) into `:core:map` limits, files and styles.
+
+Its public API exposes types from `:core:model` (`api(project(":core:model"))`).
 
 ## Style builder
 

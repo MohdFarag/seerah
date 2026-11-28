@@ -20,4 +20,6 @@ rootProject.name = "seerah"
 // Modules are added when their first real code lands (ADR 0003).
 // The spike in spike/ is a separate build and is not included here.
 include(":app")
+include(":core:content")
 include(":core:map")
+include(":core:model")

@@ -8,7 +8,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 /** Bytecode level for all modules. Builds run on JDK 21 (ADR 0004). */
-private val JAVA_TARGET = JavaVersion.VERSION_17
+internal val JAVA_TARGET = JavaVersion.VERSION_17
 
 /**
  * Lint checks that only report newer versions. Dependabot handles updates, so these
