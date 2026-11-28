@@ -27,6 +27,11 @@ Exit codes: `0` for success, `1` when a packaging or verification check fails, `
 
 See [docs/signing-runbook.md](../../docs/signing-runbook.md) for key generation, offline storage, rotation, and compromise recovery.
 
+## Android test fixtures
+
+- [scripts/generate_android_test_fixtures.py](scripts/generate_android_test_fixtures.py) deterministically builds `trusted-keys.json`, `valid-map-v1.zip`, `valid-content-v1.zip`, and `trial-rejected-map-v1.zip` in `android/core/content/src/test/resources/fixtures/` using the RFC 8032 Test 1 vector (private seed kept transient in Python).
+- [tests/test_android_fixtures.py](tests/test_android_fixtures.py) runs `verify` against those fixtures and fails CI if checked-in ZIPs drift from the generator.
+
 ## Dependencies and Tests
 
 Dependencies are hash-locked in [requirements.txt](requirements.txt) (compiled from [requirements.in](requirements.in) with `uv pip compile --generate-hashes` and tracked by Dependabot):

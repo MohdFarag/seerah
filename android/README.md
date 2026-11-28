@@ -9,6 +9,7 @@ android/
   build-logic/   convention plugins: the shared Gradle setup every module applies
   gradle/        version catalog (libs.versions.toml) and the Gradle wrapper
   app/           :app, the application module
+  core/content/  :core:content, offline package verification, PMTiles inspection and storage (see its README)
   core/map/      :core:map, the map module: the only one that touches MapLibre (see its README)
   core/model/    :core:model, pure-JVM shared domain and map metadata models (see its README)
   spike/         the finished technical spike, a separate build (reference only)
