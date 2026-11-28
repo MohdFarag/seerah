@@ -40,6 +40,7 @@ dependencyAnalysis {
             primary("com.google.dagger:hilt-android")
             includeDependency("com.google.dagger:dagger")
             includeDependency("com.google.dagger:hilt-core")
+            includeDependency("javax.inject:javax.inject")
             includeDependency("androidx.annotation:annotation")
             includeDependency("androidx.fragment:fragment")
             includeDependency("androidx.lifecycle:lifecycle-viewmodel")

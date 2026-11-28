@@ -44,6 +44,12 @@ jobs:
       - name: No trial code in release
         run: python3 ../tools/android/check_no_trial_code.py app/build/outputs/apk/release/app-release.apk
 
+      - name: No test signing keys in release
+        run: >-
+          python3 ../tools/android/check_trusted_keys.py
+          --source-dir ..
+          --apk app/build/outputs/apk/release/app-release.apk
+
       - name: 16 KB page alignment
         run: >-
           python3 ../tools/android/check_page_alignment.py

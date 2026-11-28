@@ -34,7 +34,8 @@ Run from `android/`:
 ./gradlew assembleRelease      # R8-shrunk release APK (debug-signed until the beta)
 python3 ../tools/android/check_page_alignment.py app/build/outputs/apk/release/app-release.apk
 python3 ../tools/android/check_no_trial_code.py app/build/outputs/apk/release/app-release.apk
-python3 -m unittest discover -s ../tools/android/tests   # the release guard's own tests
+python3 ../tools/android/check_trusted_keys.py --source-dir .. --apk app/build/outputs/apk/release/app-release.apk
+python3 -m unittest discover -s ../tools/android/tests   # the release guards' own tests
 ./gradlew assembleBenchmark    # the benchmark APK, for measuring on devices
 ```
 
@@ -43,10 +44,10 @@ python3 -m unittest discover -s ../tools/android/tests   # the release guard's o
 | Build type | Used for |
 | --- | --- |
 | `debug` | Development: LeakCanary, no shrinking. |
-| `release` | The shipped app: R8-shrunk, debug-signed until the beta. Contains no map-trial code; `tools/android/check_no_trial_code.py` fails when its manifest names an `app.seerah.trial` component (ADR 0007, decision 10). |
+| `release` | The shipped app: R8-shrunk, debug-signed until the beta. Contains no map-trial code (`tools/android/check_no_trial_code.py` fails when its manifest names an `app.seerah.trial` component, ADR 0007 decision 10) and no RFC 8032 / test trusted package keys (`tools/android/check_trusted_keys.py` inspects both source resources and the release APK). |
 | `benchmark` | Release-like build for measuring on devices (`:app:assembleBenchmark`, application ID `app.seerah.benchmark`). Never published. The only build type that may depend on `:core:map`; its unit tests run with `check` (`:app:testBenchmarkUnitTest`). |
 
-CI (`.github/workflows/android.yml`) runs all of these on every push and pull request that touches `android/` (except the spike), runs the release guard and its tests, checks 16 KB page alignment on the release and benchmark APKs, and attaches the release APK to the run as `seerah-app` and the benchmark APK as `seerah-app-benchmark`.
+CI (`.github/workflows/android.yml`) runs all of these on every push and pull request that touches `android/` (except the spike), runs the release guards (`check_no_trial_code.py`, `check_trusted_keys.py`) and their tests, checks 16 KB page alignment on the release and benchmark APKs, and attaches the release APK to the run as `seerah-app` and the benchmark APK as `seerah-app-benchmark`.
 
 ## Running the map trial
 
@@ -76,7 +77,7 @@ Two rules for the runs:
 | `seerah.android.application.compose` | Compose compiler, Compose BOM and preview tooling |
 | `seerah.android.library` | Like the application plugin for a library module: SDK levels, lint, Kotlin settings, the licence check and the MapLibre boundary (the module dependency rules run from `:app`) |
 | `seerah.android.library.compose` | Compose compiler and Compose BOM for a library module, without preview tooling |
-| `seerah.hilt` | Hilt with KSP |
+| `seerah.hilt` | Hilt with KSP (`api` for Android libraries so generated `@InstallIn` wrappers stay visible, `implementation` for `:app`) |
 | `seerah.jvm.library` | Pure-JVM library module: Java 17 bytecode, Kotlin warnings as errors, the licence check, the MapLibre boundary and dependency analysis |
 
 Feature conventions are added with the first module that needs them.

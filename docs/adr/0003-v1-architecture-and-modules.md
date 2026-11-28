@@ -140,8 +140,8 @@ android/
   core/
     model/              :core:model         plain Kotlin models: Phase, Event, Situation, Text, Source, Place, dates and precision
     domain/             :core:domain        time resolution and follow-along rules (plain Kotlin, no Android)
-    content/            :core:content       reads the installed content package; installs and activates new versions
-    update/             :core:update        checks for, downloads and verifies content updates
+    content/            :core:content       offline verification (Ed25519 signature, ZIP, PMTiles) and atomic storage of installed content packages
+    update/             :core:update        checks for, downloads, and stages content updates (delegating verification and install to `:core:content`)
     userdata/           :core:userdata      progress, settings and the explore session (DataStore)
     map/                :core:map           the only module that touches MapLibre: map composable, style, label images, time states, camera limits
     designsystem/       :core:designsystem  theme from the Penpot tokens, fonts, reusable components (no app models)
@@ -174,6 +174,8 @@ flowchart TD
   data --> model
   domain --> model
 ```
+
+**Amendment (2026-11-28, [v1 Android spec](../design/v1-android-package-and-map-spec.md) D1):** All offline package verification (Ed25519 signatures, ZIP reading, `manifest.json` / `map.json` / PMTiles v3 validation) and atomic `<filesDir>/content/` storage live in `:core:content`. Future `:core:update` handles networking and update-index checks and will depend on `:core:content`, keeping `:core:domain` (which depends on `:core:content`) isolated from network libraries.
 
 - Features never depend on other features; they navigate through keys in `core:navigation` and share state through the explore session.
 - Only `core:map` depends on MapLibre.
