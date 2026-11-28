@@ -2,6 +2,7 @@ package app.seerah.content
 
 import app.seerah.model.ReliefEncoding
 import java.io.File
+import java.nio.channels.FileChannel
 import java.nio.charset.StandardCharsets
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -148,12 +149,43 @@ class PackageStorageAndInstallerTest {
         return TestArchiveBuilders.writeTempBytes(outDir, fileName, TestArchiveBuilders.buildRawZip(zipSpecs))
     }
 
+    private class FakeContentDatabaseImporter : ContentDatabaseImporter {
+        var importCalls = 0
+            private set
+
+        override suspend fun importFromZip(
+            channel: FileChannel,
+            container: StrictZipReader.ZipContainer,
+            manifest: PackageManifest,
+            packageVersion: Int,
+            generation: Long,
+            targetDbFile: File,
+        ): PackageResult<Unit> {
+            importCalls += 1
+            val entries = HashMap<String, ByteArray>()
+            for (fileEntry in manifest.files) {
+                val zipEntry = container.entriesByPath.getValue(fileEntry.path)
+                val res = StrictZipReader.readVerifiedEntryBytes(channel, zipEntry, fileEntry, 8 * 1024 * 1024)
+                when (res) {
+                    is PackageResult.Success -> entries[fileEntry.path] = res.value
+                    is PackageResult.Failure -> return res
+                }
+            }
+            val parsed = ContentPackageParser.parseAndValidate(entries, packageVersion, generation)
+            if (parsed is PackageResult.Failure) return parsed
+            targetDbFile.parentFile?.mkdirs()
+            targetDbFile.writeText("fake-db-v$packageVersion-g$generation")
+            return PackageResult.Success(Unit)
+        }
+    }
+
     private fun createStack(
         rootDir: File,
         ringProvider: () -> KeyRingState,
         availableBytesProvider: () -> Long = { 2L * 1024L * 1024L * 1024L },
         appVersion: Long = 10L,
         logger: RecordingLogger = RecordingLogger(),
+        importer: ContentDatabaseImporter = FakeContentDatabaseImporter(),
     ): Triple<DefaultPackageStorage, DefaultPackageInstaller, RecordingLogger> {
         val storage = DefaultPackageStorage(rootDir, Dispatchers.IO, logger)
         val installer = DefaultPackageInstaller(
@@ -167,6 +199,7 @@ class PackageStorageAndInstallerTest {
             appVersionCodeProvider = object : AppVersionCodeProvider {
                 override suspend fun currentVersionCode(): Long = appVersion
             },
+            contentDatabaseImporter = importer,
             logger = logger,
             ioDispatcher = Dispatchers.IO,
         )
@@ -213,12 +246,68 @@ class PackageStorageAndInstallerTest {
         val downgrade = assertIs<PackageResult.Failure>(installer.install(mapV1Zip, PackageKind.MAP))
         assertEquals(PackageFailure.DowngradeOrSameVersion(1, 1), downgrade.reason)
 
-        // Install CONTENT v1 (MUST retain package.zip)
+        // Install CONTENT v1 (MUST retain package.zip and content.db without unpacking data/)
         val contentV1Zip = buildSignedPackage(work, "content-v1.zip", PackageKind.CONTENT, 1, 1, "k1", priv)
         val contentV1 = (installer.install(contentV1Zip) as PackageResult.Success).value
         val retained = assertNotNull(contentV1.retainedArchivePath)
         assertTrue(File(retained).isFile)
         assertFalse(File(retained).readBytes().isEmpty())
+        assertTrue(File(contentV1.rootDirPath, CONTENT_DB_FILE_NAME).isFile)
+        assertFalse(File(contentV1.dataDirPath).exists(), "CONTENT packages must not unpack data/")
+    }
+
+    @Test
+    fun contentInstall_avoidsRetainedDoubleCountAndRespectsDirectoryPinningAndMissingDb() = runTest {
+        val work = tempFolder.newFolder("pinning")
+        val contentRoot = File(work, "files/content")
+        val (pub, priv) = generateEd25519Keypair("k1")
+        val ring = KeyRingState.Configured(listOf(pub))
+        val fakeImporter = FakeContentDatabaseImporter()
+
+        // Create a valid content zip (~10 KiB) so SAFETY_MARGIN + db estimate determines exact space gate.
+        val zipV1 = SyntheticContentFixtures.buildSignedContentPackage(work, "c1.zip", 1, 1, "k1", priv)
+        val zipLen = zipV1.length()
+        // Enough for 32 MiB margin + 64 KiB min DB + manifest + signature (with expectedKind = CONTENT early copy -> 0 retained aligned!)
+        val tightMargin = (32L * 1024L * 1024L) + (64L * 1024L) + 16_384L
+        var avail = tightMargin
+        val (storage, installer, _) = createStack(
+            rootDir = contentRoot,
+            ringProvider = { ring },
+            availableBytesProvider = { avail },
+            importer = fakeImporter,
+        )
+
+        val v1Info = (installer.install(zipV1, PackageKind.CONTENT) as PackageResult.Success).value
+        assertEquals(1, fakeImporter.importCalls)
+        assertFalse(File(v1Info.dataDirPath).exists())
+        assertTrue(File(v1Info.rootDirPath, CONTENT_DB_FILE_NAME).isFile)
+
+        // Pin v1-g1 while upgrading to v2 -> v1-g1 must remain on disk until unpinned!
+        val pinnedDir = storage.withStorageLock {
+            storage.pinActiveDirLocked(PackageKind.CONTENT, expectedVersion = 1, expectedGeneration = 1L)
+        }
+        assertEquals("v1-g1", pinnedDir)
+
+        avail = 2L * 1024L * 1024L * 1024L
+        val zipV2 = SyntheticContentFixtures.buildSignedContentPackage(work, "c2.zip", 2, 1, "k1", priv)
+        val v2Info = (installer.install(zipV2, PackageKind.CONTENT) as PackageResult.Success).value
+        assertEquals(2, v2Info.version)
+        assertTrue(File(v1Info.rootDirPath).isDirectory, "Pinned directory must not be deleted on upgrade")
+
+        // Cleanup while pinned keeps v1-g1 alive; once unpinned, cleanup removes v1-g1!
+        assertIs<PackageResult.Success<Unit>>(storage.cleanupOrphanedFiles())
+        assertTrue(File(v1Info.rootDirPath).isDirectory)
+
+        storage.withStorageLock { storage.unpinVersionDirLocked(PackageKind.CONTENT, "v1-g1") }
+        assertIs<PackageResult.Success<Unit>>(storage.cleanupOrphanedFiles())
+        assertFalse(File(v1Info.rootDirPath).exists())
+
+        // Deleting disposable content.db from active v2-g2 must NOT quarantine active.json on cold start!
+        assertTrue(File(v2Info.rootDirPath, CONTENT_DB_FILE_NAME).delete())
+        val coldStorage = DefaultPackageStorage(contentRoot, Dispatchers.IO, RecordingLogger())
+        val coldActive = assertNotNull(coldStorage.currentInstalled(PackageKind.CONTENT))
+        assertEquals(2, coldActive.version)
+        assertTrue(zipLen > 0L)
     }
 
     @Test

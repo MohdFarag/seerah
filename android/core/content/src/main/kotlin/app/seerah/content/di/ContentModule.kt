@@ -5,6 +5,9 @@ import app.seerah.content.AndroidAppVersionCodeProvider
 import app.seerah.content.AndroidPackageStorageLogger
 import app.seerah.content.AppVersionCodeProvider
 import app.seerah.content.AvailableSpaceProvider
+import app.seerah.content.ContentDatabaseImporter
+import app.seerah.content.ContentRepository
+import app.seerah.content.DefaultContentRepository
 import app.seerah.content.DefaultPackageInstaller
 import app.seerah.content.DefaultPackageStorage
 import app.seerah.content.Ed25519Verifier
@@ -14,8 +17,11 @@ import app.seerah.content.PackageStorage
 import app.seerah.content.PackageStorageLogger
 import app.seerah.content.PackageStorageMaintenance
 import app.seerah.content.RawResourceKeyRingProvider
+import app.seerah.content.RoomContentDatabaseImporter
 import app.seerah.content.StatFsAvailableSpaceProvider
 import app.seerah.content.TrustedKeyRingSource
+import app.seerah.content.db.AndroidContentDatabaseOpener
+import app.seerah.content.db.ContentDatabaseOpener
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -26,7 +32,9 @@ import java.io.File
 import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 private const val CONTENT_ROOT_DIR_NAME = "content"
 
@@ -34,6 +42,11 @@ private const val CONTENT_ROOT_DIR_NAME = "content"
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 internal annotation class IoDispatcher
+
+/** Qualifier for `:core:content`'s shared background coroutine scope. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+internal annotation class ContentScope
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -57,7 +70,16 @@ internal abstract class ContentBindingsModule {
     abstract fun bindKeyRingSource(impl: RawResourceKeyRingProvider): TrustedKeyRingSource
 
     @Binds
+    abstract fun bindContentDatabaseOpener(impl: AndroidContentDatabaseOpener): ContentDatabaseOpener
+
+    @Binds
+    abstract fun bindContentDatabaseImporter(impl: RoomContentDatabaseImporter): ContentDatabaseImporter
+
+    @Binds
     abstract fun bindPackageInstaller(impl: DefaultPackageInstaller): PackageInstaller
+
+    @Binds
+    abstract fun bindContentRepository(impl: DefaultContentRepository): ContentRepository
 }
 
 @Module
@@ -66,6 +88,12 @@ internal object ContentProvidesModule {
     @Provides
     @IoDispatcher
     fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+
+    @Provides
+    @Singleton
+    @ContentScope
+    fun provideContentScope(@IoDispatcher ioDispatcher: CoroutineDispatcher): CoroutineScope =
+        CoroutineScope(SupervisorJob() + ioDispatcher)
 
     @Provides
     @Singleton

@@ -21,10 +21,11 @@ import kotlinx.coroutines.withContext
 private const val BLOCK_SIZE_BYTES = 4_096L
 private const val BLOCK_ALIGN_MASK = 4_095L
 private const val BLOCK_SHIFT_BITS = 12
+private const val MIN_CONTENT_DB_SPACE_BYTES = 65_536L
+private const val CONTENT_DB_MULTIPLIER = 3L
 private const val SAFETY_MARGIN_BYTES = 32L * 1_024L * 1_024L
 private const val COPY_CHUNK_BYTES = 262_144
 private const val CONTENT_ARCHIVE_NAME = "package.zip"
-private const val DATA_DIR_NAME = "data"
 private const val INSTALLER_LOG_TAG = "PackageInstaller"
 
 /**
@@ -39,22 +40,31 @@ internal class DefaultPackageInstaller @Inject constructor(
     private val verifier: Ed25519Verifier,
     private val availableSpaceProvider: AvailableSpaceProvider,
     private val appVersionCodeProvider: AppVersionCodeProvider,
+    private val contentDatabaseImporter: ContentDatabaseImporter,
     private val logger: PackageStorageLogger,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : PackageInstaller {
     private val pipeline = PackageVerificationPipeline(verifier, appVersionCodeProvider)
 
+    private data class StagedInstall(val staged: VerifiedPackageStaging, val generation: Long)
+
+    private data class InstallLockOutcome(
+        val result: PackageResult<InstalledPackageInfo>,
+        val oldDirToDeleteOffLock: File? = null,
+    )
+
     override suspend fun install(archiveFile: File, expectedKind: PackageKind?): PackageResult<InstalledPackageInfo> =
         withContext(ioDispatcher) {
-            storage.withStorageLock {
+            val outcome = storage.withStorageLock {
                 installLocked(archiveFile, expectedKind)
             }
+            outcome.oldDirToDeleteOffLock?.let { oldDir ->
+                storage.deleteRecursivelyBestEffort(oldDir)
+            }
+            outcome.result
         }
 
-    private suspend fun installLocked(
-        archiveFile: File,
-        expectedKind: PackageKind?,
-    ): PackageResult<InstalledPackageInfo> {
+    private suspend fun installLocked(archiveFile: File, expectedKind: PackageKind?): InstallLockOutcome {
         val currentRing = keyRingSource.currentKeyRing()
         val ringFailure = when (currentRing) {
             KeyRingState.Unconfigured -> PackageFailure.KeyRingNotConfigured
@@ -66,34 +76,42 @@ internal class DefaultPackageInstaller @Inject constructor(
                 if (currentRing.keys.isEmpty()) PackageFailure.KeyRingNotConfigured else null
             }
         }
-        if (ringFailure != null) return PackageResult.Failure(ringFailure)
+        if (ringFailure != null) return InstallLockOutcome(PackageResult.Failure(ringFailure))
 
         val trustedKeys = (currentRing as KeyRingState.Configured).keys
         if (!archiveFile.isFile) {
-            return PackageResult.Failure(
-                PackageFailure.IoFailure("Package archive does not exist: ${archiveFile.path}"),
+            return InstallLockOutcome(
+                PackageResult.Failure(
+                    PackageFailure.IoFailure("Package archive does not exist: ${archiveFile.path}"),
+                ),
             )
         }
         val archiveBytes = archiveFile.length()
         if (archiveBytes > MAX_RELEASE_FILE_BYTES) {
-            return PackageResult.Failure(
-                PackageFailure.InvalidPackage(
-                    InvalidPackageCause.INVALID_CONTAINER,
-                    "Archive size $archiveBytes exceeds maximum release file limit $MAX_RELEASE_FILE_BYTES.",
+            return InstallLockOutcome(
+                PackageResult.Failure(
+                    PackageFailure.InvalidPackage(
+                        InvalidPackageCause.INVALID_CONTAINER,
+                        "Archive size $archiveBytes exceeds maximum release file limit $MAX_RELEASE_FILE_BYTES.",
+                    ),
                 ),
             )
         }
 
         val stagingRoot = storage.stagingRootDir()
         if (!stagingRoot.isDirectory && !stagingRoot.mkdirs()) {
-            return PackageResult.Failure(
-                PackageFailure.IoFailure("Cannot create staging directory: ${stagingRoot.path}"),
+            return InstallLockOutcome(
+                PackageResult.Failure(
+                    PackageFailure.IoFailure("Cannot create staging directory: ${stagingRoot.path}"),
+                ),
             )
         }
         val stageName = "${expectedKind?.wireName ?: "pkg"}-${UUID.randomUUID()}"
         val stagingDir = File(stagingRoot, stageName)
         if (!stagingDir.mkdirs()) {
-            return PackageResult.Failure(PackageFailure.IoFailure("Cannot create staging folder: ${stagingDir.path}"))
+            return InstallLockOutcome(
+                PackageResult.Failure(PackageFailure.IoFailure("Cannot create staging folder: ${stagingDir.path}")),
+            )
         }
 
         var movedFinalDir: File? = null
@@ -106,31 +124,29 @@ internal class DefaultPackageInstaller @Inject constructor(
                 expectedKind = expectedKind,
                 trustedKeys = trustedKeys,
             )
-            val staged = when (verifiedResult) {
+            val (staged, nextGen) = when (verifiedResult) {
                 is PackageResult.Success -> verifiedResult.value
-                is PackageResult.Failure -> return verifiedResult
+                is PackageResult.Failure -> return InstallLockOutcome(verifiedResult)
             }
 
             // Persist verified manifest.json and manifest.sig at package root for audit/self-check.
             writeVerifiedRootFile(stagingDir, StrictZipReader.MANIFEST_ENTRY_NAME, staged.rawManifestBytes)?.let {
-                return PackageResult.Failure(it)
+                return InstallLockOutcome(PackageResult.Failure(it))
             }
             writeVerifiedRootFile(stagingDir, StrictZipReader.SIGNATURE_ENTRY_NAME, staged.rawSignatureBytes)?.let {
-                return PackageResult.Failure(it)
+                return InstallLockOutcome(PackageResult.Failure(it))
             }
             fsyncStagingTree(stagingDir)
 
             val kind = staged.manifest.kind
             val kindDir = storage.kindDir(kind)
             if (!kindDir.isDirectory && !kindDir.mkdirs()) {
-                return PackageResult.Failure(PackageFailure.IoFailure("Cannot create target kind dir: ${kindDir.path}"))
+                return InstallLockOutcome(
+                    PackageResult.Failure(PackageFailure.IoFailure("Cannot create target kind dir: ${kindDir.path}")),
+                )
             }
 
             val oldPointer = storage.activePointerLocked(kind)
-            val nextGen = maxOf(
-                oldPointer?.generation ?: 0L,
-                ActivePointerStore.scanHighestGeneration(kindDir),
-            ) + 1L
             val activeDirName = "v${staged.manifest.version}-g$nextGen"
             val finalVersionDir = File(kindDir, activeDirName)
             val oldActiveDir = oldPointer?.let { File(kindDir, it.activeDir) }
@@ -160,22 +176,34 @@ internal class DefaultPackageInstaller @Inject constructor(
                 storage.publishActiveLocked(kind, newPointer)
             }
 
-            if (oldActiveDir != null && oldActiveDir != finalVersionDir) {
-                // Best-effort cleanup after active.json swap; UI observes new state first.
-                storage.deleteRecursivelyBestEffort(oldActiveDir)
+            val oldDirToDeleteOffLock = if (
+                oldActiveDir != null &&
+                oldActiveDir != finalVersionDir &&
+                !storage.isPinnedLocked(kind, oldActiveDir.name)
+            ) {
+                oldActiveDir
+            } else {
+                null
             }
 
             val installedInfo = storage.observeInstalled(kind).value as InstalledPackageState.Installed
-            return PackageResult.Success(installedInfo.info)
+            return InstallLockOutcome(
+                result = PackageResult.Success(installedInfo.info),
+                oldDirToDeleteOffLock = oldDirToDeleteOffLock,
+            )
         } catch (exc: CancellationException) {
             throw exc
         } catch (exc: IOException) {
-            return PackageResult.Failure(
-                mapIoOrNoSpace(exc, requiredBytes = archiveBytes, detail = "Install I/O error"),
+            return InstallLockOutcome(
+                PackageResult.Failure(
+                    mapIoOrNoSpace(exc, requiredBytes = archiveBytes, detail = "Install I/O error"),
+                ),
             )
         } catch (exc: SecurityException) {
-            return PackageResult.Failure(
-                PackageFailure.IoFailure("Install filesystem permission error: ${exc.message}"),
+            return InstallLockOutcome(
+                PackageResult.Failure(
+                    PackageFailure.IoFailure("Install filesystem permission error: ${exc.message}"),
+                ),
             )
         } finally {
             withContext(NonCancellable) {
@@ -200,7 +228,7 @@ internal class DefaultPackageInstaller @Inject constructor(
         stagingDir: File,
         expectedKind: PackageKind?,
         trustedKeys: List<TrustedPublicKey>,
-    ): PackageResult<VerifiedPackageStaging> {
+    ): PackageResult<StagedInstall> {
         val channelToVerify: FileChannel
         val copiedContentZipEarly: Boolean
         if (expectedKind == PackageKind.CONTENT) {
@@ -288,29 +316,74 @@ internal class DefaultPackageInstaller @Inject constructor(
             checkAvailableSpace(
                 manifest = manifest,
                 rawManifestSize = rawManifestBytes.size,
-                retainedArchiveBytes = if (manifest.kind == PackageKind.CONTENT) archiveBytes else 0L,
+                copiedContentZipEarly = copiedContentZipEarly,
+                archiveBytes = archiveBytes,
             )?.let { return@use PackageResult.Failure(it) }
 
-            // If caller left expectedKind == null and manifest.kind == CONTENT, materialize retained
-            // package.zip from the SAME pinned channel and re-verify it before extracting data/*.
-            if (manifest.kind == PackageKind.CONTENT && !copiedContentZipEarly) {
-                val retainedFile = File(stagingDir, CONTENT_ARCHIVE_NAME)
-                copyChannelBounded(pinnedChannel, retainedFile, MAX_RELEASE_FILE_BYTES)?.let {
-                    return@use PackageResult.Failure(it)
+            val kindDir = storage.kindDir(manifest.kind)
+            val oldPointer = storage.activePointerLocked(manifest.kind)
+            val nextGen = maxOf(
+                oldPointer?.generation ?: 0L,
+                ActivePointerStore.scanHighestGeneration(kindDir),
+            ) + 1L
+
+            if (manifest.kind == PackageKind.CONTENT) {
+                val importRes = if (copiedContentZipEarly) {
+                    contentDatabaseImporter.importFromZip(
+                        channel = pinnedChannel,
+                        container = container,
+                        manifest = manifest,
+                        packageVersion = manifest.version,
+                        generation = nextGen,
+                        targetDbFile = File(stagingDir, CONTENT_DB_FILE_NAME),
+                    )
+                } else {
+                    val retainedFile = File(stagingDir, CONTENT_ARCHIVE_NAME)
+                    copyChannelBounded(pinnedChannel, retainedFile, MAX_RELEASE_FILE_BYTES)?.let {
+                        return@use PackageResult.Failure(it)
+                    }
+                    importPinnedContentCopy(
+                        retainedFile = retainedFile,
+                        expectedRawManifest = rawManifestBytes,
+                        expectedRawSig = rawSig,
+                        manifest = manifest,
+                        generation = nextGen,
+                        targetDbFile = File(stagingDir, CONTENT_DB_FILE_NAME),
+                    )
                 }
-                return@use verifyAndExtractPinnedContentCopy(retainedFile, rawManifestBytes, rawSig, expectedKind)
+                return@use when (importRes) {
+                    is PackageResult.Success -> PackageResult.Success(
+                        StagedInstall(
+                            staged = VerifiedPackageStaging(
+                                manifest = manifest,
+                                rawManifestBytes = rawManifestBytes,
+                                rawSignatureBytes = rawSig,
+                                verifiedPublicKeySha256 = verified.verifiedPublicKeySha256,
+                                mapMetadata = null,
+                            ),
+                            generation = nextGen,
+                        ),
+                    )
+
+                    is PackageResult.Failure -> importRes
+                }
             }
 
-            pipeline.verifyAndExtractChannel(pinnedChannel, stagingDir, expectedKind)
+            when (val extractRes = pipeline.verifyAndExtractChannel(pinnedChannel, stagingDir, expectedKind)) {
+                is PackageResult.Success -> PackageResult.Success(StagedInstall(extractRes.value, nextGen))
+                is PackageResult.Failure -> extractRes
+            }
         }
     }
 
-    private suspend fun verifyAndExtractPinnedContentCopy(
+    private suspend fun importPinnedContentCopy(
         retainedFile: File,
         expectedRawManifest: ByteArray,
         expectedRawSig: ByteArray,
-        expectedKind: PackageKind?,
-    ): PackageResult<VerifiedPackageStaging> {
+        manifest: PackageManifest,
+        generation: Long,
+        targetDbFile: File,
+    ): PackageResult<Unit> {
         FileChannel.open(retainedFile.toPath(), StandardOpenOption.READ).use { copiedChannel ->
             val containerRes = StrictZipReader.inspectContainer(copiedChannel, requireAllStored = false)
             val container = when (containerRes) {
@@ -343,7 +416,14 @@ internal class DefaultPackageInstaller @Inject constructor(
                     ),
                 )
             }
-            return pipeline.verifyAndExtractChannel(copiedChannel, retainedFile.parentFile!!, expectedKind)
+            return contentDatabaseImporter.importFromZip(
+                channel = copiedChannel,
+                container = container,
+                manifest = manifest,
+                packageVersion = manifest.version,
+                generation = generation,
+                targetDbFile = targetDbFile,
+            )
         }
     }
 
@@ -370,11 +450,23 @@ internal class DefaultPackageInstaller @Inject constructor(
     private fun checkAvailableSpace(
         manifest: PackageManifest,
         rawManifestSize: Int,
-        retainedArchiveBytes: Long,
+        copiedContentZipEarly: Boolean,
+        archiveBytes: Long,
     ): PackageFailure? {
-        val payloadAlignedBytes = manifest.files.sumOf { alignToBlock(it.sizeBytes) }
+        val payloadAlignedBytes = when (manifest.kind) {
+            PackageKind.CONTENT -> {
+                val totalJsonBytes = manifest.files.sumOf { it.sizeBytes }
+                maxOf(MIN_CONTENT_DB_SPACE_BYTES, alignToBlock(totalJsonBytes * CONTENT_DB_MULTIPLIER))
+            }
+
+            PackageKind.MAP -> manifest.files.sumOf { alignToBlock(it.sizeBytes) }
+        }
         val manifestAlignedBytes = alignToBlock(rawManifestSize.toLong()) + BLOCK_SIZE_BYTES
-        val retainedAligned = if (retainedArchiveBytes > 0L) alignToBlock(retainedArchiveBytes) else 0L
+        val retainedAligned = if (manifest.kind == PackageKind.CONTENT && !copiedContentZipEarly) {
+            alignToBlock(archiveBytes)
+        } else {
+            0L
+        }
         val requiredBytes = payloadAlignedBytes + manifestAlignedBytes + retainedAligned + SAFETY_MARGIN_BYTES
 
         val spaceTarget = ensureExistingSpaceDir()

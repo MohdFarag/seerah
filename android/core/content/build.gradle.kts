@@ -2,6 +2,11 @@ plugins {
     alias(libs.plugins.seerah.android.library)
     alias(libs.plugins.seerah.hilt)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.room3)
+}
+
+room3 {
+    schemaDirectory("$projectDir/schemas")
 }
 
 android {
@@ -28,9 +33,14 @@ dependencies {
     api(project(":core:model"))
     api(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.core)
+    implementation(libs.androidx.room3.common)
+    implementation(libs.androidx.room3.runtime)
+    implementation(libs.androidx.sqlite)
+    implementation(libs.androidx.sqlite.framework)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.tink.android)
+    ksp(libs.androidx.room3.compiler)
 
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)

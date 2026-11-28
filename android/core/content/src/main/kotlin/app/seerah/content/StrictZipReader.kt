@@ -1,6 +1,7 @@
 package app.seerah.content
 
 import java.io.BufferedInputStream
+import java.io.ByteArrayOutputStream
 import java.io.EOFException
 import java.io.File
 import java.io.IOException
@@ -150,6 +151,38 @@ internal object StrictZipReader {
         return PackageResult.Success(bytes)
     }
 
+    suspend fun readVerifiedEntryBytes(
+        channel: FileChannel,
+        entry: ZipEntryMeta,
+        manifestEntry: PackageFileEntry,
+        maxBytes: Int,
+    ): PackageResult<ByteArray> {
+        if (entry.uncompressedSize != manifestEntry.sizeBytes) {
+            return payloadIntegrity(
+                "${entry.path}: declared size ${manifestEntry.sizeBytes} disagrees with ZIP header ${entry.uncompressedSize}.",
+            )
+        }
+        if (manifestEntry.sizeBytes > maxBytes.toLong()) {
+            return invalidContainer(
+                "${entry.path}: entry size ${manifestEntry.sizeBytes} exceeds maximum buffer limit $maxBytes.",
+            )
+        }
+        val out = ByteArrayOutputStream(manifestEntry.sizeBytes.toInt())
+        val checkResult = verifyAndStreamEntry(channel, entry, manifestEntry) { buffer, count ->
+            out.write(buffer, 0, count)
+        }
+        return when (checkResult) {
+            is PackageResult.Success -> PackageResult.Success(out.toByteArray())
+            is PackageResult.Failure -> checkResult
+        }
+    }
+
+    suspend fun verifyEntryBytesDiscarding(
+        channel: FileChannel,
+        entry: ZipEntryMeta,
+        manifestEntry: PackageFileEntry,
+    ): PackageResult<Unit> = verifyAndStreamEntry(channel, entry, manifestEntry) { _, _ -> }
+
     suspend fun extractEntryToFile(
         channel: FileChannel,
         entry: ZipEntryMeta,
@@ -166,27 +199,59 @@ internal object StrictZipReader {
             ?: return invalidContainer("Unsafe payload destination path '${manifestEntry.path}'.")
         canonicalTarget.parentFile?.mkdirs()
 
+        return FileChannel.open(
+            canonicalTarget.toPath(),
+            StandardOpenOption.CREATE_NEW,
+            StandardOpenOption.WRITE,
+        ).use { outChannel ->
+            val streamResult = verifyAndStreamEntry(channel, entry, manifestEntry) { buffer, count ->
+                val writeBuf = ByteBuffer.wrap(buffer, 0, count)
+                while (writeBuf.hasRemaining()) {
+                    outChannel.write(writeBuf)
+                }
+            }
+            when (streamResult) {
+                is PackageResult.Success -> {
+                    outChannel.force(true)
+                    PackageResult.Success(canonicalTarget)
+                }
+
+                is PackageResult.Failure -> {
+                    canonicalTarget.delete()
+                    streamResult
+                }
+            }
+        }
+    }
+
+    private suspend fun verifyAndStreamEntry(
+        channel: FileChannel,
+        entry: ZipEntryMeta,
+        manifestEntry: PackageFileEntry,
+        onChunk: (ByteArray, Int) -> Unit,
+    ): PackageResult<Unit> {
+        if (entry.uncompressedSize != manifestEntry.sizeBytes) {
+            return payloadIntegrity(
+                "${entry.path}: declared size ${manifestEntry.sizeBytes} disagrees with ZIP header ${entry.uncompressedSize}.",
+            )
+        }
+
         val sliceStream = ChannelSliceInputStream(channel, entry.dataOffset, entry.compressedSize)
         return try {
-            streamVerifiedPayload(sliceStream, entry, manifestEntry, canonicalTarget)
+            streamVerifiedPayload(sliceStream, entry, manifestEntry, onChunk)
         } catch (exc: CancellationException) {
-            canonicalTarget.delete()
             throw exc
         } catch (exc: ZipException) {
-            canonicalTarget.delete()
             payloadIntegrity("${entry.path}: malformed compressed stream: ${exc.message}")
         } catch (exc: DataFormatException) {
-            canonicalTarget.delete()
             payloadIntegrity("${entry.path}: invalid DEFLATE data: ${exc.message}")
         } catch (exc: EOFException) {
-            canonicalTarget.delete()
             payloadIntegrity("${entry.path}: truncated ZIP payload stream: ${exc.message}")
         } catch (exc: IOException) {
-            canonicalTarget.delete()
             if (isOutOfSpaceError(exc)) {
                 PackageResult.Failure(PackageFailure.InsufficientStorage(manifestEntry.sizeBytes, 0L))
             } else {
-                PackageResult.Failure(PackageFailure.IoFailure("Failed extracting '${entry.path}': ${exc.message}"))
+                PackageResult.Failure(PackageFailure.IoFailure("Failed streaming '${entry.path}': ${exc.message}"))
             }
         }
     }
@@ -195,8 +260,8 @@ internal object StrictZipReader {
         sliceStream: InputStream,
         entry: ZipEntryMeta,
         manifestEntry: PackageFileEntry,
-        outputFile: File,
-    ): PackageResult<File> {
+        onChunk: (ByteArray, Int) -> Unit,
+    ): PackageResult<Unit> {
         val digest = MessageDigest.getInstance("SHA-256")
         val crc = CRC32()
         val buffer = ByteArray(EXTRACT_BUFFER_BYTES)
@@ -210,45 +275,33 @@ internal object StrictZipReader {
         }
 
         try {
-            FileChannel.open(
-                outputFile.toPath(),
-                StandardOpenOption.CREATE_NEW,
-                StandardOpenOption.WRITE,
-            ).use { outChannel ->
-                while (bytesWritten < manifestEntry.sizeBytes) {
-                    currentCoroutineContext().ensureActive()
-                    val want = minOf(buffer.size.toLong(), manifestEntry.sizeBytes - bytesWritten).toInt()
-                    val read = input.read(buffer, 0, want)
-                    if (read <= 0) {
-                        return payloadIntegrity(
-                            "${entry.path}: stream ended early at $bytesWritten of ${manifestEntry.sizeBytes} bytes.",
-                        ).also { outputFile.delete() }
-                    }
-                    crc.update(buffer, 0, read)
-                    digest.update(buffer, 0, read)
-                    val writeBuf = ByteBuffer.wrap(buffer, 0, read)
-                    while (writeBuf.hasRemaining()) {
-                        outChannel.write(writeBuf)
-                    }
-                    bytesWritten += read
+            while (bytesWritten < manifestEntry.sizeBytes) {
+                currentCoroutineContext().ensureActive()
+                val want = minOf(buffer.size.toLong(), manifestEntry.sizeBytes - bytesWritten).toInt()
+                val read = input.read(buffer, 0, want)
+                if (read <= 0) {
+                    return payloadIntegrity(
+                        "${entry.path}: stream ended early at $bytesWritten of ${manifestEntry.sizeBytes} bytes.",
+                    )
                 }
+                crc.update(buffer, 0, read)
+                digest.update(buffer, 0, read)
+                onChunk(buffer, read)
+                bytesWritten += read
+            }
 
-                // Attempt a 1-byte probe past sizeBytes (including 0-byte entries) to catch trailing data/zip bombs.
-                val extraByte = input.read()
-                if (extraByte != -1) {
-                    outputFile.delete()
-                    return payloadIntegrity(
-                        "${entry.path}: decompressed stream exceeded declared size ${manifestEntry.sizeBytes}.",
-                    )
-                }
-                if (inflater != null && (!inflater.finished() || inflater.bytesRead != entry.compressedSize)) {
-                    outputFile.delete()
-                    return payloadIntegrity(
-                        "${entry.path}: trailing unauthenticated bytes in DEFLATE slice " +
-                            "(finished=${inflater.finished()}, read=${inflater.bytesRead}/${entry.compressedSize}).",
-                    )
-                }
-                outChannel.force(true)
+            // Attempt a 1-byte probe past sizeBytes (including 0-byte entries) to catch trailing data/zip bombs.
+            val extraByte = input.read()
+            if (extraByte != -1) {
+                return payloadIntegrity(
+                    "${entry.path}: decompressed stream exceeded declared size ${manifestEntry.sizeBytes}.",
+                )
+            }
+            if (inflater != null && (!inflater.finished() || inflater.bytesRead != entry.compressedSize)) {
+                return payloadIntegrity(
+                    "${entry.path}: trailing unauthenticated bytes in DEFLATE slice " +
+                        "(finished=${inflater.finished()}, read=${inflater.bytesRead}/${entry.compressedSize}).",
+                )
             }
         } finally {
             inflater?.end()
@@ -256,17 +309,15 @@ internal object StrictZipReader {
 
         val actualCrc = crc.value and UINT32_MASK
         if (actualCrc != entry.crc32) {
-            outputFile.delete()
             return payloadIntegrity("${entry.path}: CRC-32 mismatch (expected ${entry.crc32}, got $actualCrc).")
         }
         val actualSha = digest.digest().toLowerHex()
         if (actualSha != manifestEntry.sha256Hex) {
-            outputFile.delete()
             return payloadIntegrity(
                 "${entry.path}: SHA-256 mismatch (expected ${manifestEntry.sha256Hex}, got $actualSha).",
             )
         }
-        return PackageResult.Success(outputFile)
+        return PackageResult.Success(Unit)
     }
 
     private data class EocdRecord(val totalEntries: Int, val cdSize: Long, val cdOffset: Long)

@@ -35,6 +35,9 @@ enum class InvalidPackageCause {
     /** `data/map.json` failed schema, coordinate, source, or credit checks. */
     INVALID_MAP_METADATA,
 
+    /** Compiled content payload JSON entries failed schema, reference, cycle, or domain checks. */
+    INVALID_CONTENT_PAYLOAD,
+
     /** A PMTiles map archive under `data/` failed header, binary directory, metadata, or Goal 9 checks. */
     INVALID_PMTILES,
 }
