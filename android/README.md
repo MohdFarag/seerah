@@ -13,6 +13,7 @@ android/
   core/domain/   :core:domain, pure-JVM time resolution, certainty notes and follow-along engine (see its README)
   core/map/      :core:map, the map module: the only one that touches MapLibre (see its README)
   core/model/    :core:model, pure-JVM shared domain and map metadata models (see its README)
+  core/userdata/ :core:userdata, local persistence for the explore session and follow-along bookmark (see its README)
   spike/         the finished technical spike, a separate build (reference only)
 ```
 
