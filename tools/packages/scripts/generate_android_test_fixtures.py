@@ -6,6 +6,7 @@ import argparse
 import base64
 import hashlib
 import json
+import shutil
 import sys
 import tempfile
 import zipfile
@@ -19,6 +20,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _PACKAGES_SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_PACKAGES_SRC) not in sys.path:
     sys.path.insert(0, str(_PACKAGES_SRC))
+
+sys.path.insert(0, str(_REPO_ROOT / "tools/content/src"))
 
 from seerah_packages import archive, signing  # noqa: E402
 
@@ -262,23 +265,88 @@ def generate_fixtures(out_dir: Path) -> None:
         )
 
         # 2. valid-content-v1.zip (ZIP_DEFLATED)
-        content_data = work / "valid-content" / "data"
-        content_data.mkdir(parents=True)
-        (content_data / "index.json").write_text(
-            json.dumps({"events": ["taif"], "schema": 1}, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        archive.build_package(
-            kind="content",
-            data_dir=content_data,
+        source = work / "approved-fixture"
+        fixture_docs = {
+            "content.yaml": {
+                "content_schema": 1,
+                "content_version": "synthetic-1",
+                "phases": [{"id": "fixture-phase", "order": 1, "title": "Synthetic phase"}],
+            },
+            "world/places.yaml": {
+                "places": [
+                    {
+                        "id": "fixture-port",
+                        "name": "Synthetic port",
+                        "kind": "port",
+                        "accuracy": "exact",
+                        "coordinates": {"lat": 20.62, "lon": 58.91},
+                        "visibility": "always",
+                        "prominence": 1,
+                        "review": "approved",
+                    }
+                ]
+            },
+            "world/areas.yaml": {"areas": []},
+            "world/sources.yaml": {"sources": []},
+            "years/undated.yaml": {
+                "events": [
+                    {
+                        "id": "fixture-event",
+                        "phase_id": "fixture-phase",
+                        "order": 1,
+                        "kind": "migration",
+                        "depth": "brief",
+                        "title": "Synthetic event",
+                        "visibility": "always",
+                        "prominence": 1,
+                        "date": {"precision": "unknown"},
+                        "where": {
+                            "kind": "single_place",
+                            "place_id": "fixture-port",
+                            "accuracy": "exact",
+                        },
+                        "lead_in": "Fixture start",
+                        "outcome": "Fixture end",
+                        "situations": [
+                            {
+                                "id": "fixture-situation",
+                                "order": 1,
+                                "title": "Fixture situation",
+                                "text_ids": ["fixture-text"],
+                            }
+                        ],
+                        "review": "approved",
+                    }
+                ]
+            },
+            "texts/fixture-event.yaml": {
+                "event_id": "fixture-event",
+                "texts": [
+                    {
+                        "id": "fixture-text",
+                        "kind": "editorial",
+                        "body": "Synthetic fixture text.",
+                        "review": "approved",
+                    }
+                ],
+            },
+        }
+        for name, doc in fixture_docs.items():
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(doc), encoding="utf-8")
+        fixture = archive.pack_content(
+            source=source,
             version=1,
             min_app_version=1,
             key_id=FIXTURE_KEY_ID,
             private_key=private_key,
             source_commit=FIXTURE_SOURCE_COMMIT,
-            out_path=out_dir / "valid-content-v1.zip",
+            allow_dirty=True,
+            out_dir=work,
             created=FIXTURE_CREATED,
         )
+        shutil.copyfile(fixture, out_dir / "valid-content-v1.zip")
 
         # 3. trial-rejected-map-v1.zip
         trial_data = work / "trial-map" / "data"

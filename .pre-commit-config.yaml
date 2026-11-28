@@ -55,6 +55,6 @@ repos:
         name: validate content
         entry: python3 tools/validate_content.py
         language: python
-        additional_dependencies: [jsonschema==4.26.0]
-        files: ^(content/|tools/validate_content\.py)
+        additional_dependencies: [jsonschema==4.26.0, ruamel.yaml==0.19.1]
+        files: ^(content/|tools/content/|tools/validate_content\.py)
         pass_filenames: false

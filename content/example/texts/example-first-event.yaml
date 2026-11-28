@@ -1,0 +1,7 @@
+event_id: example-first-event
+texts:
+  - id: example-text
+    kind: editorial
+    body: |
+      Synthetic sample text for the content tools.
+    review: draft

@@ -17,6 +17,17 @@
 -keep class app.seerah.content.TrustedKeyRingLoader { *; }
 -keep class app.seerah.content.TrustedKeyRingSource { *; }
 -keep class app.seerah.content.IsolatedTinkEd25519Verifier { *; }
+-keep class app.seerah.content.InstalledPackageState { *; }
+-keep class app.seerah.content.InstalledPackageState$* { *; }
+-keep class app.seerah.content.ContentState { *; }
+-keep class app.seerah.content.ContentState$* { *; }
+-keep class app.seerah.content.ContentLookupResult { *; }
+-keep class app.seerah.content.ContentLookupResult$* { *; }
+-keep class app.seerah.content.ContentRepository { *; }
+-keep class app.seerah.content.ContentDatabaseManager { *; }
+-keep class app.seerah.content.DefaultContentRepository { *; }
+-keep class app.seerah.content.RoomContentDatabaseImporter { *; }
+-keep class app.seerah.content.db.AndroidContentDatabaseOpener { *; }
 -keep class app.seerah.content.DefaultPackageStorage { *; }
 -keep class app.seerah.content.DefaultPackageInstaller { *; }
 -keep class app.seerah.content.RawResourceKeyRingProvider { *; }

@@ -31,6 +31,11 @@ updates:
     # above updates the base image.
     ignore:
       - dependency-name: numpy
+  - package-ecosystem: pip
+    directory: /tools/content
+    schedule: { interval: monthly }
+    cooldown: { default-days: 7 }
+    commit-message: { prefix: build }
   # Host-side package signing and verification tool (tools/packages/requirements.txt).
   - package-ecosystem: pip
     directory: /tools/packages

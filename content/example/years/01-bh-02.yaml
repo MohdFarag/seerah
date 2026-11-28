@@ -1,0 +1,15 @@
+calendar: pre-hijra
+year: 2
+events:
+  - id: example-first-event
+    phase_id: example-phase
+    order: 1
+    title: Synthetic first event
+    kind: migration
+    depth: deep
+    date: {precision: year}
+    where: {kind: single_place, place_id: example-port, accuracy: general}
+    visibility: always
+    prominence: 1
+    event_text_ids: [example-text]
+    review: draft

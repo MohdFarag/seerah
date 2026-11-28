@@ -40,6 +40,11 @@ internal class DefaultPackageStorage @Inject constructor(
     private var hydrated = false
 
     private val activePointers = EnumMap<PackageKind, ActivePointer>(PackageKind::class.java)
+    private val pinnedDirCounts = EnumMap<PackageKind, MutableMap<String, Int>>(PackageKind::class.java).apply {
+        for (kind in PackageKind.entries) {
+            put(kind, HashMap())
+        }
+    }
     private val stateFlows = EnumMap<PackageKind, MutableStateFlow<InstalledPackageState>>(
         PackageKind::class.java,
     ).apply {
@@ -112,7 +117,7 @@ internal class DefaultPackageStorage @Inject constructor(
                     }
                     val keepDirName = activePointers[kind]?.activeDir
                     for (child in kindDir.listFiles().orEmpty()) {
-                        if (child.isDirectory && child.name != keepDirName) {
+                        if (child.isDirectory && child.name != keepDirName && !isPinnedLocked(kind, child.name)) {
                             deleteRecursivelyBestEffort(child)
                         }
                     }
@@ -136,6 +141,35 @@ internal class DefaultPackageStorage @Inject constructor(
     internal fun kindDir(kind: PackageKind): File = File(contentRootDir, kind.wireName)
 
     internal fun stagingRootDir(): File = File(contentRootDir, STAGING_DIR_NAME)
+
+    internal fun pinActiveDirLocked(kind: PackageKind, expectedVersion: Int, expectedGeneration: Long): String? {
+        val active = activePointers[kind] ?: return null
+        if (active.version != expectedVersion || active.generation != expectedGeneration) return null
+        pinVersionDirLocked(kind, active.activeDir)
+        return active.activeDir
+    }
+
+    internal fun pinVersionDirLocked(kind: PackageKind, dirName: String) {
+        val counts = pinnedDirCounts.getValue(kind)
+        counts[dirName] = (counts[dirName] ?: 0) + 1
+    }
+
+    internal fun unpinVersionDirLocked(kind: PackageKind, dirName: String) {
+        val counts = pinnedDirCounts.getValue(kind)
+        val remaining = (counts[dirName] ?: 0) - 1
+        if (remaining > 0) {
+            counts[dirName] = remaining
+        } else {
+            counts.remove(dirName)
+        }
+    }
+
+    internal fun isPinnedLocked(kind: PackageKind, dirName: String): Boolean =
+        (pinnedDirCounts[kind]?.get(dirName) ?: 0) > 0
+
+    internal fun quarantineActiveLocked(kind: PackageKind, message: String) {
+        quarantineCorruptPointer(kind, File(kindDir(kind), ActivePointerStore.ACTIVE_FILE_NAME), message)
+    }
 
     internal fun publishActiveLocked(kind: PackageKind, pointer: ActivePointer) {
         val versionDir = File(kindDir(kind), pointer.activeDir)
@@ -205,15 +239,17 @@ internal class DefaultPackageStorage @Inject constructor(
     private fun hasRequiredActiveFiles(kind: PackageKind, versionDir: File): Boolean {
         val manifestFile = File(versionDir, StrictZipReader.MANIFEST_ENTRY_NAME)
         val sigFile = File(versionDir, StrictZipReader.SIGNATURE_ENTRY_NAME)
-        val dataDir = File(versionDir, DATA_DIR_NAME)
-        if (!versionDir.isDirectory || !manifestFile.isFile || !sigFile.isFile || !dataDir.isDirectory) {
+        if (!versionDir.isDirectory || !manifestFile.isFile || !sigFile.isFile) {
             return false
         }
         return when (kind) {
+            // content.db is disposable and automatically rebuilt from package.zip if missing or corrupt.
             PackageKind.CONTENT -> File(versionDir, CONTENT_ARCHIVE_NAME).isFile
 
             PackageKind.MAP -> {
-                File(dataDir, MAP_JSON_NAME).isFile &&
+                val dataDir = File(versionDir, DATA_DIR_NAME)
+                dataDir.isDirectory &&
+                    File(dataDir, MAP_JSON_NAME).isFile &&
                     File(dataDir, "base.pmtiles").isFile &&
                     File(dataDir, "relief.pmtiles").isFile
             }

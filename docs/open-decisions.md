@@ -29,6 +29,8 @@ From PRD v0.2 §13 and the open items elsewhere in it. **Don't hard-code an answ
 
 ## Decided
 
+- The owner approved D1 and D3 on 2026-11-28. Phase 1 migrates the public example to YAML and keeps legacy JSON validation available. Phase 2 keeps the pure-JVM domain module dependent only on the model module ([specification](design/v1-content-pipeline-and-domain-spec.md)).
+
 - v1 map pipeline: [specification](design/v1-map-pipeline-spec.md), owner decisions D1–D7 approved 2026-11-23. Coastal cleanup edits (`remove-land` and `fill-water`, their own schema, imagery or dated-data sources), the production `coverage.yaml` and `map.json` (`tile_schema: 1`) formats, and host-side package signing in `tools/packages/`. The values in `coverage.yaml` stay open (above).
 - v1 Android package verification, storage and `tile_schema: 1` map bridge: [specification](design/v1-android-package-and-map-spec.md), owner decisions `D1`, `D2`, and `D5` approved 2026-11-28 (`D3` handled as an internal implementation choice; `D4` deferred until content exists). Offline Ed25519/ZIP/PMTiles verification and atomic `<filesDir>/content/` storage live in `:core:content`, future updates in `:core:update`, and cold starts use offline `active.json` without re-verifying signatures or hashing PMTiles.
 - Pre-Hijra dating: canonical Hijri axis (`1 BH, 2 BH…` / `1 AH…`, no year zero) plus an explicit, optional, owner-reviewed `prophethood_year` (السنة من البعثة) shown alongside pre-Hijra dates when sourced, never computed by formula; a display-priority toggle (Hijri default) may be added in a future release (owner, 2026-11-22; [ADR 0005](adr/0005-content-model-exploration-and-story.md)).

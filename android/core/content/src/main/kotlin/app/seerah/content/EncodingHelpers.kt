@@ -1,8 +1,11 @@
 package app.seerah.content
 
+import android.database.sqlite.SQLiteFullException
 import android.system.ErrnoException
 import android.system.OsConstants
+import androidx.sqlite.SQLiteException
 import java.io.EOFException
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -17,6 +20,7 @@ internal const val FOUR_MIB_BYTES: Int = 4_194_304
 internal const val MAX_RELEASE_FILE_BYTES: Long = 2_147_483_647L
 internal const val SHA256_HEX_LENGTH: Int = 64
 internal const val RAW_ED25519_SIGNATURE_BYTES: Int = 64
+internal const val CONTENT_DB_FILE_NAME: String = "content.db"
 
 private const val NIBBLE_MASK = 0x0F
 private const val HIGH_NIBBLE_SHIFT = 4
@@ -78,6 +82,39 @@ internal fun isOutOfSpaceError(error: Throwable): Boolean {
         cursor = cursor.cause
     }
     return false
+}
+
+internal fun isSqliteFullError(error: Throwable): Boolean {
+    if (isOutOfSpaceError(error)) return true
+    var cursor: Throwable? = error
+    while (cursor != null) {
+        if (cursor is SQLiteFullException) return true
+        val msg = cursor.message
+        if (msg != null &&
+            (
+                msg.contains("SQLITE_FULL", ignoreCase = true) ||
+                    msg.contains("database or disk is full", ignoreCase = true) ||
+                    msg.contains("error code 13", ignoreCase = true) ||
+                    msg.contains("code: 13", ignoreCase = true)
+                )
+        ) {
+            return true
+        }
+        if (cursor is SQLiteException && msg?.contains("full", ignoreCase = true) == true) {
+            return true
+        }
+        cursor = cursor.cause
+    }
+    return false
+}
+
+internal fun deleteSqliteFiles(dbFile: File) {
+    for (suffix in listOf("", "-journal", "-wal", "-shm")) {
+        val candidate = File("${dbFile.path}$suffix")
+        if (candidate.exists()) {
+            candidate.delete()
+        }
+    }
 }
 
 /**

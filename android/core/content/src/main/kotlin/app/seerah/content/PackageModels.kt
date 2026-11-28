@@ -66,7 +66,8 @@ data class PackageManifest(
  * @property keyId Signing key identifier recorded at installation time.
  * @property publicKeySha256 Lowercase 64-hex SHA-256 digest of the raw 32-byte signing key.
  * @property rootDirPath Absolute path to the active `v<version>-g<gen>/` version directory.
- * @property dataDirPath Absolute path to the extracted `data/` directory inside [rootDirPath].
+ * @property dataDirPath Absolute path to the `data/` directory inside [rootDirPath] (populated for `map`
+ * packages; `content` packages stream directly from [retainedArchivePath] into disposable `content.db`).
  * @property retainedArchivePath Absolute path to retained `package.zip` for `content` packages, or null for `map`.
  */
 data class InstalledPackageInfo(
