@@ -59,11 +59,28 @@ def keypair(tmp_path: Path) -> Keypair:
     )
 
 
+def _content_data():
+    docs = {name: {name: []} for name in archive.CONTENT_ENTRIES}
+    docs["meta"] = {
+        "content_schema": 1,
+        "content_version": "fixture",
+        "phases": [{"id": "fixture", "order": 1, "title": "Synthetic"}],
+        "min_timeline_point": None,
+        "max_timeline_point": None,
+    }
+    return {f"data/{name}.json": json.dumps(doc).encode() for name, doc in docs.items()}
+
+
+def _write_content_data(data):
+    for name, payload in _content_data().items():
+        (data / Path(name).name).write_bytes(payload)
+
+
 @pytest.fixture
 def content_package(tmp_path: Path, keypair: Keypair) -> ContentPackage:
     data = tmp_path / "content-data"
     data.mkdir()
-    (data / "ok.json").write_bytes(b"{}")
+    _write_content_data(data)
     path = archive.build_package(
         kind="content",
         data_dir=data,
@@ -551,7 +568,8 @@ def _content_manifest(key_id: str) -> dict:
     return {
         "created": CREATED,
         "files": [
-            {"path": "data/item.json", "size": 2, "sha256": hashlib.sha256(b"{}").hexdigest()}
+            {"path": name, "size": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+            for name, payload in _content_data().items()
         ],
         "key_id": key_id,
         "kind": "content",
@@ -579,7 +597,7 @@ def _signed_content_zip(path: Path, manifest: dict, private_key) -> Path:
         [
             ("manifest.json", raw),
             ("manifest.sig", signing.sign_bytes(private_key, raw)),
-            ("data/item.json", b"{}"),
+            *_content_data().items(),
         ],
     )
 
@@ -605,7 +623,7 @@ def test_oversized_signature_is_rejected(tmp_path: Path, keypair: Keypair, conte
         [
             ("manifest.json", content_package.raw_manifest),
             ("manifest.sig", content_package.raw_sig + b"\x00"),
-            ("data/ok.json", b"{}"),
+            ("data/areas.json", b"{}"),
         ],
     )
 
@@ -621,7 +639,7 @@ def test_oversized_map_manifest_is_rejected_before_signature_check(
         [
             ("manifest.json", b" " * (archive.MAX_MAP_MANIFEST_BYTES + 1)),
             ("manifest.sig", b"\x00" * 64),
-            ("data/ok.json", b"{}"),
+            ("data/areas.json", b"{}"),
         ],
     )
 
@@ -635,7 +653,7 @@ def test_oversized_map_manifest_is_rejected_before_signature_check(
 def _content_zip(tmp_path: Path, keypair: Keypair, compress_type: int) -> Path:
     data = tmp_path / f"content-{compress_type}"
     data.mkdir()
-    (data / "content.db").write_bytes(b"sqlite-content" * 100)
+    _write_content_data(data)
     return archive.build_package(
         kind="content",
         data_dir=data,
@@ -777,12 +795,11 @@ def _case(name: str, build: Callable[[Path, ContentPackage], None], message: str
     return pytest.param(build, message, id=name)
 
 
-def _entries(pkg: ContentPackage, data: bytes = b"{}") -> list[tuple[str, bytes]]:
-    return [
-        ("manifest.json", pkg.raw_manifest),
-        ("manifest.sig", pkg.raw_sig),
-        ("data/ok.json", data),
-    ]
+def _entries(pkg: ContentPackage, data: bytes | None = None) -> list[tuple[str, bytes]]:
+    entries = _content_data()
+    if data is not None:
+        entries["data/areas.json"] = data.ljust(len(entries["data/areas.json"]))
+    return [("manifest.json", pkg.raw_manifest), ("manifest.sig", pkg.raw_sig), *entries.items()]
 
 
 @pytest.mark.parametrize(
@@ -797,14 +814,18 @@ def _entries(pkg: ContentPackage, data: bytes = b"{}") -> list[tuple[str, bytes]
         _case(
             "symlink-mode",
             lambda d, p: _write_zip(
-                d, _entries(p), **{"data/ok.json": {"external_attr": (stat.S_IFLNK | 0o777) << 16}}
+                d,
+                _entries(p),
+                **{"data/areas.json": {"external_attr": (stat.S_IFLNK | 0o777) << 16}},
             ),
             "non-regular Unix file mode",
         ),
         _case(
             "fifo-mode",
             lambda d, p: _write_zip(
-                d, _entries(p), **{"data/ok.json": {"external_attr": (stat.S_IFIFO | 0o600) << 16}}
+                d,
+                _entries(p),
+                **{"data/areas.json": {"external_attr": (stat.S_IFIFO | 0o600) << 16}},
             ),
             "non-regular Unix file mode",
         ),
@@ -813,14 +834,14 @@ def _entries(pkg: ContentPackage, data: bytes = b"{}") -> list[tuple[str, bytes]
             lambda d, p: _write_zip(
                 d,
                 _entries(p),
-                **{"data/ok.json": {"external_attr": archive.ZIP_REGULAR_FILE_ATTR | 0x10}},
+                **{"data/areas.json": {"external_attr": archive.ZIP_REGULAR_FILE_ATTR | 0x10}},
             ),
             "directory entry refused",
         ),
         _case(
             "extra-field",
             lambda d, p: _write_zip(
-                d, _entries(p), **{"data/ok.json": {"extra": b"\x99\x99\x02\x00ab"}}
+                d, _entries(p), **{"data/areas.json": {"extra": b"\x99\x99\x02\x00ab"}}
             ),
             "extra fields",
         ),
@@ -877,7 +898,7 @@ def test_verify_rejects_duplicate_entry_names(
 ):
     with pytest.warns(UserWarning, match="Duplicate name"):
         dup = _write_zip(
-            tmp_path / "dup.zip", [*_entries(content_package), ("data/ok.json", b"{}")]
+            tmp_path / "dup.zip", [*_entries(content_package), ("data/areas.json", b"{}")]
         )
 
     with pytest.raises(PackageError, match="duplicate entry names"):
@@ -902,3 +923,58 @@ def test_content_manifest_must_not_carry_map_provenance(content_package: Content
 
     with pytest.raises(PackageError, match="manifest.json"):
         archive.validate_manifest_dict(manifest)
+
+
+@pytest.mark.parametrize("change", ["missing", "extra", "wrong-schema", "wrong-document"])
+def test_content_package_rejects_invalid_payload(tmp_path, keypair, change):
+    data = tmp_path / "data"
+    data.mkdir()
+    _write_content_data(data)
+    if change == "missing":
+        (data / "texts.json").unlink()
+    elif change == "extra":
+        (data / "extra.json").write_text("{}")
+    elif change == "wrong-document":
+        (data / "events.json").write_text('{"texts":[]}')
+    else:
+        path = data / "meta.json"
+        path.write_text(json.dumps(json.loads(path.read_text()) | {"content_schema": 2}))
+    with pytest.raises(PackageError):
+        archive.build_package(
+            kind="content",
+            data_dir=data,
+            version=1,
+            min_app_version=1,
+            key_id=keypair.key_id,
+            private_key=keypair.private_key,
+            source_commit=SOURCE_COMMIT,
+            out_path=tmp_path / "invalid.zip",
+        )
+    assert not (tmp_path / "invalid.zip").exists()
+
+
+def test_pack_content_cli_refuses_draft_example(tmp_path, keypair, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "read_passphrase", lambda *args, **kwargs: PASSPHRASE)
+    result = cli.main(
+        [
+            "pack-content",
+            "--source",
+            str(Path(__file__).resolve().parents[3] / "content/example"),
+            "--version",
+            "1",
+            "--min-app-version",
+            "1",
+            "--key",
+            str(keypair.pem),
+            "--key-id",
+            keypair.key_id,
+            "--out",
+            str(tmp_path),
+            "--allow-dirty",
+            "--source-commit",
+            SOURCE_COMMIT,
+        ]
+    )
+    assert result == 1
+    assert "approval" in capsys.readouterr().err
+    assert not (tmp_path / "seerah-content-1.zip").exists()

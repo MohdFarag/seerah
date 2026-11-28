@@ -1,0 +1,1781 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Seerah v1 package",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/meta"
+    },
+    {
+      "$ref": "#/$defs/sources"
+    },
+    {
+      "$ref": "#/$defs/areas"
+    },
+    {
+      "$ref": "#/$defs/places"
+    },
+    {
+      "$ref": "#/$defs/texts"
+    },
+    {
+      "$ref": "#/$defs/routes"
+    },
+    {
+      "$ref": "#/$defs/stories"
+    },
+    {
+      "$ref": "#/$defs/events"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lat": {
+          "type": "number",
+          "minimum": -85.0511287798066,
+          "maximum": 85.0511287798066
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "required": [
+        "lat",
+        "lon"
+      ]
+    },
+    "time": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "year"
+            }
+          },
+          "required": [
+            "precision"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "month"
+            },
+            "month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          },
+          "required": [
+            "precision",
+            "month"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "day"
+            },
+            "month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "day": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            }
+          },
+          "required": [
+            "precision",
+            "month",
+            "day"
+          ]
+        }
+      ]
+    },
+    "date": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "year"
+            },
+            "calendar": {
+              "enum": [
+                "hijri",
+                "pre-hijra"
+              ]
+            },
+            "year": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "approximate": {
+              "type": "boolean"
+            },
+            "note": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "prophethood_year": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "precision",
+            "calendar",
+            "year"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "month"
+            },
+            "calendar": {
+              "enum": [
+                "hijri",
+                "pre-hijra"
+              ]
+            },
+            "year": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "approximate": {
+              "type": "boolean"
+            },
+            "note": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "prophethood_year": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          },
+          "required": [
+            "precision",
+            "month",
+            "calendar",
+            "year"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "day"
+            },
+            "calendar": {
+              "enum": [
+                "hijri",
+                "pre-hijra"
+              ]
+            },
+            "year": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "approximate": {
+              "type": "boolean"
+            },
+            "note": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "prophethood_year": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "day": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            }
+          },
+          "required": [
+            "precision",
+            "month",
+            "day",
+            "calendar",
+            "year"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "unknown"
+            },
+            "calendar": {
+              "enum": [
+                "hijri",
+                "pre-hijra"
+              ]
+            },
+            "approximate": {
+              "type": "boolean"
+            },
+            "note": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "prophethood_year": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "precision"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "prophethood_year"
+            ]
+          },
+          "then": {
+            "required": [
+              "calendar"
+            ],
+            "properties": {
+              "calendar": {
+                "const": "pre-hijra"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "timeline": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "year"
+            },
+            "calendar": {
+              "enum": [
+                "hijri",
+                "pre-hijra"
+              ]
+            },
+            "year": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "precision",
+            "calendar",
+            "year"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "month"
+            },
+            "calendar": {
+              "enum": [
+                "hijri",
+                "pre-hijra"
+              ]
+            },
+            "year": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          },
+          "required": [
+            "precision",
+            "calendar",
+            "year",
+            "month"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "precision": {
+              "const": "day"
+            },
+            "calendar": {
+              "enum": [
+                "hijri",
+                "pre-hijra"
+              ]
+            },
+            "year": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "month": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "day": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            }
+          },
+          "required": [
+            "precision",
+            "calendar",
+            "year",
+            "month",
+            "day"
+          ]
+        }
+      ]
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "skippable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "title"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "quran",
+            "hadith",
+            "seerah-book",
+            "atlas",
+            "shamail",
+            "commentary"
+          ]
+        },
+        "work": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "edition": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://[^ /]+",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "work"
+      ]
+    },
+    "place": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "settlement",
+            "mountain",
+            "valley",
+            "well",
+            "house",
+            "mosque",
+            "cave",
+            "port",
+            "other"
+          ]
+        },
+        "accuracy": {
+          "enum": [
+            "exact",
+            "general",
+            "unknown"
+          ]
+        },
+        "coordinates": {
+          "$ref": "#/$defs/point"
+        },
+        "off_map": {
+          "type": "boolean"
+        },
+        "visibility": {
+          "enum": [
+            "always",
+            "in-context"
+          ]
+        },
+        "prominence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start": {
+                "oneOf": [
+                  {
+                    "const": "baseline"
+                  },
+                  {
+                    "$ref": "#/$defs/timeline"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "exists": {
+                "type": "boolean"
+              },
+              "kind_override": {
+                "enum": [
+                  "settlement",
+                  "mountain",
+                  "valley",
+                  "well",
+                  "house",
+                  "mosque",
+                  "cave",
+                  "port",
+                  "other"
+                ]
+              }
+            },
+            "required": [
+              "start",
+              "name",
+              "exists"
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "accuracy",
+        "visibility",
+        "prominence",
+        "states"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "accuracy"
+            ],
+            "properties": {
+              "accuracy": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "coordinates": false
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "accuracy"
+                  ],
+                  "properties": {
+                    "accuracy": {
+                      "const": "unknown"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "off_map"
+                  ],
+                  "properties": {
+                    "off_map": {
+                      "const": true
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "then": {
+            "required": [
+              "coordinates"
+            ]
+          }
+        }
+      ]
+    },
+    "area": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label_point": {
+          "$ref": "#/$defs/point"
+        },
+        "polygon_ring": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          },
+          "minItems": 4
+        },
+        "off_map": {
+          "type": "boolean"
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start": {
+                "oneOf": [
+                  {
+                    "const": "baseline"
+                  },
+                  {
+                    "$ref": "#/$defs/timeline"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "pattern": "\\S"
+              },
+              "exists": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "start",
+              "name",
+              "exists"
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "states"
+      ]
+    },
+    "where": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "unknown"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "single_place"
+            },
+            "place_id": {
+              "$ref": "#/$defs/id"
+            },
+            "accuracy": {
+              "enum": [
+                "exact",
+                "general"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "place_id",
+            "accuracy"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "multi_place"
+            },
+            "place_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "minItems": 1
+            },
+            "accuracy": {
+              "enum": [
+                "exact",
+                "general"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "place_ids",
+            "accuracy"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "area"
+            },
+            "area_id": {
+              "$ref": "#/$defs/id"
+            },
+            "accuracy": {
+              "const": "general"
+            }
+          },
+          "required": [
+            "kind",
+            "area_id",
+            "accuracy"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "route"
+            },
+            "accuracy": {
+              "enum": [
+                "exact",
+                "general"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "accuracy"
+          ]
+        }
+      ]
+    },
+    "situation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "text_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "place": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "accuracy": {
+                  "enum": [
+                    "exact",
+                    "general"
+                  ]
+                },
+                "place_id": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "required": [
+                "accuracy",
+                "place_id"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "accuracy": {
+                  "const": "unknown"
+                }
+              },
+              "required": [
+                "accuracy"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "title",
+        "text_ids"
+      ]
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "cause-of",
+            "result-of",
+            "continues"
+          ]
+        },
+        "target_event_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "type",
+        "target_event_id"
+      ]
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "documented": {
+          "type": "boolean"
+        },
+        "stations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 2
+        },
+        "coordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          },
+          "minItems": 2
+        },
+        "station_waypoint_indices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 2
+        },
+        "accuracy_note": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "distance_km": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "distance_basis": {
+          "enum": [
+            "source",
+            "estimate"
+          ]
+        },
+        "days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "event_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "documented",
+        "stations",
+        "event_id"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "documented"
+            ],
+            "properties": {
+              "documented": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "station_waypoint_indices",
+              "coordinates",
+              "accuracy_note"
+            ]
+          },
+          "else": {
+            "properties": {
+              "station_waypoint_indices": false,
+              "coordinates": false,
+              "accuracy_note": false
+            }
+          }
+        }
+      ],
+      "dependentRequired": {
+        "distance_basis": [
+          "distance_km"
+        ],
+        "distance_km": [
+          "distance_basis"
+        ]
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "phase_id": {
+          "$ref": "#/$defs/id"
+        },
+        "parent_id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "enum": [
+            "call",
+            "opposition",
+            "pledge",
+            "migration",
+            "founding",
+            "legislation",
+            "expedition"
+          ]
+        },
+        "depth": {
+          "enum": [
+            "deep",
+            "medium",
+            "brief"
+          ]
+        },
+        "expedition_role": {
+          "enum": [
+            "prophet-led",
+            "dispatched"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "date": {
+          "$ref": "#/$defs/date"
+        },
+        "where": {
+          "$ref": "#/$defs/where"
+        },
+        "visibility": {
+          "enum": [
+            "always",
+            "in-context"
+          ]
+        },
+        "prominence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "lead_in": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "outcome": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "situations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/situation"
+          }
+        },
+        "event_text_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relation"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "phase_id",
+        "order",
+        "title",
+        "date",
+        "kind",
+        "where",
+        "visibility",
+        "prominence",
+        "depth"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "expedition_role"
+            ]
+          },
+          "then": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "expedition"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_work_id": {
+          "$ref": "#/$defs/id"
+        },
+        "locator": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://[^ /]+",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "source_work_id",
+        "locator"
+      ]
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "quran",
+            "hadith",
+            "athar",
+            "seerah-narration",
+            "editorial"
+          ]
+        },
+        "body": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "source": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/citation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "excerpt_of": {
+          "$ref": "#/$defs/id"
+        },
+        "explanation": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "explanation_source": {
+          "$ref": "#/$defs/citation"
+        },
+        "event_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "body",
+        "event_id"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "editorial"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "type": "null"
+              },
+              "excerpt_of": false
+            }
+          },
+          "else": {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      ],
+      "dependentRequired": {
+        "explanation_source": [
+          "explanation"
+        ]
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "camera": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "const": "frame"
+                },
+                "shot": {
+                  "enum": [
+                    "wide",
+                    "medium",
+                    "close"
+                  ]
+                },
+                "transition": {
+                  "enum": [
+                    "auto",
+                    "cut",
+                    "fly",
+                    "pan"
+                  ]
+                },
+                "targets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^(place|area|event|route):[a-z0-9]+(-[a-z0-9]+)*$"
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "mode",
+                "shot",
+                "transition",
+                "targets"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "const": "follow"
+                },
+                "shot": {
+                  "enum": [
+                    "wide",
+                    "medium",
+                    "close"
+                  ]
+                },
+                "transition": {
+                  "enum": [
+                    "auto",
+                    "cut",
+                    "fly",
+                    "pan"
+                  ]
+                },
+                "route_id": {
+                  "$ref": "#/$defs/id"
+                },
+                "from_station_index": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "to_station_index": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "mode",
+                "route_id",
+                "from_station_index",
+                "to_station_index"
+              ]
+            }
+          ]
+        },
+        "time": {
+          "oneOf": [
+            {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "precision": {
+                      "const": "year"
+                    },
+                    "calendar": {
+                      "enum": [
+                        "hijri",
+                        "pre-hijra"
+                      ]
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "mode": {
+                      "const": "at"
+                    }
+                  },
+                  "required": [
+                    "precision",
+                    "calendar",
+                    "year",
+                    "mode"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "precision": {
+                      "const": "month"
+                    },
+                    "calendar": {
+                      "enum": [
+                        "hijri",
+                        "pre-hijra"
+                      ]
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "month": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12
+                    },
+                    "mode": {
+                      "const": "at"
+                    }
+                  },
+                  "required": [
+                    "precision",
+                    "calendar",
+                    "year",
+                    "month",
+                    "mode"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "precision": {
+                      "const": "day"
+                    },
+                    "calendar": {
+                      "enum": [
+                        "hijri",
+                        "pre-hijra"
+                      ]
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "month": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12
+                    },
+                    "day": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 31
+                    },
+                    "mode": {
+                      "const": "at"
+                    }
+                  },
+                  "required": [
+                    "precision",
+                    "calendar",
+                    "year",
+                    "month",
+                    "day",
+                    "mode"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "const": "time_lapse"
+                },
+                "from": {
+                  "$ref": "#/$defs/timeline"
+                },
+                "to": {
+                  "$ref": "#/$defs/timeline"
+                }
+              },
+              "required": [
+                "mode",
+                "from",
+                "to"
+              ]
+            }
+          ]
+        },
+        "highlight": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(place|area|event|route):[a-z0-9]+(-[a-z0-9]+)*$"
+          }
+        },
+        "focus_mode": {
+          "type": "boolean"
+        },
+        "reveal": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(place|area|event|route):[a-z0-9]+(-[a-z0-9]+)*$"
+          }
+        },
+        "draw_route": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "route_id": {
+              "$ref": "#/$defs/id"
+            },
+            "from_station_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "to_station_index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "route_id",
+            "from_station_index",
+            "to_station_index"
+          ]
+        },
+        "show_movement": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from_place_id": {
+              "$ref": "#/$defs/id"
+            },
+            "to_place_id": {
+              "$ref": "#/$defs/id"
+            },
+            "route_id": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "required": [
+            "from_place_id",
+            "to_place_id"
+          ]
+        },
+        "show_area": {
+          "$ref": "#/$defs/id"
+        },
+        "panel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title_card": {
+              "type": "boolean"
+            },
+            "text_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "linking_sentence": {
+              "type": "string",
+              "pattern": "\\S"
+            },
+            "explore_here": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "title_card"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "camera",
+        "time",
+        "panel"
+      ]
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "event_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "title",
+        "steps"
+      ]
+    },
+    "chapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "phase_id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "scenes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scene"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "title",
+        "scenes"
+      ]
+    },
+    "story": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "chapters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/chapter"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "chapters"
+      ]
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "content_schema": {
+          "const": 1
+        },
+        "content_version": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/phase"
+          },
+          "minItems": 1
+        },
+        "min_timeline_point": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "calendar": {
+                  "enum": [
+                    "hijri",
+                    "pre-hijra"
+                  ]
+                },
+                "year": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "calendar",
+                "year"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_timeline_point": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "calendar": {
+                  "enum": [
+                    "hijri",
+                    "pre-hijra"
+                  ]
+                },
+                "year": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "calendar",
+                "year"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "content_schema",
+        "content_version",
+        "phases",
+        "min_timeline_point",
+        "max_timeline_point"
+      ]
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      },
+      "required": [
+        "sources"
+      ]
+    },
+    "areas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "areas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/area"
+          }
+        }
+      },
+      "required": [
+        "areas"
+      ]
+    },
+    "places": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "places": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/place"
+          }
+        }
+      },
+      "required": [
+        "places"
+      ]
+    },
+    "texts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "texts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        }
+      },
+      "required": [
+        "texts"
+      ]
+    },
+    "routes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/route"
+          }
+        }
+      },
+      "required": [
+        "routes"
+      ]
+    },
+    "stories": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/story"
+          }
+        }
+      },
+      "required": [
+        "stories"
+      ]
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/event"
+          }
+        }
+      },
+      "required": [
+        "events"
+      ]
+    }
+  }
+}

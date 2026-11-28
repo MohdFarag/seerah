@@ -21,7 +21,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-dev.txt
+          cache-dependency-path: |
+            requirements-dev.txt
+            tools/content/requirements.in
       - run: pip install -r requirements-dev.txt
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -50,4 +52,4 @@ jobs:
           cache-dependency-path: tools/packages/requirements.txt
       - run: pip install --require-hashes -r tools/packages/requirements.txt
       - name: Package signing and archive tests
-        run: PYTHONPATH=tools/packages/src python3 -m pytest -c tools/packages/pyproject.toml tools/packages/tests
+        run: PYTHONPATH=tools/packages/src:tools/content/src python3 -m pytest -c tools/packages/pyproject.toml tools/packages/tests

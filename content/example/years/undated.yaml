@@ -1,0 +1,13 @@
+events:
+  - id: example-second-event
+    phase_id: example-phase
+    order: 2
+    title: Synthetic second event
+    kind: founding
+    depth: brief
+    date: {precision: unknown}
+    where: {kind: unknown}
+    related: [{target_event_id: example-first-event, type: continues}]
+    visibility: in-context
+    prominence: 2
+    review: draft

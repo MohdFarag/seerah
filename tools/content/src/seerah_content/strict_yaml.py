@@ -63,5 +63,13 @@ def load(path: Path) -> object:
         return value
     except ContentSourceError:
         raise
-    except (OSError, YAMLError, ValueError, RecursionError, OverflowError, KeyError) as error:
+    except (
+        OSError,
+        YAMLError,
+        ValueError,
+        RecursionError,
+        OverflowError,
+        LookupError,
+        TypeError,
+    ) as error:
         raise ContentSourceError(path, str(error)) from error

@@ -7,6 +7,7 @@ import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.Signature
+import java.util.zip.ZipInputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -59,7 +60,12 @@ class PackageStorageAndInstallerTest {
         val commit40 = "a".repeat(40)
         val entries = ArrayList<Pair<String, ByteArray>>()
         if (kind == PackageKind.CONTENT) {
-            entries.add("data/a.json" to """{"v":$version}""".toByteArray(StandardCharsets.UTF_8))
+            val fixture = requireNotNull(javaClass.getResourceAsStream("/fixtures/valid-content-v1.zip"))
+            ZipInputStream(fixture).use { zip ->
+                generateSequence { zip.nextEntry }.filter { it.name.startsWith("data/") }.forEach { entry ->
+                    entries.add(entry.name to zip.readBytes())
+                }
+            }
         } else {
             val mapJson = """
                 {

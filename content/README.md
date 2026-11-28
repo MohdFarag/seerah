@@ -6,14 +6,22 @@ The **content itself** (the v1 index of 26 draft events, event files, and everyt
 
 ```text
 content/
-  schema/content.schema.json   entity definitions (phase, event, situation, text, source, place, display date)
-  schema/manifest.schema.json  shared signed package manifest schema (kind: "content" | "map")
-  example/                     a synthetic example in the same layout as seerah-content (not Seerah content); tests the validator
+  schema/content-source.schema.json   YAML authoring documents
+  schema/content-package.schema.json  eight compiled JSON documents
+  schema/content.schema.json          legacy JSON index during migration
+  schema/manifest.schema.json         shared signed package manifest
+  example/content.yaml                synthetic draft corpus and phases
+  example/world/                      baseline places, areas and sources
+  example/years/                      dated changes and events, plus undated events
+  example/texts/                      texts grouped by event ID
+  example/stories/                    story scripts grouped by story ID
 ```
 
 `python3 tools/validate_content.py` checks the example; `python3 tools/validate_content.py ../seerah-content` checks the real content. A change to the format is made here first, then applied in `seerah-content`.
 
-## Rules the schema enforces
+See the [authoring commands and migration guide](../tools/content/README.md).
+
+## Content rules
 
 - Only items with `review: approved` ever ship; the content build refuses `draft`, `in-review` and `title-approved` ([ADR 0007](../docs/adr/0007-content-formats-compatibility-and-signing.md)). Only the owner sets `approved`.
 

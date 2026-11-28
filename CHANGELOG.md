@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Content authors can validate YAML 1.2, compile a preview, migrate a legacy JSON index, and build signed v1 content packages from approved sources.
+
 - Android Phase 3 content storage and guards (`:core:content`): atomic `<filesDir>/content/` layout, `active.json` generation pointer, shared `Mutex` coordination, block-aligned `StatFs` storage checks (`32 MiB` headroom), Rule A/B/C key-compromise version-floor reset, Hilt DI (`ContentModule.kt`), fail-closed `res/raw/trusted_package_keys.json` pre-ceremony placeholder (real production keys must be embedded before shipping beta APKs), `tools/android/check_trusted_keys.py` CI release guard, and device smoke tests (including R8 Full Mode).
 - Android Phase 2 verification core (`:core:content`) and Python-to-Kotlin golden fixtures: isolated single-key Ed25519 `NO_PREFIX` verification (`tink-android`), hardened `FileChannel` ZIP reader, `manifest.json` / `data/map.json` / PMTiles v3 binary directory & metadata validation, and deterministic fixture drift tests in `tools/packages/`.
 - Android Phase 1 foundation for v1 packages (`seerah.jvm.library`, `:core:model`, `:core:map` `MapPackageBinding`): pure-JVM `tile_schema: 1` `MapMetadata` models and verified metadata-to-style helpers (`toCameraLimits`, `resolveMapFiles`, `styleCValueRamp`, `toStyleSpec`).

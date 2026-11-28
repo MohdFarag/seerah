@@ -1,0 +1,8 @@
+content_schema: 1
+content_version: 0.0.0-example
+phases:
+- id: example-phase
+  note: Synthetic example of the content format, used to test the validator. Not
+    Seerah content.
+  order: 1
+  title: 'مثال: مرحلة'

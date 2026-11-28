@@ -1,0 +1,9 @@
+places:
+  - id: example-port
+    name: Synthetic port
+    kind: port
+    accuracy: general
+    coordinates: {lat: 20.62, lon: 58.91}
+    visibility: always
+    prominence: 1
+    review: draft

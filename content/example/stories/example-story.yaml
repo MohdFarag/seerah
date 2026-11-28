@@ -1,0 +1,19 @@
+id: example-story
+title: Synthetic walkthrough
+review: draft
+chapters:
+  - id: example-chapter
+    title: Synthetic chapter
+    phase_id: example-phase
+    order: 1
+    scenes:
+      - id: example-scene
+        title: Synthetic scene
+        event_id: example-first-event
+        order: 1
+        steps:
+          - id: example-step
+            order: 1
+            camera: {mode: frame, targets: ['place:example-port'], shot: wide, transition: cut}
+            time: {mode: at, calendar: pre-hijra, year: 2, precision: year}
+            panel: {title_card: true, text_ids: [example-text]}

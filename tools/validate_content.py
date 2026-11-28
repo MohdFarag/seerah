@@ -1,17 +1,7 @@
 #!/usr/bin/env python3
-"""Validate Seerah content.
+"""Validate legacy JSON or v1 YAML content and optionally compile a YAML corpus."""
 
-Usage: validate_content.py [CONTENT_DIR]
-
-CONTENT_DIR holds `index/phases.json` and `events/`. The content itself lives in the
-private `seerah-content` repository (ADR 0006); without an argument the synthetic
-example in `content/example/` is checked, so the validator is tested in this repository.
-
-Uses the JSON Schema (`content/schema/`) if the `jsonschema` package is installed, and
-always runs the cross-reference and integrity checks the schema can't express.
-Exit code 1 on any error.
-"""
-
+import argparse
 import json
 import pathlib
 import sys
@@ -43,12 +33,17 @@ def schema_check(doc, path):
     return True
 
 
-def main(root: pathlib.Path) -> int:
+def validate_legacy(root: pathlib.Path) -> int:
+    """Check the legacy index without loading YAML dependencies."""
+    errors.clear()
     index_path = root / "index" / "phases.json"
     index = load(index_path)
     if index is None:
         return report(False)
     used_schema = schema_check(index, index_path)
+
+    if errors:
+        return report(used_schema)
 
     ids: dict[str, str] = {}
     events = {}
@@ -102,8 +97,56 @@ def report(used_schema: bool, n: int = 0) -> int:
     return 0
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("root", nargs="?", type=pathlib.Path, default=DEFAULT_CONTENT)
+    parser.add_argument("--compile", type=pathlib.Path)
+    parser.add_argument("--require-approved", action="store_true")
+    parser.add_argument("--strict-warnings", action="store_true")
+    parser.add_argument("--allow-dirty", action="store_true")
+    parser.add_argument("--source-commit")
+    args = parser.parse_args()
+    legacy = (args.root / "index/phases.json").is_file()
+    yaml = (args.root / "content.yaml").is_file()
+    if legacy == yaml:
+        print("error: expected exactly one of content.yaml and index/phases.json", file=sys.stderr)
+        return 1
+    if legacy:
+        print(
+            "warning: legacy phases.json format is deprecated; migrate to YAML 1.2", file=sys.stderr
+        )
+        if (
+            args.compile
+            or args.require_approved
+            or args.strict_warnings
+            or args.allow_dirty
+            or args.source_commit
+        ):
+            parser.error("compilation and release options require a YAML source")
+        return validate_legacy(args.root)
+    sys.path.insert(0, str(REPO / "tools/content/src"))
+    from seerah_content.compiler import compile_source, write_payload
+    from seerah_content.provenance import source_revision
+
+    try:
+        if args.require_approved or args.source_commit:
+            source_revision(args.root, args.allow_dirty, args.source_commit)
+        docs, warnings = compile_source(
+            args.root,
+            require_approved=args.require_approved,
+            validate_package=bool(args.compile),
+            strict_warnings=args.strict_warnings,
+        )
+        for warning in warnings:
+            print(f"warning: {warning}", file=sys.stderr)
+        if args.compile:
+            write_payload(docs, args.compile / "data")
+    except (ValueError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(f"ok: {len(docs['events']['events'])} events")
+    return 0
+
+
 if __name__ == "__main__":
-    if len(sys.argv) > 2:
-        print(__doc__)
-        sys.exit(2)
-    sys.exit(main(pathlib.Path(sys.argv[1]) if len(sys.argv) == 2 else DEFAULT_CONTENT))
+    sys.exit(main())

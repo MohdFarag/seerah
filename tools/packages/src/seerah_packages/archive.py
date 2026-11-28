@@ -7,6 +7,8 @@ import os
 import re
 import stat
 import struct
+import sys
+import tempfile
 import zipfile
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
@@ -1063,8 +1065,84 @@ def verify_package(
                     expected_tool_commit=manifest["tool_commit"],
                     expected_image=manifest["image"],
                 )
+            else:
+                _verify_content_entries(zf, manifest)
             return manifest
     except zipfile.BadZipFile as exc:
         raise PackageError(f"{package_path}: corrupt ZIP archive: {exc}") from exc
     except OSError as exc:
         raise PackageError(f"{package_path}: I/O error: {exc}") from exc
+
+
+CONTENT_ENTRIES = ("areas", "events", "meta", "places", "routes", "sources", "stories", "texts")
+
+
+def _verify_content_entries(zf, manifest):
+    paths = [f"data/{name}.json" for name in CONTENT_ENTRIES]
+    if [entry["path"] for entry in manifest["files"]] != paths:
+        raise PackageError("content package must contain exactly the eight v1 data files")
+    schema = json.loads((_REPO_ROOT / "content/schema/content-package.schema.json").read_text())
+    for name, path in zip(CONTENT_ENTRIES, paths, strict=True):
+        with zf.open(path) as stream:
+            try:
+                data = json.loads(stream.read().decode("utf-8"))
+            except (ValueError, RecursionError) as exc:
+                raise PackageError(f"{path}: invalid JSON: {exc}") from exc
+        validator = Draft202012Validator({"$defs": schema["$defs"], "$ref": f"#/$defs/{name}"})
+        error = next(validator.iter_errors(data), None)
+        if error:
+            raise PackageError(f"{path}{error.json_path}: {error.message}")
+
+
+def pack_content(
+    *,
+    source,
+    version,
+    min_app_version,
+    key_id,
+    private_key,
+    out_dir,
+    created=None,
+    previous_manifest_path=None,
+    strict_warnings=False,
+    allow_dirty=False,
+    source_commit=None,
+    force=False,
+):
+    """Compile approved source documents and publish a self-verified signed package."""
+    from seerah_content.compiler import compile_source, write_payload
+    from seerah_content.provenance import source_revision
+
+    out_path = out_dir / f"seerah-content-{version}.zip"
+    if out_path.exists() and not force:
+        raise PackageError(f"{out_path} exists; pass --force")
+    if previous_manifest_path:
+        _check_previous_manifest(
+            previous_manifest_path, expected_kind="content", new_version=version
+        )
+    try:
+        revision = source_revision(source, allow_dirty, source_commit)
+        payload, warnings = compile_source(
+            source, require_approved=True, strict_warnings=strict_warnings
+        )
+        if not allow_dirty and source_revision(source, False, None) != revision:
+            raise PackageError("source checkout changed during compilation")
+    except ValueError as exc:
+        raise PackageError(str(exc)) from exc
+    for warning in warnings:
+        print(f"warning: {warning}", file=sys.stderr)
+    with tempfile.TemporaryDirectory() as staging:
+        data = Path(staging) / "data"
+        write_payload(payload, data)
+        return build_package(
+            kind="content",
+            data_dir=data,
+            version=version,
+            min_app_version=min_app_version,
+            key_id=key_id,
+            private_key=private_key,
+            source_commit=revision,
+            out_path=out_path,
+            created=created,
+            compress_type=zipfile.ZIP_DEFLATED,
+        )

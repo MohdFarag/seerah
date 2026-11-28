@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .archive import (
     PackageError,
+    pack_content,
     pack_map_staging,
     validate_iso_timestamp,
     verify_package,
@@ -63,54 +64,60 @@ def _build_parser() -> _Parser:
         help="File descriptor to read passphrase from (one line).",
     )
 
-    pack_map = sub.add_parser(
-        "pack-map",
-        help="Package and sign a production map staging directory into seerah-map-<version>.zip.",
-    )
-    pack_map.add_argument("--staging", type=Path, required=True, help="Path to map-staging-<fp8>/.")
-    pack_map.add_argument(
-        "--version", type=int, required=True, help="Package version (1..1000000)."
-    )
-    pack_map.add_argument(
+    packing = argparse.ArgumentParser(add_help=False)
+    packing.add_argument("--version", type=int, required=True, help="Package version (1..1000000).")
+    packing.add_argument(
         "--min-app-version",
         type=int,
         required=True,
         help="Minimum Android app versionCode (>= 1).",
     )
-    pack_map.add_argument(
+    packing.add_argument(
         "--key", type=Path, required=True, help="Encrypted PKCS#8 private key PEM."
     )
-    pack_map.add_argument("--key-id", required=True, help="Key identifier matching the public key.")
-    pack_map.add_argument(
+    packing.add_argument("--key-id", required=True, help="Key identifier matching the public key.")
+    packing.add_argument(
         "--out", type=Path, required=True, help="Output directory for .zip package."
     )
-    pack_map.add_argument(
+    packing.add_argument(
         "--created",
         default=None,
         help="UTC timestamp YYYY-MM-DDTHH:MM:SSZ (defaults to current UTC time).",
     )
-    pack_map.add_argument(
+    packing.add_argument(
         "--passphrase-fd",
         type=int,
         default=None,
         help="File descriptor to read passphrase from (one line).",
     )
-    pack_map.add_argument(
+    packing.add_argument(
         "--previous-manifest",
         type=Path,
         default=None,
         help="Optional previous manifest.json to enforce strictly increasing version.",
     )
+    packing.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow overwriting an existing seerah-map-<version>.zip.",
+    )
+
+    pack_map = sub.add_parser(
+        "pack-map", parents=[packing], help="Package a production map staging directory"
+    )
+    pack_map.add_argument("--staging", type=Path, required=True)
     pack_map.add_argument(
         "--allow-local-provenance",
         action="store_true",
         help="Allow local:* image provenance for local testing.",
     )
-    pack_map.add_argument(
-        "--force",
-        action="store_true",
-        help="Allow overwriting an existing seerah-map-<version>.zip.",
+    content = sub.add_parser(
+        "pack-content", parents=[packing], help="Compile and sign approved YAML content"
     )
+    content.add_argument("--source", type=Path, required=True)
+    content.add_argument("--source-commit")
+    content.add_argument("--allow-dirty", action="store_true")
+    content.add_argument("--strict-warnings", action="store_true")
 
     verify = sub.add_parser("verify", help="Verify a signed content or map package ZIP.")
     verify.add_argument("--package", type=Path, required=True, help="Path to package .zip file.")
@@ -145,7 +152,7 @@ def _cmd_keygen(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def _cmd_pack_map(args: argparse.Namespace) -> int:
+def _cmd_pack(args: argparse.Namespace) -> int:
     try:
         validate_key_id(args.key_id)
     except SigningError as exc:
@@ -162,6 +169,23 @@ def _cmd_pack_map(args: argparse.Namespace) -> int:
 
     passphrase = read_passphrase(args.passphrase_fd, confirm=False)
     private_key = load_private_key(args.key, passphrase)
+    if args.command == "pack-content":
+        out_zip = pack_content(
+            source=args.source,
+            version=args.version,
+            min_app_version=args.min_app_version,
+            key_id=args.key_id,
+            private_key=private_key,
+            out_dir=args.out,
+            created=args.created,
+            previous_manifest_path=args.previous_manifest,
+            strict_warnings=args.strict_warnings,
+            allow_dirty=args.allow_dirty,
+            source_commit=args.source_commit,
+            force=args.force,
+        )
+        _say(f"pack-content: wrote and verified {out_zip}")
+        return EXIT_OK
     out_zip = pack_map_staging(
         staging_dir=args.staging,
         version=args.version,
@@ -201,8 +225,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         args = parser.parse_args(argv)
         if args.command == "keygen":
             return _cmd_keygen(args)
-        if args.command == "pack-map":
-            return _cmd_pack_map(args)
+        if args.command in ("pack-map", "pack-content"):
+            return _cmd_pack(args)
         if args.command == "verify":
             return _cmd_verify(args)
         raise _UsageError(f"unknown command {args.command!r}")

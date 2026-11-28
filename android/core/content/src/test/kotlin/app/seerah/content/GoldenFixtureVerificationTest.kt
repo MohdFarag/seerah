@@ -73,9 +73,9 @@ class GoldenFixtureVerificationTest {
 
         assertEquals(PackageKind.CONTENT, verified.manifest.kind)
         assertNull(verified.mapMetadata)
-        val extracted = File(staging, "data/index.json")
+        val extracted = File(staging, "data/events.json")
         assertTrue(extracted.isFile)
-        assertTrue("taif" in extracted.readText())
+        assertTrue("fixture-event" in extracted.readText())
     }
 
     @Test
