@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Pure-JVM Seerah domain models and engine (`:core:model`, `:core:domain`, ADR 0003 `D3` isolation): sealed timeline dates without year zero, chronological place/area state resolution, `in-context` visibility rules, automatic certainty notes, manual follow-along state machine with update-resilient bookmarks, and unified exploration/story map snapshots.
 - Content authors can validate YAML 1.2, compile a preview, migrate a legacy JSON index, and build signed v1 content packages from approved sources.
 
 - Android Phase 3 content storage and guards (`:core:content`): atomic `<filesDir>/content/` layout, `active.json` generation pointer, shared `Mutex` coordination, block-aligned `StatFs` storage checks (`32 MiB` headroom), Rule A/B/C key-compromise version-floor reset, Hilt DI (`ContentModule.kt`), fail-closed `res/raw/trusted_package_keys.json` pre-ceremony placeholder (real production keys must be embedded before shipping beta APKs), `tools/android/check_trusted_keys.py` CI release guard, and device smoke tests (including R8 Full Mode).

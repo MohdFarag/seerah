@@ -21,5 +21,6 @@ rootProject.name = "seerah"
 // The spike in spike/ is a separate build and is not included here.
 include(":app")
 include(":core:content")
+include(":core:domain")
 include(":core:map")
 include(":core:model")

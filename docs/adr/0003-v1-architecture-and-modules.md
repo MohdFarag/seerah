@@ -169,17 +169,16 @@ flowchart TD
   features --> map[":core:map"]
   features --> domain[":core:domain"]
   features --> data["data modules<br/>:core:content · :core:userdata · :core:update"]
-  domain --> data
   map --> model[":core:model"]
   data --> model
   domain --> model
 ```
 
-**Amendment (2026-11-28, [v1 Android spec](../design/v1-android-package-and-map-spec.md) D1):** All offline package verification (Ed25519 signatures, ZIP reading, `manifest.json` / `map.json` / PMTiles v3 validation) and atomic `<filesDir>/content/` storage live in `:core:content`. Future `:core:update` handles networking and update-index checks and will depend on `:core:content`, keeping `:core:domain` (which depends on `:core:content`) isolated from network libraries.
+**Amendment (2026-11-28, [v1 Android spec](../design/v1-android-package-and-map-spec.md) D1 & [v1 content/domain spec](../design/v1-content-pipeline-and-domain-spec.md) D3):** All offline package verification (Ed25519 signatures, ZIP reading, `manifest.json` / `map.json` / PMTiles v3 validation) and atomic `<filesDir>/content/` storage live in `:core:content`, while future `:core:update` handles networking and depends on `:core:content`. Because `:core:domain` is pure JVM (`seerah.jvm.library`), it depends **only on `:core:model`** and is forbidden from depending on `:core:content` or `:core:userdata` (`DependencyRules.kt`). Features collect reactive snapshots from `:core:content` and pass immutable `:core:model` data into `:core:domain`.
 
 - Features never depend on other features; they navigate through keys in `core:navigation` and share state through the explore session.
 - Only `core:map` depends on MapLibre.
-- `core:model` and `core:domain` are plain Kotlin with no Android dependency, so the time rules are tested on the JVM.
+- `core:model` and `core:domain` are plain Kotlin with no Android dependency (`core:domain` depends only on `core:model`), so time resolution, certainty notes, and follow-along rules are tested on the JVM.
 - Content and user data never share storage. User data refers to content only by stable IDs, and copes with an ID that a content update removed.
 - Nothing that belongs to content is hard-coded: the map bounds, zoom levels, place names and time states come from the content package.
 - These rules are checked by the build (ADR 0004), not left to review.

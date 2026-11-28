@@ -33,7 +33,7 @@ internal fun Project.configureModuleGraphRules() {
             ":feature:.* -X> :feature:.*",
             ":core:model -X> :.*",
             ":core:designsystem -X> :.*",
-            ":core:(model|domain) -X> :core:(map|designsystem|ui|navigation|update)",
+            ":core:domain -X> :core:(content|userdata|map|designsystem|ui|navigation|update)",
         )
     }
 }
