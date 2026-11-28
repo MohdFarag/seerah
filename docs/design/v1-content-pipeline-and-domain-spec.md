@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # v1 Content Pipeline, Room Database and Domain Rules Spec
 
 - **Author:** MohdFarag
-- **Status:** Revised after [Elephant-Goldfish Model (EGM) review](egm-review-v1-content-pipeline-and-domain/consolidated_review_report.md) — awaiting owner approval of `D1` and `D3` before Phase 1 starts
+- **Status:** Revised after [Elephant-Goldfish Model (EGM) review](egm-review-v1-content-pipeline-and-domain/consolidated_review_report.md) — the owner approved `D1` and `D3` on 2026-11-28
 - **Date:** 2026-11-28
 
 ## Overview
@@ -22,11 +22,11 @@ It pairs directly with the host packaging core in [`tools/packages/`](../../tool
 
 ---
 
-## Owner Decisions Needed (`D1`, `D3`)
+## Approved Owner Decisions (`D1`, `D3`)
 
-Only `D1` and `D3` require Mohamed's approval before Phase 1 starts. Former `D2` and `D4` are internal engineering and milestone choices moved below for traceability with the [consolidated EGM review report](egm-review-v1-content-pipeline-and-domain/consolidated_review_report.md).
+The owner approved both recommended options on 2026-11-28. Phase 1 implements D1. Phase 2 implements D3, including the ADR 0003 update. Former `D2` and `D4` are internal engineering and milestone choices moved below for traceability with the [consolidated EGM review report](egm-review-v1-content-pipeline-and-domain/consolidated_review_report.md).
 
-| ID | Topic | Recommended option | Alternative | Why |
+| ID | Topic | Approved option | Alternative | Why |
 | --- | --- | --- | --- | --- |
 | **D1** | `seerah-content` YAML cutover & temporary lazy JSON fallback | **Migrate `content/example/` to YAML in Phase 1 while keeping an auto-detected legacy JSON fallback (with a deprecation notice and strict lazy imports) in `tools/validate_content.py` until the private `seerah-content` repo migrates.** Supply a repeatable conversion script and workflow update snippet for `seerah-content`, then retire the JSON fallback once `seerah-content` is converted. | Drop JSON support immediately in `tools/validate_content.py`, or delay YAML compiler work until `seerah-content` converts first. | `../seerah-content/.github/workflows/validate.yml` checks out `al-seerah/seerah` at `main`, installs **only** `jsonschema==4.26.0`, and runs `python3 seerah/tools/validate_content.py content` on `index/phases.json`. Lazy-importing `ruamel.yaml` / `seerah_content` only when `content.yaml` is present keeps `seerah-content` CI green without forcing an all-at-once lockstep cutover. |
 | **D3** | Pure-JVM `:core:domain` module boundary vs. [ADR 0003](../adr/0003-v1-architecture-and-modules.md) | **Keep `:core:domain` strictly pure JVM (`seerah.jvm.library`) depending only on `:core:model`**, keep `ContentRepository` inside `:core:content`, enforce `:core:domain -X> :core:(content\|userdata)` in [`DependencyRules.kt`](../../android/build-logic/convention/src/main/kotlin/app/seerah/buildlogic/DependencyRules.kt), and update [ADR 0003](../adr/0003-v1-architecture-and-modules.md) lines `172`, `178`, and `182` to match. | Turn `:core:domain` into an Android library so it can depend on `:core:content`, or add reverse repository interfaces across modules. | Gradle forbids a pure-JVM plugin (`seerah.jvm.library`) from depending on an Android library (`:core:content`). Keeping `:core:domain -> :core:model` pure JVM preserves ADR 0003's core rule (*"`core:model` and `core:domain` are plain Kotlin with no Android dependency"*) and keeps `:core:domain` isolated from Room, Tink, and Android APIs. |
@@ -453,7 +453,7 @@ Exposing **one** generation-consistent `ExplorationCorpus` via `ContentState.Rea
 
 ---
 
-## Phased Implementation Roadmap (Starts After Owner Approves `D1` & `D3`)
+## Phased Implementation Roadmap
 
 | Phase | Scope | Exit Gate |
 | --- | --- | --- |
