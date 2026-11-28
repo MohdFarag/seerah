@@ -31,6 +31,8 @@ jobs:
         run: SKIP=no-commit-to-branch pre-commit run --all-files --show-diff-on-failure
       - name: Validate content
         run: python3 tools/validate_content.py
+      - name: Content source tests
+        run: python3 -m pytest -c tools/content/pyproject.toml tools/content/tests
 
   packages:
     runs-on: ubuntu-latest
