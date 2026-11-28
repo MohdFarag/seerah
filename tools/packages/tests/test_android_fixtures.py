@@ -2,6 +2,7 @@
 
 import importlib.util
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,33 @@ def _load_generator():
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def _assert_zip_matches(committed: Path, regenerated: Path) -> None:
+    """Compare ZIP structure, entry metadata, and uncompressed payloads.
+
+    Comparing uncompressed payloads avoids false drift failures when ZIP_DEFLATED
+    bitstreams vary between stock zlib and zlib-ng while still checking every
+    manifest, Ed25519 signature, and payload byte identically.
+    """
+    with zipfile.ZipFile(committed) as cz, zipfile.ZipFile(regenerated) as rz:
+        committed_meta = [
+            (i.filename, i.compress_type, i.date_time, i.external_attr, i.file_size, i.CRC)
+            for i in cz.infolist()
+        ]
+        regenerated_meta = [
+            (i.filename, i.compress_type, i.date_time, i.external_attr, i.file_size, i.CRC)
+            for i in rz.infolist()
+        ]
+        assert committed_meta == regenerated_meta, (
+            f"Android fixture {committed.name} entry metadata drifted from "
+            "generate_android_test_fixtures.py"
+        )
+        for info in cz.infolist():
+            assert cz.read(info.filename) == rz.read(info.filename), (
+                f"Android fixture {committed.name}:{info.filename} drifted from "
+                "generate_android_test_fixtures.py"
+            )
 
 
 def test_checked_in_android_fixtures_verify_and_match_generator(tmp_path: Path):
@@ -62,6 +90,10 @@ def test_checked_in_android_fixtures_verify_and_match_generator(tmp_path: Path):
     ):
         committed_file = _FIXTURES_DIR / name
         assert committed_file.is_file(), f"Missing fixture {committed_file}"
-        assert committed_file.read_bytes() == (regenerated / name).read_bytes(), (
-            f"Android fixture {name} drifted from generate_android_test_fixtures.py"
-        )
+        regenerated_file = regenerated / name
+        if name.endswith(".zip"):
+            _assert_zip_matches(committed_file, regenerated_file)
+        else:
+            assert committed_file.read_bytes() == regenerated_file.read_bytes(), (
+                f"Android fixture {name} drifted from generate_android_test_fixtures.py"
+            )

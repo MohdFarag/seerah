@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from pmtiles.tile import Compression, TileType, zxy_to_tileid
+from pmtiles.tile import Compression, TileType, deserialize_header, zxy_to_tileid
 from pmtiles.writer import write as pmtiles_write
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -85,6 +85,22 @@ def _valid_map_json() -> dict:
     }
 
 
+def _normalize_pmtiles_gzip_os(path: Path) -> None:
+    """Pin RFC 1952 gzip OS header byte to 0xFF (unknown) for Python/zlib portability."""
+    raw = bytearray(path.read_bytes())
+    header = deserialize_header(bytes(raw[:127]))
+    for offset_key, length_key in (
+        ("root_offset", "root_length"),
+        ("metadata_offset", "metadata_length"),
+        ("leaf_directory_offset", "leaf_directory_length"),
+    ):
+        offset = header[offset_key]
+        length = header[length_key]
+        if length >= 10 and raw[offset : offset + 2] == b"\x1f\x8b":
+            raw[offset + 9] = 0xFF
+    path.write_bytes(bytes(raw))
+
+
 def _write_minimal_pmtiles(
     path: Path,
     *,
@@ -113,6 +129,7 @@ def _write_minimal_pmtiles(
             },
             metadata,
         )
+    _normalize_pmtiles_gzip_os(path)
 
 
 def _write_trial_rejected_map_zip(
