@@ -10,6 +10,7 @@ Pure-JVM domain and metadata models shared across modules ([ADR 0003](../../../d
 - **Sources & texts (`TextModels.kt`):** `SourceKind`, `SourceWork`, `SourceCitation`, `TextKind`, `ContentText`.
 - **Events & details (`EventModels.kt`):** `Phase`, `EventKind`, `EventDepth`, `ExpeditionRole`, `RelationType`, `PlaceReference`, `EventLocation`, `Situation`, `EventRelation`, `SeerahEvent`, `EventDetail`.
 - **Story & corpus summaries (`StoryModels.kt`, `ContentMetadata.kt`):** `ShotSize`, `CameraTransition`, `MapTargetRef`, `StepCamera`, `StepTime`, `StepRouteDrawing`, `StepMovement`, `StepPanel`, `StoryStep`, `StoryScene`, `StoryChapter`, `Story`, `StorySummary`, `ContentPackageSummary`, `ExplorationCorpus`.
+- **`FollowAlongBookmark`** identifies a saved story step by stable IDs and carries a fallback index for content changes.
 
 ## Test
 

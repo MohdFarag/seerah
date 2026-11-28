@@ -2,6 +2,7 @@ package app.seerah.domain
 
 import app.seerah.model.CalendarAxis
 import app.seerah.model.CameraTransition
+import app.seerah.model.FollowAlongBookmark
 import app.seerah.model.MapTargetRef
 import app.seerah.model.ShotSize
 import app.seerah.model.StepCamera

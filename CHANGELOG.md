@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Local explore-session storage (`:core:userdata`): versioned JSON DataStore (`filesDir/datastore/explore-session.json`) persisting the selected timeline point, focused place or event ID, and follow-along bookmark in atomic transactions while preserving unreadable or newer-version files, with shared `FollowAlongBookmark` in `:core:model` and Hilt DI.
 - Disposable Room 3 content database and reactive repository (`:core:content`): single-pass streaming ZIP validation and import (`androidx.room3` with `AndroidSQLiteDriver` and `JournalMode.TRUNCATE`), generation-pinned hot-swap with active read leases, automatic one-shot database rebuild from retained signed `package.zip`, and `ContentRepository` streams for exploration and on-demand event/story lookups.
 - Pure-JVM Seerah domain models and engine (`:core:model`, `:core:domain`, ADR 0003 `D3` isolation): sealed timeline dates without year zero, chronological place/area state resolution, `in-context` visibility rules, automatic certainty notes, manual follow-along state machine with update-resilient bookmarks, and unified exploration/story map snapshots.
 - Content authors can validate YAML 1.2, compile a preview, migrate a legacy JSON index, and build signed v1 content packages from approved sources.

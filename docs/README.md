@@ -37,6 +37,7 @@ Where every document lives and what it is for. If you add a document, list it he
 | [design/v1-map-pipeline-spec.md](design/v1-map-pipeline-spec.md) | Production v1 map pipeline: coastal cleanup edits, `coverage.yaml`, `map.json` (`tile_schema: 1`) and shared host-side Ed25519 signing/packaging ([consolidated EGM review](design/egm-review-v1-map-pipeline/consolidated_review_report.md)). |
 | [design/v1-android-package-and-map-spec.md](design/v1-android-package-and-map-spec.md) | Approved v1 Android package verification, storage lifecycle and `tile_schema: 1` map-loading specification ([consolidated EGM review](design/egm-review-v1-android-package-and-map/consolidated_review_report.md)). |
 | [design/v1-content-pipeline-and-domain-spec.md](design/v1-content-pipeline-and-domain-spec.md) | Owner-reviewed v1 content authoring pipeline (YAML 1.2), disposable Room 3 database (`content.db`), and pure-JVM domain rules specification ([consolidated EGM review](design/egm-review-v1-content-pipeline-and-domain/consolidated_review_report.md)). |
+| [design/v1-userdata-spec.md](design/v1-userdata-spec.md) | Approved local storage for the v1 explore session and follow-along bookmark ([consolidated EGM review](design/egm-review-v1-userdata/consolidated_review_report.md)). |
 | [design/2026-11-22_DRIFT_REPORT.md](design/2026-11-22_DRIFT_REPORT.md) | Dated EGM drift report comparing `docs/` against the codebase at commit `cb58036` (historical snapshot). |
 
 ## Map trial

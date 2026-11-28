@@ -1,35 +1,10 @@
 package app.seerah.domain
 
+import app.seerah.model.FollowAlongBookmark
 import app.seerah.model.Story
 import app.seerah.model.StoryChapter
 import app.seerah.model.StoryScene
 import app.seerah.model.StoryStep
-
-/**
- * Stable follow-along resume point that survives content updates when step ordering shifts or scenes
- * are edited ([ADR 0003](../../../docs/adr/0003-v1-architecture-and-modules.md)).
- */
-data class FollowAlongBookmark(
-    val storyId: String,
-    val chapterId: String,
-    val sceneId: String,
-    val stepId: String,
-    val fallbackStepIndex: Int,
-) {
-    init {
-        require(
-            storyId.isNotBlank() &&
-                chapterId.isNotBlank() &&
-                sceneId.isNotBlank() &&
-                stepId.isNotBlank(),
-        ) {
-            "FollowAlongBookmark identifiers must not be blank."
-        }
-        require(fallbackStepIndex >= 0) {
-            "FollowAlongBookmark fallbackStepIndex must be >= 0, got $fallbackStepIndex."
-        }
-    }
-}
 
 /**
  * Pure follow-along playback state tracked in the exploration session.
